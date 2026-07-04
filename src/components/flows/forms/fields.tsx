@@ -2,20 +2,6 @@
 
 /**
  * Reusable field components shared across every per-node form.
- *
- * `NodeKeySelect` — picks a node from the flow's node list, rendered
- * with the source node's icon so the dropdown reads as
- * "destination = ◇ menu" rather than an opaque slug.
- *
- * `NextNodeRow` — wraps NodeKeySelect with a label; the most common
- * per-node form row ("after this node, advance to…").
- *
- * `TextRow` — wraps Input or Textarea behind a label. Pure UI sugar
- * to keep per-node forms uncluttered.
- *
- * Lives in src/components/flows/forms/ so both the list view's
- * collapsed-card editor and the canvas view's side-panel editor
- * (introduced in this PR) mount the exact same form components.
  */
 
 import { Input } from "@/components/ui/input";
@@ -27,8 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useT } from "@/hooks/use-i18n";
 import { cn } from "@/lib/utils";
-import { NODE_META, type BuilderNode } from "../shared";
+import { nodeStaticMeta, type BuilderNode } from "../shared";
 
 export function TextRow({
   label,
@@ -75,6 +62,7 @@ export function NextNodeRow({
   onChange: (v: string) => void;
   label: string;
 }) {
+  const t = useT();
   return (
     <div>
       <label className="mb-1 block text-xs text-muted-foreground">{label}</label>
@@ -83,7 +71,7 @@ export function NextNodeRow({
         nodes={allNodes}
         excludeKey={currentKey}
         onChange={(v) => onChange(v ?? "")}
-        placeholder="Pick a next node…"
+        placeholder={t("flows.forms.pickNextNode")}
       />
     </div>
   );
@@ -104,6 +92,7 @@ export function NodeKeySelect({
   placeholder?: string;
   className?: string;
 }) {
+  const t = useT();
   const options = nodes.filter((n) => n.node_key !== excludeKey);
   return (
     <Select
@@ -114,14 +103,14 @@ export function NodeKeySelect({
         <SelectValue placeholder={placeholder ?? "—"} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="__none__">— None —</SelectItem>
+        <SelectItem value="__none__">{t("flows.forms.none")}</SelectItem>
         {options.map((n) => {
-          const Icon = NODE_META[n.node_type].icon;
+          const Icon = nodeStaticMeta[n.node_type].icon;
           return (
             <SelectItem key={n.node_key} value={n.node_key}>
               <span className="inline-flex items-center gap-1.5">
                 <Icon
-                  className={cn("h-3 w-3", NODE_META[n.node_type].color)}
+                  className={cn("h-3 w-3", nodeStaticMeta[n.node_type].color)}
                 />
                 {n.node_key}
               </span>

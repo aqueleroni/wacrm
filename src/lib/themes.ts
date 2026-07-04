@@ -66,36 +66,60 @@ export interface ThemeMeta {
   swatch: string;
 }
 
+export type ThemeTranslateFn = (
+  key: string,
+  params?: Record<string, string | number>,
+) => string;
+
+const THEME_SWATCHES: Record<ThemeId, string> = {
+  violet: "oklch(0.526 0.247 293)",
+  emerald: "oklch(0.62 0.16 162)",
+  cobalt: "oklch(0.585 0.2 254)",
+  amber: "oklch(0.745 0.16 65)",
+  rose: "oklch(0.645 0.22 16)",
+};
+
+/** Translated theme catalog for UI pickers — pass `t` from useT() or i18n. */
+export function getThemes(t: ThemeTranslateFn): ReadonlyArray<ThemeMeta> {
+  return THEME_IDS.map((id) => ({
+    id,
+    name: t(`settings.appearance.themes.${id}.name`),
+    tagline: t(`settings.appearance.themes.${id}.tagline`),
+    swatch: THEME_SWATCHES[id],
+  }));
+}
+
+/** English fallback catalog (boot script / non-React contexts). */
 export const THEMES: ReadonlyArray<ThemeMeta> = [
   {
     id: "violet",
     name: "Violet",
     tagline: "The default — confident, slightly playful.",
-    swatch: "oklch(0.526 0.247 293)",
+    swatch: THEME_SWATCHES.violet,
   },
   {
     id: "emerald",
     name: "Emerald",
     tagline: "Growth-coded, nods at messaging without copying WhatsApp green.",
-    swatch: "oklch(0.62 0.16 162)",
+    swatch: THEME_SWATCHES.emerald,
   },
   {
     id: "cobalt",
     name: "Cobalt",
     tagline: "Clean B2B-SaaS blue — calm and product-y.",
-    swatch: "oklch(0.585 0.2 254)",
+    swatch: THEME_SWATCHES.cobalt,
   },
   {
     id: "amber",
     name: "Amber",
     tagline: "Warm and friendly — feels good for SMB teams.",
-    swatch: "oklch(0.745 0.16 65)",
+    swatch: THEME_SWATCHES.amber,
   },
   {
     id: "rose",
     name: "Rose",
     tagline: "Bold and modern — D2C, creator-economy, lifestyle.",
-    swatch: "oklch(0.645 0.22 16)",
+    swatch: THEME_SWATCHES.rose,
   },
 ];
 

@@ -74,10 +74,50 @@ export const recipientStatusConfig: Record<RecipientStatus, StatusDisplay> = {
   },
 };
 
+/** Lookup broadcast/recipient status display with translated labels. */
+type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
+
+const BROADCAST_STATUS_KEYS: Record<BroadcastStatus, string> = {
+  draft: 'broadcasts.status.draft',
+  scheduled: 'broadcasts.status.scheduled',
+  sending: 'broadcasts.status.sending',
+  sent: 'broadcasts.status.sent',
+  failed: 'broadcasts.status.failed',
+};
+
+const RECIPIENT_STATUS_KEYS: Record<RecipientStatus, string> = {
+  pending: 'broadcasts.recipientStatus.pending',
+  sent: 'broadcasts.recipientStatus.sent',
+  delivered: 'broadcasts.recipientStatus.delivered',
+  read: 'broadcasts.recipientStatus.read',
+  replied: 'broadcasts.recipientStatus.replied',
+  failed: 'broadcasts.recipientStatus.failed',
+};
+
+export function getBroadcastStatusMeta(
+  status: string,
+  t: TranslateFn,
+): StatusDisplay {
+  const key = status as BroadcastStatus;
+  const base =
+    broadcastStatusConfig[key] ?? broadcastStatusConfig.draft;
+  const labelKey = BROADCAST_STATUS_KEYS[key] ?? BROADCAST_STATUS_KEYS.draft;
+  return { ...base, label: t(labelKey) };
+}
+
+export function getRecipientStatusMeta(
+  status: string,
+  t: TranslateFn,
+): StatusDisplay {
+  const key = status as RecipientStatus;
+  const base =
+    recipientStatusConfig[key] ?? recipientStatusConfig.pending;
+  const labelKey = RECIPIENT_STATUS_KEYS[key] ?? RECIPIENT_STATUS_KEYS.pending;
+  return { ...base, label: t(labelKey) };
+}
+
 /**
- * Tolerant lookup — callers often have a generic string status
- * coming from Supabase. Falls back to the "draft" / "pending"
- * entry so the UI never crashes on an unknown value.
+ * @deprecated Use getBroadcastStatusMeta(status, t) for translated labels.
  */
 export function getBroadcastStatus(status: string): StatusDisplay {
   return (
@@ -86,6 +126,7 @@ export function getBroadcastStatus(status: string): StatusDisplay {
   );
 }
 
+/** @deprecated Use getRecipientStatusMeta(status, t) for translated labels. */
 export function getRecipientStatus(status: string): StatusDisplay {
   return (
     recipientStatusConfig[status as RecipientStatus] ??

@@ -5,16 +5,17 @@ import { ChevronRight, Loader2 } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
+import { useT } from '@/hooks/use-i18n';
 import { useTheme } from '@/hooks/use-theme';
 import { THEMES } from '@/lib/themes';
-import { CURRENCIES } from '@/lib/currency';
+import { getCurrencyLabel } from '@/lib/currency';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
-import { SECTION_META, type SettingsSection } from './settings-sections';
+import { getSectionMeta, type SettingsSection } from './settings-sections';
 import { SettingsChip, StatusDot } from './settings-chip';
-import { ROLE_META } from './role-meta';
+import { getRoleMeta } from './role-meta';
 
 interface OverviewCounts {
   members: number | null;
@@ -35,9 +36,12 @@ export function SettingsOverview({
 }: {
   onSelect: (section: SettingsSection) => void;
 }) {
+  const t = useT();
   const { user, profile, accountId, accountRole, defaultCurrency, canManageMembers } =
     useAuth();
   const { mode, theme } = useTheme();
+  const sectionMeta = getSectionMeta(t);
+  const roleMetaByRole = getRoleMeta(t);
 
   const [counts, setCounts] = useState<OverviewCounts | null>(null);
   const [countsLoading, setCountsLoading] = useState(true);
@@ -139,11 +143,10 @@ export function SettingsOverview({
 
   const displayName = profile?.full_name || profile?.email || 'Your account';
   const initial = (profile?.full_name || profile?.email || 'U').charAt(0).toUpperCase();
-  const roleMeta = accountRole ? ROLE_META[accountRole] : null;
+  const roleMeta = accountRole ? roleMetaByRole[accountRole] : null;
   const RoleIcon = roleMeta?.icon;
 
-  const currencyLabel =
-    CURRENCIES.find((c) => c.code === defaultCurrency)?.label ?? defaultCurrency;
+  const currencyLabel = getCurrencyLabel(defaultCurrency, t);
   const themeName = THEMES.find((t) => t.id === theme)?.name ?? theme;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -250,7 +253,7 @@ export function SettingsOverview({
       {/* Status tiles */}
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {tiles.map(({ section, loading, subtitle }) => {
-          const meta = SECTION_META[section];
+          const meta = sectionMeta[section];
           const Icon = meta.icon;
           return (
             <button

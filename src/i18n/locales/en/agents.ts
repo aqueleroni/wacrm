@@ -1,0 +1,52 @@
+export const agents = {
+  title: 'AI Agents',
+  subtitle: 'Your bring-your-own-key AI agent — set it up, then test it in the playground before it replies to customers in the inbox.',
+  tabs: {
+    playground: 'Playground',
+    setup: 'Setup',
+  },
+  playground: {
+    title: 'Playground',
+    subtitle: 'test replies as if you were a customer',
+    description: 'Test how your AI agent responds before enabling it in the inbox.',
+    placeholder: 'Type a customer message…',
+    send: 'Send',
+    reset: 'Reset',
+    empty: 'Send a message to see how your agent would reply.',
+    emptyHint:
+      'It uses your knowledge base and behaves exactly like the auto-reply bot — including handoff.',
+    notSetupLink: 'Not set up yet? Go to Setup',
+    handoff: 'Would hand off to a human here',
+    notConfigured: {
+      title: 'AI not configured yet',
+      description: 'Set up your AI provider and knowledge base first.',
+      goToSetup: 'Go to Setup',
+    },
+    thinking: 'Thinking…',
+    error: 'Something went wrong. Check your AI configuration.',
+    toast: {
+      notConfigured: 'No agent configured yet — finish Setup first.',
+      noReply: "Couldn't get a reply.",
+      unreachable: "Couldn't reach the agent.",
+    },
+  },
+  setup: {
+    title: 'AI Configuration',
+    description: 'Connect your AI provider and customize how the agent responds.',
+    provider: 'Provider',
+    apiKey: 'API key',
+    model: 'Model',
+    systemPrompt: 'System prompt',
+    knowledge: 'Knowledge base',
+    enabled: 'Enable AI in inbox',
+    save: 'Save configuration',
+    saved: 'AI configuration saved',
+    saveFailed: 'Failed to save AI configuration',
+  },
+  knowledge: {
+    title: 'Knowledge base',
+    description: 'Upload documents or add text the AI can reference when replying.',
+    add: 'Add knowledge',
+    empty: 'No knowledge entries yet',
+  },
+} as const;

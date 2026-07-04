@@ -66,7 +66,8 @@ describe("validateFlowForActivation — flow-level", () => {
       issues.some(
         (i) =>
           i.field === "entry_node_id" &&
-          i.message.includes('"ghost"'),
+          i.messageKey === "flows.validation.flow.entryNodeNotFound" &&
+          i.messageParams?.key === "ghost",
       ),
     ).toBe(true);
   });
@@ -77,7 +78,7 @@ describe("validateFlowForActivation — flow-level", () => {
       [],
     );
     expect(
-      issues.some((i) => i.message.includes("at least one node")),
+      issues.some((i) => i.messageKey === "flows.validation.flow.noNodes"),
     ).toBe(true);
   });
 
@@ -94,7 +95,7 @@ describe("validateFlowForActivation — flow-level", () => {
     expect(
       issues.some(
         (i) =>
-          i.message.includes("Duplicate node_key") &&
+          i.messageKey === "flows.validation.flow.duplicateNodeKey" &&
           i.node_key === "a",
       ),
     ).toBe(true);
@@ -114,7 +115,7 @@ describe("validateFlowForActivation — trigger", () => {
       issues.some(
         (i) =>
           i.scope === "trigger" &&
-          i.message.includes("at least one keyword"),
+          i.messageKey === "flows.validation.trigger.keywordsRequired",
       ),
     ).toBe(true);
   });
@@ -140,7 +141,7 @@ describe("validateFlowForActivation — trigger", () => {
         (i) =>
           i.scope === "trigger" &&
           i.severity === "warning" &&
-          i.message.includes("blank"),
+          i.messageKey.startsWith("flows.validation.trigger.blankKeywords"),
       ),
     ).toBe(true);
   });
@@ -199,7 +200,7 @@ describe("validateFlowForActivation — nodes", () => {
         (i) =>
           i.node_key === "b" &&
           i.field === "buttons" &&
-          i.message.includes("at least one"),
+          i.messageKey === "flows.validation.node.sendButtonsMinButtons",
       ),
     ).toBe(true);
   });
@@ -231,7 +232,7 @@ describe("validateFlowForActivation — nodes", () => {
         (i) =>
           i.node_key === "b" &&
           i.field === "buttons" &&
-          i.message.includes("at most 3"),
+          i.messageKey === "flows.validation.node.sendButtonsMaxButtons",
       ),
     ).toBe(true);
   });
@@ -261,7 +262,7 @@ describe("validateFlowForActivation — nodes", () => {
         (i) =>
           i.node_key === "b" &&
           i.field === "buttons.0.title" &&
-          i.message.includes("over 20"),
+          i.messageKey === "flows.validation.node.buttonTitleTooLong",
       ),
     ).toBe(true);
   });
@@ -288,7 +289,8 @@ describe("validateFlowForActivation — nodes", () => {
       issues.some(
         (i) =>
           i.field === "buttons.0.next_node_key" &&
-          i.message.includes("ghost"),
+          i.messageKey === "flows.validation.node.buttonNextNotFound" &&
+          i.messageParams?.key === "ghost",
       ),
     ).toBe(true);
   });
@@ -314,7 +316,7 @@ describe("validateFlowForActivation — nodes", () => {
       nodes,
     );
     expect(
-      issues.some((i) => i.message.includes("Duplicate button reply id")),
+      issues.some((i) => i.messageKey === "flows.validation.node.buttonDuplicateReplyId"),
     ).toBe(true);
   });
 
@@ -346,7 +348,7 @@ describe("validateFlowForActivation — nodes", () => {
         (i) =>
           i.node_key === "l" &&
           i.field === "sections" &&
-          i.message.includes("at most 10"),
+          i.messageKey === "flows.validation.node.sendListMaxRows",
       ),
     ).toBe(true);
   });
@@ -381,7 +383,7 @@ describe("validateFlowForActivation — nodes", () => {
       nodes,
     );
     expect(
-      issues.some((i) => i.message.includes("exceeds 24 chars")),
+      issues.some((i) => i.messageKey === "flows.validation.node.listRowTitleTooLong"),
     ).toBe(true);
   });
 
@@ -401,7 +403,7 @@ describe("validateFlowForActivation — nodes", () => {
         (i) =>
           i.node_key === "orphan" &&
           i.severity === "warning" &&
-          i.message.includes("unreachable"),
+          i.messageKey === "flows.validation.flow.unreachableNode",
       ),
     ).toBe(true);
   });
@@ -415,7 +417,7 @@ describe("validateFlowForActivation — nodes", () => {
       nodes,
     );
     expect(
-      issues.some((i) => i.message.includes("Unknown node type")),
+      issues.some((i) => i.messageKey === "flows.validation.node.unknownType"),
     ).toBe(true);
   });
 });
@@ -483,7 +485,8 @@ describe("validateFlowForActivation — send_media", () => {
         (i) =>
           i.node_key === "m" &&
           i.field === "next_node_key" &&
-          i.message.includes("ghost"),
+          i.messageKey === "flows.validation.node.sendMediaNextNotFound" &&
+          i.messageParams?.key === "ghost",
       ),
     ).toBe(true);
   });

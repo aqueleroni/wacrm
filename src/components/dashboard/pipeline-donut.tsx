@@ -3,23 +3,27 @@
 import { GitBranch } from 'lucide-react'
 import type { PipelineDonutData } from '@/lib/dashboard/types'
 import { formatCurrencyShort } from '@/lib/currency'
+import { useT } from '@/hooks/use-i18n'
 import { EmptyState } from './empty-state'
 import { Skeleton } from './skeleton'
 
 interface PipelineDonutProps {
   data: PipelineDonutData | null
   loading: boolean
-  /** Account default currency for the totals. */
   currency: string
 }
 
 export function PipelineDonut({ data, loading, currency }: PipelineDonutProps) {
+  const t = useT()
+
   return (
     <section className="flex h-full flex-col rounded-xl border border-border bg-card">
       <header className="border-b border-border px-5 py-4">
-        <h2 className="text-sm font-semibold text-foreground">Pipeline Value</h2>
+        <h2 className="text-sm font-semibold text-foreground">
+          {t('dashboard.charts.pipeline.title')}
+        </h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Open deals by stage
+          {t('dashboard.charts.pipeline.subtitle')}
         </p>
       </header>
 
@@ -29,8 +33,8 @@ export function PipelineDonut({ data, loading, currency }: PipelineDonutProps) {
         ) : data.stages.length === 0 ? (
           <EmptyState
             icon={GitBranch}
-            title="No open deals yet"
-            hint="Create deals in Pipelines to see stage breakdowns here."
+            title={t('dashboard.charts.pipeline.empty')}
+            hint={t('dashboard.charts.pipeline.emptyHint')}
           />
         ) : (
           <>
@@ -45,7 +49,12 @@ export function PipelineDonut({ data, loading, currency }: PipelineDonutProps) {
                   />
                   <span className="flex-1 truncate text-muted-foreground">{s.name}</span>
                   <span className="text-muted-foreground tabular-nums">
-                    {s.dealCount} deal{s.dealCount === 1 ? '' : 's'}
+                    {t(
+                      s.dealCount === 1
+                        ? 'dashboard.charts.pipeline.dealCount'
+                        : 'dashboard.charts.pipeline.dealCount_plural',
+                      { count: s.dealCount },
+                    )}
                   </span>
                   <span className="w-20 text-right text-muted-foreground tabular-nums">
                     {formatCurrencyShort(s.totalValue, currency)}
@@ -60,22 +69,14 @@ export function PipelineDonut({ data, loading, currency }: PipelineDonutProps) {
   )
 }
 
-// ------------------------------------------------------------
-// SVG ring. 200×200 viewBox, 12px ring width. We draw one <path>
-// per stage using an SVG arc from startAngle → endAngle. Gaps
-// between segments are implied by a thin slate-900 stroke between
-// them for a cleaner look.
-// ------------------------------------------------------------
 function Donut({ data, currency }: { data: PipelineDonutData; currency: string }) {
+  const t = useT()
   const size = 200
   const r = 80
   const ringWidth = 18
   const cx = size / 2
   const cy = size / 2
 
-  // Small slices would render as slivers that disappear into stroke
-  // rounding. We give each stage a floor share purely for rendering,
-  // but keep the labels/legend honest with the actual totals.
   const totalRaw = data.totalValue || 1
   const minFrac = 0.02
   const rawShares = data.stages.map((s) => s.totalValue / totalRaw)
@@ -83,9 +84,6 @@ function Donut({ data, currency }: { data: PipelineDonutData; currency: string }
   const floorSum = floored.reduce((a, b) => a + b, 0)
   const shares = floored.map((x) => x / floorSum)
 
-  // Build a cumulative-offset array, then map stages → arc paths. Using
-  // a pre-computed offsets array avoids the Next 16 React Compiler's
-  // "Cannot reassign variable after render completes" rule.
   const offsets: number[] = [0]
   for (let i = 0; i < shares.length; i++) offsets.push(offsets[i] + shares[i])
   const segments = data.stages.map((s, i) => {
@@ -96,8 +94,7 @@ function Donut({ data, currency }: { data: PipelineDonutData; currency: string }
 
   return (
     <div className="flex items-center justify-center">
-      <svg viewBox={`0 0 ${size} ${size}`} className="h-48 w-48" role="img" aria-label="Pipeline value by stage">
-        {/* background ring */}
+      <svg viewBox={`0 0 ${size} ${size}`} className="h-48 w-48" role="img" aria-label={t('dashboard.charts.pipeline.ariaLabel')}>
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--muted)" strokeWidth={ringWidth} />
         {segments.map((seg) => (
           <path
@@ -109,14 +106,13 @@ function Donut({ data, currency }: { data: PipelineDonutData; currency: string }
             strokeLinecap="butt"
           />
         ))}
-        {/* center label */}
         <text
           x={cx}
           y={cy - 6}
           textAnchor="middle"
           className="fill-muted-foreground text-[11px]"
         >
-          Total
+          {t('dashboard.charts.pipeline.totalValue')}
         </text>
         <text
           x={cx}

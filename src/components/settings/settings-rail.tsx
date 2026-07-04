@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, type ReactNode } from 'react';
 
+import { useT } from '@/hooks/use-i18n';
 import { cn } from '@/lib/utils';
 import {
-  RAIL_GROUPS,
-  SECTION_META,
+  getRailGroups,
+  getSectionMeta,
   SETTINGS_SECTIONS,
   type SettingsSection,
 } from './settings-sections';
@@ -30,6 +31,9 @@ export function SettingsRail({
   onSelect: (section: SettingsSection) => void;
   hints?: Partial<Record<SettingsSection, ReactNode>>;
 }) {
+  const t = useT();
+  const sectionMeta = getSectionMeta(t);
+  const railGroups = getRailGroups(t);
   const activeRef = useRef<HTMLButtonElement>(null);
 
   // When horizontal (mobile), keep the active chip in view. On desktop
@@ -46,16 +50,16 @@ export function SettingsRail({
 
   return (
     <nav
-      aria-label="Settings sections"
+      aria-label={t('settings.rail.ariaLabel')}
       className={cn(
         'flex gap-1 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         'border-b border-border',
         'lg:sticky lg:top-0 lg:flex-col lg:overflow-visible lg:border-b-0 lg:pb-0',
       )}
     >
-      {RAIL_GROUPS.map(({ label, group }) => {
+      {railGroups.map(({ label, group }) => {
         const items = SETTINGS_SECTIONS.filter(
-          (s) => SECTION_META[s].group === group,
+          (s) => sectionMeta[s].group === group,
         );
         return (
           <div
@@ -68,7 +72,7 @@ export function SettingsRail({
               </div>
             ) : null}
             {items.map((s) => {
-              const meta = SECTION_META[s];
+              const meta = sectionMeta[s];
               const Icon = meta.icon;
               const isActive = s === active;
               return (

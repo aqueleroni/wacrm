@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useT } from "@/hooks/use-i18n";
 
 interface ConversationListProps {
   activeConversationId: string | null;
@@ -43,12 +44,12 @@ const STATUS_COLORS: Record<ConversationStatus, string> = {
 
 type InboxFilter = ConversationStatus | "all" | "unread";
 
-const FILTER_OPTIONS: { label: string; value: InboxFilter }[] = [
-  { label: "All", value: "all" },
-  { label: "Unread", value: "unread" },
-  { label: "Open", value: "open" },
-  { label: "Pending", value: "pending" },
-  { label: "Closed", value: "closed" },
+const FILTER_KEYS: { key: string; value: InboxFilter }[] = [
+  { key: "inbox.conversationList.filters.all", value: "all" },
+  { key: "inbox.conversationList.filters.unread", value: "unread" },
+  { key: "inbox.conversationList.filters.open", value: "open" },
+  { key: "inbox.conversationList.filters.pending", value: "pending" },
+  { key: "inbox.conversationList.filters.closed", value: "closed" },
 ];
 
 export function ConversationList({
@@ -58,6 +59,7 @@ export function ConversationList({
   onConversationsLoaded,
   resyncToken = 0,
 }: ConversationListProps) {
+  const t = useT();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [loading, setLoading] = useState(true);
@@ -212,7 +214,12 @@ export function ConversationList({
     [onSelect]
   );
 
-  const activeFilter = FILTER_OPTIONS.find((o) => o.value === filter);
+  const filterOptions = useMemo(
+    () => FILTER_KEYS.map((opt) => ({ label: t(opt.key), value: opt.value })),
+    [t],
+  );
+
+  const activeFilter = filterOptions.find((o) => o.value === filter);
 
   return (
     // w-full on mobile so the list occupies the whole viewport when it's
@@ -226,7 +233,7 @@ export function ConversationList({
           <Input
             value={search}
             onChange={handleSearchChange}
-            placeholder="Search conversations..."
+            placeholder={t("inbox.conversationList.search")}
             className="border-border bg-muted pl-9 text-sm text-foreground placeholder-muted-foreground focus:border-primary/50"
           />
         </div>
@@ -234,14 +241,14 @@ export function ConversationList({
         <div className="flex flex-wrap items-center gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger className="inline-flex items-center justify-center h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md hover:bg-muted">
-                {activeFilter?.label ?? "All"}
+                {activeFilter?.label ?? t("inbox.conversationList.filters.all")}
                 <ChevronDown className="h-3 w-3" />
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
               className="border-border bg-popover"
             >
-              {FILTER_OPTIONS.map((opt) => (
+              {filterOptions.map((opt) => (
                 <DropdownMenuItem
                   key={opt.value}
                   onClick={() => setFilter(opt.value)}
@@ -268,7 +275,7 @@ export function ConversationList({
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                Tags
+                {t("inbox.contactPanel.tags")}
                 {selectedTagIds.length > 0 && (
                   <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
                     {selectedTagIds.length}
@@ -310,7 +317,7 @@ export function ConversationList({
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <span className="truncate">{selectedCompany ?? "Company"}</span>
+                <span className="truncate">{selectedCompany ?? t("inbox.conversationList.company")}</span>
                 <ChevronDown className="h-3 w-3 shrink-0" />
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -326,7 +333,7 @@ export function ConversationList({
                       : "text-popover-foreground"
                   )}
                 >
-                  All companies
+                  {t("inbox.conversationList.allCompanies")}
                 </DropdownMenuItem>
                 {companies.map((co) => (
                   <DropdownMenuItem
@@ -361,7 +368,7 @@ export function ConversationList({
                     className="h-1.5 w-1.5 shrink-0 rounded-full"
                     style={{ backgroundColor: tag?.color ?? "var(--muted-foreground)" }}
                   />
-                  <span className="max-w-24 truncate">{tag?.name ?? "Tag"}</span>
+                  <span className="max-w-24 truncate">{tag?.name ?? t("inbox.conversationList.tag")}</span>
                   <X className="h-3 w-3" />
                 </button>
               );
@@ -379,7 +386,7 @@ export function ConversationList({
               onClick={clearContactFilters}
               className="px-1 text-[11px] text-muted-foreground hover:text-foreground"
             >
-              Clear all
+              {t("common.actions.clearAll")}
             </button>
           </div>
         )}
@@ -398,7 +405,7 @@ export function ConversationList({
           </div>
         ) : filtered.length === 0 ? (
           <div className="px-4 py-12 text-center">
-            <p className="text-sm text-muted-foreground">No conversations found</p>
+            <p className="text-sm text-muted-foreground">{t("inbox.conversationList.noResults")}</p>
           </div>
         ) : (
           <div className="flex flex-col">
@@ -428,8 +435,9 @@ function ConversationItem({
   isActive,
   onSelect,
 }: ConversationItemProps) {
+  const t = useT();
   const contact = conversation.contact;
-  const displayName = contact?.name || contact?.phone || "Unknown";
+  const displayName = contact?.name || contact?.phone || t("inbox.conversationList.unknown");
   const initials = displayName.charAt(0).toUpperCase();
 
   const handleClick = useCallback(() => {
@@ -473,7 +481,7 @@ function ConversationItem({
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-2">
           <p className="truncate text-xs text-muted-foreground">
-            {conversation.last_message_text || "No messages yet"}
+            {conversation.last_message_text || t("inbox.conversationList.noMessages")}
           </p>
           <div className="flex shrink-0 items-center gap-1.5">
             {conversation.unread_count > 0 && (
@@ -486,7 +494,7 @@ function ConversationItem({
                 "h-2 w-2 rounded-full",
                 STATUS_COLORS[conversation.status]
               )}
-              title={conversation.status}
+              title={t(`inbox.status.${conversation.status}`)}
             />
           </div>
         </div>

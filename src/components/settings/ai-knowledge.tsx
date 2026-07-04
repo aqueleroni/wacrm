@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Plus, Trash2, Pencil, RefreshCw, BookOpen } from 'lucide-react';
+import { useT } from '@/hooks/use-i18n';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,6 +34,7 @@ export function AiKnowledgeCard({
   canEdit: boolean;
   hasEmbeddingsKey: boolean;
 }) {
+  const t = useT();
   const [docs, setDocs] = useState<DocSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<EditTarget>(null);
@@ -48,13 +50,13 @@ export function AiKnowledgeCard({
       const res = await fetch('/api/ai/knowledge');
       const data = await res.json();
       if (res.ok) setDocs(data.documents ?? []);
-      else toast.error(data.error ?? 'Failed to load knowledge base');
+      else toast.error(data.error ?? t('settings.ai.toast.loadKnowledgeFailed'));
     } catch {
-      toast.error('Failed to load knowledge base');
+      toast.error(t('settings.ai.toast.loadKnowledgeFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!accountId || loadedAccountIdRef.current === accountId) return;
@@ -73,14 +75,14 @@ export function AiKnowledgeCard({
       const res = await fetch(`/api/ai/knowledge/${id}`);
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? 'Failed to open document');
+        toast.error(data.error ?? t('settings.ai.toast.openDocFailed'));
         return;
       }
       setEditing(id);
       setTitle(data.title ?? '');
       setContent(data.content ?? '');
     } catch {
-      toast.error('Failed to open document');
+      toast.error(t('settings.ai.toast.openDocFailed'));
     }
   };
 
@@ -92,7 +94,7 @@ export function AiKnowledgeCard({
 
   const save = async () => {
     if (!title.trim() || !content.trim()) {
-      toast.error('Title and content are required.');
+      toast.error(t('settings.ai.toast.titleContentRequired'));
       return;
     }
     setSaving(true);
@@ -110,14 +112,17 @@ export function AiKnowledgeCard({
       if (res.ok) {
         // A 200 with `warning` means saved but indexing degraded.
         if (data.warning) toast.warning(data.warning);
-        else toast.success(isNew ? 'Document added.' : 'Document updated.');
+        else
+          toast.success(
+            isNew ? t('settings.ai.toast.docAdded') : t('settings.ai.toast.docUpdated'),
+          );
         cancelEdit();
         await fetchDocs();
       } else {
-        toast.error(data.error ?? 'Failed to save.');
+        toast.error(data.error ?? t('settings.ai.toast.saveFailed'));
       }
     } catch {
-      toast.error('Failed to save.');
+      toast.error(t('settings.ai.toast.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -127,14 +132,14 @@ export function AiKnowledgeCard({
     try {
       const res = await fetch(`/api/ai/knowledge/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        toast.success('Document removed.');
+        toast.success(t('settings.ai.toast.docRemoved'));
         setDocs((d) => d.filter((x) => x.id !== id));
       } else {
         const data = await res.json();
-        toast.error(data.error ?? 'Failed to remove.');
+        toast.error(data.error ?? t('settings.ai.toast.removeFailed'));
       }
     } catch {
-      toast.error('Failed to remove.');
+      toast.error(t('settings.ai.toast.removeFailed'));
     }
   };
 
@@ -144,12 +149,12 @@ export function AiKnowledgeCard({
       const res = await fetch('/api/ai/knowledge/reindex', { method: 'POST' });
       const data = await res.json();
       if (res.ok && data.success) {
-        toast.success(`Reindexed ${data.reindexed} document(s).`);
+        toast.success(t('settings.ai.toast.reindexed', { count: data.reindexed }));
       } else {
-        toast.error(data.error ?? 'Reindex failed.');
+        toast.error(data.error ?? t('settings.ai.toast.reindexFailed'));
       }
     } catch {
-      toast.error('Reindex failed.');
+      toast.error(t('settings.ai.toast.reindexFailed'));
     } finally {
       setReindexing(false);
     }
@@ -159,28 +164,24 @@ export function AiKnowledgeCard({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <BookOpen className="h-4 w-4 text-primary" /> Knowledge base
+          <BookOpen className="h-4 w-4 text-primary" /> {t('settings.ai.knowledge.title')}
         </CardTitle>
         <CardDescription>
-          Add FAQs, policies, or product details. The assistant retrieves the
-          relevant pieces when drafting and auto-replying, so it can answer
-          instead of handing off.
+          {t('settings.ai.knowledge.description')}
           {hasEmbeddingsKey
-            ? ' Semantic search is on (embeddings key set).'
-            : ' Using keyword search — add an embeddings key above for semantic search.'}
+            ? t('settings.ai.knowledge.semanticOn')
+            : t('settings.ai.knowledge.semanticOff')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
           <div className="flex items-center py-4 text-sm text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('settings.ai.loading')}
           </div>
         ) : (
           <>
             {docs.length === 0 && editing === null && (
-              <p className="text-sm text-muted-foreground">
-                No documents yet.
-              </p>
+              <p className="text-sm text-muted-foreground">{t('settings.ai.knowledge.empty')}</p>
             )}
 
             {docs.length > 0 && (
@@ -200,7 +201,7 @@ export function AiKnowledgeCard({
                           size="sm"
                           className="h-8 w-8 p-0"
                           onClick={() => void openEdit(doc.id)}
-                          title="Edit"
+                          title={t('settings.ai.knowledge.edit')}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -209,7 +210,7 @@ export function AiKnowledgeCard({
                           size="sm"
                           className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                           onClick={() => void remove(doc.id)}
-                          title="Delete"
+                          title={t('settings.ai.knowledge.delete')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -223,33 +224,33 @@ export function AiKnowledgeCard({
             {editing !== null ? (
               <div className="space-y-3 rounded-md border border-border p-3">
                 <div className="space-y-2">
-                  <Label htmlFor="kb-title">Title</Label>
+                  <Label htmlFor="kb-title">{t('settings.ai.knowledge.titleLabel')}</Label>
                   <Input
                     id="kb-title"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Returns & refunds policy"
+                    placeholder={t('settings.ai.knowledge.titlePlaceholder')}
                     disabled={saving}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="kb-content">Content</Label>
+                  <Label htmlFor="kb-content">{t('settings.ai.knowledge.contentLabel')}</Label>
                   <Textarea
                     id="kb-content"
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
-                    placeholder="Paste the FAQ answer, policy text, or product details…"
+                    placeholder={t('settings.ai.knowledge.contentPlaceholder')}
                     rows={8}
                     disabled={saving}
                   />
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" onClick={cancelEdit} disabled={saving}>
-                    Cancel
+                    {t('settings.ai.knowledge.cancel')}
                   </Button>
                   <Button onClick={save} disabled={saving}>
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save document
+                    {t('settings.ai.knowledge.saveDocument')}
                   </Button>
                 </div>
               </div>
@@ -257,7 +258,7 @@ export function AiKnowledgeCard({
               canEdit && (
                 <div className="flex items-center justify-between">
                   <Button variant="outline" size="sm" onClick={openNew}>
-                    <Plus className="mr-2 h-4 w-4" /> Add document
+                    <Plus className="mr-2 h-4 w-4" /> {t('settings.ai.knowledge.addDocument')}
                   </Button>
                   {hasEmbeddingsKey && docs.length > 0 && (
                     <Button
@@ -265,14 +266,14 @@ export function AiKnowledgeCard({
                       size="sm"
                       onClick={reindex}
                       disabled={reindexing}
-                      title="Re-embed all documents (e.g. after adding an embeddings key)"
+                      title={t('settings.ai.knowledge.reindexTitle')}
                     >
                       {reindexing ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
                         <RefreshCw className="mr-2 h-4 w-4" />
                       )}
-                      Reindex
+                      {t('settings.ai.knowledge.reindex')}
                     </Button>
                   )}
                 </div>

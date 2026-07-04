@@ -37,6 +37,11 @@ export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
 export const DEFAULT_SECTION: SettingsSection = 'overview';
 
+export type TranslateFn = (
+  key: string,
+  params?: Record<string, string | number>,
+) => string;
+
 /** Rail grouping. `adminOnly` items are hidden for non-admins. */
 export interface SectionMeta {
   id: SettingsSection;
@@ -45,24 +50,80 @@ export interface SectionMeta {
   group: 'top' | 'account' | 'workspace';
 }
 
-export const SECTION_META: Record<SettingsSection, SectionMeta> = {
-  overview: { id: 'overview', label: 'Overview', icon: LayoutGrid, group: 'top' },
-  profile: { id: 'profile', label: 'Your profile', icon: User, group: 'account' },
-  security: { id: 'security', label: 'Login & security', icon: Shield, group: 'account' },
-  appearance: { id: 'appearance', label: 'Appearance', icon: Palette, group: 'account' },
-  whatsapp: { id: 'whatsapp', label: 'WhatsApp', icon: PlugZap, group: 'workspace' },
-  templates: { id: 'templates', label: 'Templates', icon: FileText, group: 'workspace' },
-  fields: { id: 'fields', label: 'Fields & tags', icon: Tags, group: 'workspace' },
-  deals: { id: 'deals', label: 'Deals & currency', icon: Coins, group: 'workspace' },
-  members: { id: 'members', label: 'Team members', icon: UsersRound, group: 'workspace' },
-  api: { id: 'api', label: 'API keys', icon: KeyRound, group: 'workspace' },
-};
+export function getSectionMeta(t: TranslateFn): Record<SettingsSection, SectionMeta> {
+  return {
+    overview: {
+      id: 'overview',
+      label: t('settings.sections.overview'),
+      icon: LayoutGrid,
+      group: 'top',
+    },
+    profile: {
+      id: 'profile',
+      label: t('settings.sections.profile'),
+      icon: User,
+      group: 'account',
+    },
+    security: {
+      id: 'security',
+      label: t('settings.sections.security'),
+      icon: Shield,
+      group: 'account',
+    },
+    appearance: {
+      id: 'appearance',
+      label: t('settings.sections.appearance'),
+      icon: Palette,
+      group: 'account',
+    },
+    whatsapp: {
+      id: 'whatsapp',
+      label: t('settings.sections.whatsapp'),
+      icon: PlugZap,
+      group: 'workspace',
+    },
+    templates: {
+      id: 'templates',
+      label: t('settings.sections.templates'),
+      icon: FileText,
+      group: 'workspace',
+    },
+    fields: {
+      id: 'fields',
+      label: t('settings.sections.fields'),
+      icon: Tags,
+      group: 'workspace',
+    },
+    deals: {
+      id: 'deals',
+      label: t('settings.sections.deals'),
+      icon: Coins,
+      group: 'workspace',
+    },
+    members: {
+      id: 'members',
+      label: t('settings.sections.members'),
+      icon: UsersRound,
+      group: 'workspace',
+    },
+    api: {
+      id: 'api',
+      label: t('settings.sections.api'),
+      icon: KeyRound,
+      group: 'workspace',
+    },
+  };
+}
 
-export const RAIL_GROUPS: { label: string | null; group: SectionMeta['group'] }[] = [
-  { label: null, group: 'top' },
-  { label: 'Account', group: 'account' },
-  { label: 'Workspace', group: 'workspace' },
-];
+export function getRailGroups(
+  t: TranslateFn,
+): { label: string | null; group: SectionMeta['group'] }[] {
+  return [
+    { label: null, group: 'top' },
+    { label: t('settings.rail.groups.account'), group: 'account' },
+    { label: t('settings.rail.groups.workspace'), group: 'workspace' },
+  ];
+}
 
 function isSection(value: string | null): value is SettingsSection {
   return !!value && (SETTINGS_SECTIONS as readonly string[]).includes(value);

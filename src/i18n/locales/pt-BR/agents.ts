@@ -1,0 +1,52 @@
+export const agents = {
+  title: 'Agentes de IA',
+  subtitle: 'Seu agente de IA com chave própria — configure, teste no playground e só então deixe responder clientes na caixa de entrada.',
+  tabs: {
+    playground: 'Playground',
+    setup: 'Configuração',
+  },
+  playground: {
+    title: 'Playground',
+    subtitle: 'teste respostas como se fosse um cliente',
+    description: 'Teste como seu agente de IA responde antes de ativá-lo na caixa de entrada.',
+    placeholder: 'Digite uma mensagem de cliente…',
+    send: 'Enviar',
+    reset: 'Reiniciar',
+    empty: 'Envie uma mensagem para ver como seu agente responderia.',
+    emptyHint:
+      'Usa sua base de conhecimento e se comporta exatamente como o bot de resposta automática — incluindo transferência.',
+    notSetupLink: 'Ainda não configurou? Ir para Configuração',
+    handoff: 'Transferiria para um humano aqui',
+    notConfigured: {
+      title: 'IA ainda não configurada',
+      description: 'Configure primeiro o provedor de IA e a base de conhecimento.',
+      goToSetup: 'Ir para Configuração',
+    },
+    thinking: 'Pensando…',
+    error: 'Algo deu errado. Verifique a configuração de IA.',
+    toast: {
+      notConfigured: 'Nenhum agente configurado ainda — finalize a Configuração primeiro.',
+      noReply: 'Não foi possível obter uma resposta.',
+      unreachable: 'Não foi possível contatar o agente.',
+    },
+  },
+  setup: {
+    title: 'Configuração de IA',
+    description: 'Conecte seu provedor de IA e personalize como o agente responde.',
+    provider: 'Provedor',
+    apiKey: 'Chave de API',
+    model: 'Modelo',
+    systemPrompt: 'Prompt do sistema',
+    knowledge: 'Base de conhecimento',
+    enabled: 'Ativar IA na caixa de entrada',
+    save: 'Salvar configuração',
+    saved: 'Configuração de IA salva',
+    saveFailed: 'Falha ao salvar configuração de IA',
+  },
+  knowledge: {
+    title: 'Base de conhecimento',
+    description: 'Envie documentos ou adicione textos que a IA pode consultar ao responder.',
+    add: 'Adicionar conhecimento',
+    empty: 'Nenhuma entrada de conhecimento ainda',
+  },
+} as const;

@@ -29,6 +29,10 @@ import type {
   SendMessageNodeConfig,
   StartNodeConfig,
 } from "./types";
+import type { Locale } from "@/i18n/config";
+import { flowTemplateContent as flowTemplateContentEn } from "@/i18n/locales/en/flow-template-content";
+import { flowTemplateContent as flowTemplateContentPtBR } from "@/i18n/locales/pt-BR/flow-template-content";
+import type { FlowTemplateContent, FlowTemplateNodeContent } from "@/i18n/locales/en/flow-template-content";
 
 export type FlowTemplateNodeType =
   | "start"
@@ -289,16 +293,104 @@ const LEAD_CAPTURE: FlowTemplate = {
 // Registry
 // ============================================================
 
+const TEMPLATE_CONTENT: Record<Locale, Record<string, FlowTemplateContent>> = {
+  en: flowTemplateContentEn,
+  "pt-BR": flowTemplateContentPtBR,
+};
+
+function applyNodeContent(
+  config: FlowTemplateNode["config"],
+  patch: FlowTemplateNodeContent,
+): FlowTemplateNode["config"] {
+  const next = { ...config } as Record<string, unknown>;
+
+  if (patch.text !== undefined) next.text = patch.text;
+  if (patch.footer_text !== undefined) next.footer_text = patch.footer_text;
+  if (patch.button_label !== undefined) next.button_label = patch.button_label;
+  if (patch.prompt_text !== undefined) next.prompt_text = patch.prompt_text;
+  if (patch.note !== undefined) next.note = patch.note;
+
+  if (patch.buttonTitles && Array.isArray(next.buttons)) {
+    next.buttons = (next.buttons as Array<{ reply_id: string; title: string }>).map(
+      (b) => ({
+        ...b,
+        title: patch.buttonTitles![b.reply_id] ?? b.title,
+      }),
+    );
+  }
+
+  if (patch.sections && Array.isArray(next.sections)) {
+    next.sections = (
+      next.sections as Array<{
+        title: string;
+        rows: Array<{ reply_id: string; title: string; next_node_key: string }>;
+      }>
+    ).map((section, i) => {
+      const sectionPatch = patch.sections![i];
+      if (!sectionPatch) return section;
+      return {
+        ...section,
+        title: sectionPatch.title ?? section.title,
+        rows: section.rows.map((row) => ({
+          ...row,
+          title: sectionPatch.rowTitles?.[row.reply_id] ?? row.title,
+        })),
+      };
+    });
+  }
+
+  return next as FlowTemplateNode["config"];
+}
+
+function localizeTemplate(template: FlowTemplate, locale: Locale): FlowTemplate {
+  const content = TEMPLATE_CONTENT[locale]?.[template.slug];
+  if (!content) return template;
+
+  return {
+    ...template,
+    name: content.name ?? template.name,
+    description: content.description ?? template.description,
+    nodes: template.nodes.map((node) => {
+      const nodeContent = content.nodes[node.node_key];
+      if (!nodeContent) return node;
+      return {
+        ...node,
+        config: applyNodeContent(node.config, nodeContent),
+      };
+    }),
+  };
+}
+
 const TEMPLATES: Record<string, FlowTemplate> = {
   welcome_menu: WELCOME_MENU,
   faq_bot: FAQ_BOT,
   lead_capture: LEAD_CAPTURE,
 };
 
-export function getFlowTemplate(slug: string): FlowTemplate | null {
-  return TEMPLATES[slug] ?? null;
+export function getFlowTemplate(slug: string, locale: Locale = "en"): FlowTemplate | null {
+  const base = TEMPLATES[slug] ?? null;
+  if (!base) return null;
+  return localizeTemplate(base, locale);
 }
 
 export function listFlowTemplates(): FlowTemplate[] {
   return Object.values(TEMPLATES);
+}
+
+export type TemplateTranslateFn = (
+  key: string,
+  params?: Record<string, string | number>,
+) => string;
+
+/** Localized template name for UI galleries. */
+export function getTemplateDisplayName(slug: string, t: TemplateTranslateFn): string {
+  return t(`flows.templates.${slug}.name`);
+}
+
+/** Localized template description for UI galleries. */
+export function getTemplateDisplayDescription(
+  slug: string,
+  t: TemplateTranslateFn,
+): string {
+  return t(`flows.templates.${slug}.description`);
 }

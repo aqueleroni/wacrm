@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/hooks/use-i18n";
 import type { Message } from "@/types";
 
 interface ReplyQuoteProps {
@@ -26,6 +27,7 @@ export function ReplyQuote({
   onDismiss,
   onPrimary = false,
 }: ReplyQuoteProps) {
+  const t = useT();
   const isChip = !!onDismiss;
   return (
     <div
@@ -63,7 +65,7 @@ export function ReplyQuote({
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="Cancel reply"
+          aria-label={t("inbox.messages.cancelReply")}
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <X className="h-3.5 w-3.5" />
@@ -74,22 +76,25 @@ export function ReplyQuote({
 }
 
 /** Build the one-line preview text shown inside a reply quote. */
-export function buildReplyPreview(message: Message): string {
+export function buildReplyPreview(
+  message: Message,
+  t: (key: string) => string,
+): string {
   if (message.content_text) return message.content_text;
   switch (message.content_type) {
     case "image":
-      return "[Image]";
+      return t("inbox.messages.preview.image");
     case "video":
-      return "[Video]";
+      return t("inbox.messages.preview.video");
     case "audio":
-      return "[Audio]";
+      return t("inbox.messages.preview.audio");
     case "document":
-      return "[Document]";
+      return t("inbox.messages.preview.document");
     case "location":
-      return "[Location]";
+      return t("inbox.messages.preview.location");
     case "template":
-      return "[Template]";
+      return t("inbox.messages.preview.template");
     default:
-      return "[Message]";
+      return t("inbox.messages.preview.message");
   }
 }

@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/client"
+import { useT } from "@/hooks/use-i18n"
 import type {
   Automation,
   AutomationLog,
@@ -26,6 +27,7 @@ export default function AutomationLogsPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  const t = useT()
   const { id } = use(params)
   const router = useRouter()
 
@@ -56,18 +58,18 @@ export default function AutomationLogsPage({
         setAutomation(autRes.data as Automation | null)
         setLogs((logRes.data ?? []) as AutomationLog[])
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load logs")
+        setError(err instanceof Error ? err.message : t("automations.logs.loadFailed"))
       }
     }
     load()
-  }, [id])
+  }, [id, t])
 
   if (error) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-3">
         <p className="text-sm text-red-400">{error}</p>
         <Button variant="outline" onClick={() => router.push("/automations")}>
-          Back
+          {t("common.actions.back")}
         </Button>
       </div>
     )
@@ -88,27 +90,33 @@ export default function AutomationLogsPage({
           type="button"
           onClick={() => router.push("/automations")}
           className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          aria-label="Back"
+          aria-label={t("common.actions.back")}
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div>
           <h1 className="text-2xl font-bold text-foreground">{automation.name}</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">Execution logs</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t("automations.logs.title")}</p>
         </div>
       </div>
 
       {logs.length === 0 ? (
         <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/40">
-          <p className="text-sm text-foreground">No executions yet</p>
+          <p className="text-sm text-foreground">{t("automations.logs.emptyExecutions")}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Trigger this automation to see runs here.
+            {t("automations.logs.emptyExecutionsHint")}
           </p>
         </div>
       ) : (
         <ul className="space-y-2">
           {logs.map((log) => {
             const isOpen = openLogId === log.id
+            const stepCount = log.steps_executed?.length ?? 0
+            const stepLabel =
+              stepCount === 1
+                ? t("automations.logs.steps", { count: stepCount })
+                : t("automations.logs.stepsPlural", { count: stepCount })
+
             return (
               <li
                 key={log.id}
@@ -127,15 +135,16 @@ export default function AutomationLogsPage({
                   <StatusBadge status={log.status} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium text-foreground">
-                      {log.contact?.name ?? log.contact?.phone ?? "Unknown contact"}
+                      {log.contact?.name ??
+                        log.contact?.phone ??
+                        t("automations.logs.unknownContact")}
                     </div>
                     <div className="truncate text-xs text-muted-foreground">
-                      {log.trigger_event} · {log.steps_executed?.length ?? 0} step
-                      {log.steps_executed?.length === 1 ? "" : "s"}
+                      {log.trigger_event} · {stepLabel}
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {formatRelative(log.created_at)}
+                    {formatRelative(t, log.created_at)}
                   </div>
                 </button>
                 {isOpen && (
@@ -150,7 +159,9 @@ export default function AutomationLogsPage({
                         <StepRow key={i} result={r} />
                       ))}
                       {(log.steps_executed ?? []).length === 0 && (
-                        <li className="text-xs text-muted-foreground">No steps recorded.</li>
+                        <li className="text-xs text-muted-foreground">
+                          {t("automations.logs.noSteps")}
+                        </li>
                       )}
                     </ul>
                   </div>
@@ -165,12 +176,20 @@ export default function AutomationLogsPage({
 }
 
 function StatusBadge({ status }: { status: AutomationLog["status"] }) {
+  const t = useT()
   const classes =
     status === "success"
       ? "border-primary/30 bg-primary/10 text-primary"
       : status === "partial"
       ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
       : "border-red-500/30 bg-red-500/10 text-red-300"
+  const label =
+    status === "success"
+      ? t("automations.logs.status.success")
+      : status === "partial"
+      ? t("automations.logs.status.partial")
+      : t("automations.logs.status.failed")
+
   return (
     <span
       className={cn(
@@ -178,7 +197,7 @@ function StatusBadge({ status }: { status: AutomationLog["status"] }) {
         classes,
       )}
     >
-      {status}
+      {label}
     </span>
   )
 }

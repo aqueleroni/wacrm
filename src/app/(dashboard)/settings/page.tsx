@@ -16,12 +16,14 @@ import { FieldsAndTagsPanel } from '@/components/settings/fields-and-tags-panel'
 import { DealsSettings } from '@/components/settings/deals-settings';
 import { MembersTab } from '@/components/settings/members-tab';
 import { ApiKeysSettings } from '@/components/settings/api-keys-settings';
+import { useT } from '@/hooks/use-i18n';
 import {
   resolveSection,
   type SettingsSection,
 } from '@/components/settings/settings-sections';
 
 export default function SettingsPage() {
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { defaultCurrency } = useAuth();
@@ -67,11 +69,10 @@ export default function SettingsPage() {
     <div>
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Settings
+          {t('settings.title')}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Everything in one place — your account and your workspace. Pick a
-          section to manage it.
+          {t('settings.subtitle')}
         </p>
       </div>
 

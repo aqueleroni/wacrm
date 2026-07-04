@@ -7,20 +7,8 @@
  * sees issues live) and server (so a broken POST/PUT can't slip in
  * via direct API call).
  *
- * Three rule categories:
- *   1. Trigger sanity — keyword flows need keywords, etc.
- *   2. Graph integrity — entry node exists, all next_node_key
- *      references resolve, no unreachable nodes, non-terminal nodes
- *      have an outgoing edge.
- *   3. Meta API limits — button title ≤20 chars, ≤3 buttons per
- *      send_buttons, ≤10 list rows total, ≤24 chars per list row
- *      title. Mirrors the runtime checks inside
- *      `src/lib/whatsapp/meta-api.ts` so save-time and send-time
- *      can never disagree.
- *
- * Issues carry enough field info that the builder can highlight the
- * exact input that triggered them. Node-scoped issues include
- * `node_key`; trigger-scoped use `scope: 'trigger'`.
+ * Issues carry `messageKey` + optional `messageParams` for i18n.
+ * UI code translates via `translateValidationIssues(issues, t)`.
  */
 
 import { INTERACTIVE_LIMITS } from "@/lib/whatsapp/meta-api";
@@ -32,7 +20,27 @@ export interface ValidationIssue {
   node_key?: string;
   /** Dotted path to the bad field, e.g. 'buttons.0.title'. */
   field?: string;
+  messageKey: string;
+  messageParams?: Record<string, string | number>;
+}
+
+export type TranslateFn = (
+  key: string,
+  params?: Record<string, string | number>,
+) => string;
+
+export interface TranslatedValidationIssue extends ValidationIssue {
   message: string;
+}
+
+export function translateValidationIssues(
+  issues: ValidationIssue[],
+  t: TranslateFn,
+): TranslatedValidationIssue[] {
+  return issues.map((issue) => ({
+    ...issue,
+    message: t(issue.messageKey, issue.messageParams),
+  }));
 }
 
 interface FlowInput {
@@ -54,26 +62,23 @@ export function validateFlowForActivation(
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
-  // ---- name ----
   if (!flow.name || !flow.name.trim()) {
     issues.push({
       severity: "error",
       scope: "flow",
       field: "name",
-      message: "Flow name is required.",
+      messageKey: "flows.validation.flow.nameRequired",
     });
   }
 
-  // ---- trigger ----
   issues.push(...validateTrigger(flow.trigger_type, flow.trigger_config));
 
-  // ---- graph integrity ----
   if (!flow.entry_node_id) {
     issues.push({
       severity: "error",
       scope: "flow",
       field: "entry_node_id",
-      message: "Pick an entry node before activating.",
+      messageKey: "flows.validation.flow.entryNodeRequired",
     });
   }
 
@@ -82,7 +87,7 @@ export function validateFlowForActivation(
     issues.push({
       severity: "error",
       scope: "flow",
-      message: "A flow needs at least one node before activation.",
+      messageKey: "flows.validation.flow.noNodes",
     });
   }
 
@@ -91,12 +96,11 @@ export function validateFlowForActivation(
       severity: "error",
       scope: "flow",
       field: "entry_node_id",
-      message: `Entry node "${flow.entry_node_id}" doesn't exist.`,
+      messageKey: "flows.validation.flow.entryNodeNotFound",
+      messageParams: { key: flow.entry_node_id },
     });
   }
 
-  // Duplicate node_key (the DB UNIQUE constraint catches this on save
-  // too, but surfacing it client-side gives a friendlier error path).
   const seen = new Set<string>();
   for (const n of nodes) {
     if (seen.has(n.node_key)) {
@@ -104,20 +108,17 @@ export function validateFlowForActivation(
         severity: "error",
         scope: "node",
         node_key: n.node_key,
-        message: `Duplicate node_key "${n.node_key}".`,
+        messageKey: "flows.validation.flow.duplicateNodeKey",
+        messageParams: { key: n.node_key },
       });
     }
     seen.add(n.node_key);
   }
 
-  // Per-node rules (Meta limits + dead-end + edge resolution).
   for (const n of nodes) {
     issues.push(...validateNode(n, keys));
   }
 
-  // Reachability — every non-orphan node must be reachable from the
-  // entry. Done after per-node validation so we don't double-report
-  // when a node has bad config AND is unreachable.
   if (flow.entry_node_id && keys.has(flow.entry_node_id)) {
     const reached = reachableFromEntry(flow.entry_node_id, nodes);
     for (const n of nodes) {
@@ -126,7 +127,8 @@ export function validateFlowForActivation(
           severity: "warning",
           scope: "node",
           node_key: n.node_key,
-          message: `Node "${n.node_key}" is unreachable from the entry node.`,
+          messageKey: "flows.validation.flow.unreachableNode",
+          messageParams: { key: n.node_key },
         });
       }
     }
@@ -134,10 +136,6 @@ export function validateFlowForActivation(
 
   return issues;
 }
-
-// ============================================================
-// Trigger
-// ============================================================
 
 function validateTrigger(
   trigger_type: FlowInput["trigger_type"],
@@ -154,12 +152,9 @@ function validateTrigger(
         severity: "error",
         scope: "trigger",
         field: "trigger_config.keywords",
-        message: "Keyword triggers need at least one keyword.",
+        messageKey: "flows.validation.trigger.keywordsRequired",
       });
     } else {
-      // Empty / whitespace-only keywords are silent no-ops at match
-      // time — call them out so the user doesn't think they configured
-      // a keyword that never fires.
       const blanks = keywords.filter(
         (k) => typeof k !== "string" || !k.trim(),
       ).length;
@@ -168,19 +163,18 @@ function validateTrigger(
           severity: "warning",
           scope: "trigger",
           field: "trigger_config.keywords",
-          message: `${blanks} keyword${blanks === 1 ? " is" : "s are"} blank — they won't match anything.`,
+          messageKey:
+            blanks === 1
+              ? "flows.validation.trigger.blankKeywords"
+              : "flows.validation.trigger.blankKeywords_plural",
+          messageParams: { count: blanks },
         });
       }
     }
   }
-  // first_inbound_message / manual have no config; nothing to validate.
 
   return issues;
 }
-
-// ============================================================
-// Per-node
-// ============================================================
 
 function validateNode(
   node: NodeInput,
@@ -197,7 +191,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "next_node_key",
-          message: "Start node must point to a next node.",
+          messageKey: "flows.validation.node.startNextRequired",
         });
       } else if (!knownKeys.has(cfg.next_node_key)) {
         issues.push({
@@ -205,7 +199,8 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "next_node_key",
-          message: `Start points to non-existent node "${cfg.next_node_key}".`,
+          messageKey: "flows.validation.node.startNextNotFound",
+          messageParams: { key: cfg.next_node_key },
         });
       }
       break;
@@ -219,7 +214,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "text",
-          message: "Send-message node needs a text body.",
+          messageKey: "flows.validation.node.sendMessageTextRequired",
         });
       }
       if (!cfg.next_node_key) {
@@ -228,7 +223,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "next_node_key",
-          message: "Send-message node must point to a next node.",
+          messageKey: "flows.validation.node.sendMessageNextRequired",
         });
       } else if (!knownKeys.has(cfg.next_node_key)) {
         issues.push({
@@ -236,7 +231,8 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "next_node_key",
-          message: `Send-message points to non-existent node "${cfg.next_node_key}".`,
+          messageKey: "flows.validation.node.sendMessageNextNotFound",
+          messageParams: { key: cfg.next_node_key },
         });
       }
       break;
@@ -258,7 +254,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "media_type",
-          message: "Send-media node needs a media type (image, video, or document).",
+          messageKey: "flows.validation.node.sendMediaTypeRequired",
         });
       }
       if (!cfg.media_url?.trim()) {
@@ -267,18 +263,17 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "media_url",
-          message: "Send-media node needs a file (upload one before activating).",
+          messageKey: "flows.validation.node.sendMediaFileRequired",
         });
       }
-      // Caption cap mirrors Meta's interactive body cap; documented as a
-      // hard limit in the WhatsApp Cloud API media-message reference.
       if (cfg.caption && cfg.caption.length > INTERACTIVE_LIMITS.bodyMaxLength) {
         issues.push({
           severity: "error",
           scope: "node",
           node_key: node.node_key,
           field: "caption",
-          message: `Caption exceeds ${INTERACTIVE_LIMITS.bodyMaxLength} chars (WhatsApp limit).`,
+          messageKey: "flows.validation.node.sendMediaCaptionTooLong",
+          messageParams: { max: INTERACTIVE_LIMITS.bodyMaxLength },
         });
       }
       if (!cfg.next_node_key) {
@@ -287,7 +282,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "next_node_key",
-          message: "Send-media node must point to a next node.",
+          messageKey: "flows.validation.node.sendMediaNextRequired",
         });
       } else if (!knownKeys.has(cfg.next_node_key)) {
         issues.push({
@@ -295,7 +290,8 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "next_node_key",
-          message: `Send-media points to non-existent node "${cfg.next_node_key}".`,
+          messageKey: "flows.validation.node.sendMediaNextNotFound",
+          messageParams: { key: cfg.next_node_key },
         });
       }
       break;
@@ -316,7 +312,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "text",
-          message: "Send-buttons node needs a text body.",
+          messageKey: "flows.validation.node.sendButtonsTextRequired",
         });
       }
       const btns = cfg.buttons ?? [];
@@ -326,7 +322,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "buttons",
-          message: "Send-buttons needs at least one button.",
+          messageKey: "flows.validation.node.sendButtonsMinButtons",
         });
       }
       if (btns.length > INTERACTIVE_LIMITS.maxButtons) {
@@ -335,19 +331,22 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "buttons",
-          message: `WhatsApp allows at most ${INTERACTIVE_LIMITS.maxButtons} buttons per message.`,
+          messageKey: "flows.validation.node.sendButtonsMaxButtons",
+          messageParams: { max: INTERACTIVE_LIMITS.maxButtons },
         });
       }
       const seenIds = new Set<string>();
       btns.forEach((b, i) => {
         const field = `buttons.${i}`;
+        const index = i + 1;
         if (!b.reply_id?.trim()) {
           issues.push({
             severity: "error",
             scope: "node",
             node_key: node.node_key,
             field: `${field}.reply_id`,
-            message: `Button ${i + 1} needs a reply id.`,
+            messageKey: "flows.validation.node.buttonReplyIdRequired",
+            messageParams: { index },
           });
         } else if (seenIds.has(b.reply_id)) {
           issues.push({
@@ -355,7 +354,8 @@ function validateNode(
             scope: "node",
             node_key: node.node_key,
             field: `${field}.reply_id`,
-            message: `Duplicate button reply id "${b.reply_id}".`,
+            messageKey: "flows.validation.node.buttonDuplicateReplyId",
+            messageParams: { id: b.reply_id },
           });
         }
         if (b.reply_id) seenIds.add(b.reply_id);
@@ -366,7 +366,8 @@ function validateNode(
             scope: "node",
             node_key: node.node_key,
             field: `${field}.title`,
-            message: `Button ${i + 1} needs a title.`,
+            messageKey: "flows.validation.node.buttonTitleRequired",
+            messageParams: { index },
           });
         } else if (b.title.length > INTERACTIVE_LIMITS.buttonTitleMaxLength) {
           issues.push({
@@ -374,7 +375,11 @@ function validateNode(
             scope: "node",
             node_key: node.node_key,
             field: `${field}.title`,
-            message: `Button ${i + 1} title is over ${INTERACTIVE_LIMITS.buttonTitleMaxLength} chars (WhatsApp limit).`,
+            messageKey: "flows.validation.node.buttonTitleTooLong",
+            messageParams: {
+              index,
+              max: INTERACTIVE_LIMITS.buttonTitleMaxLength,
+            },
           });
         }
 
@@ -384,7 +389,8 @@ function validateNode(
             scope: "node",
             node_key: node.node_key,
             field: `${field}.next_node_key`,
-            message: `Button ${i + 1} needs a next node.`,
+            messageKey: "flows.validation.node.buttonNextRequired",
+            messageParams: { index },
           });
         } else if (!knownKeys.has(b.next_node_key)) {
           issues.push({
@@ -392,7 +398,8 @@ function validateNode(
             scope: "node",
             node_key: node.node_key,
             field: `${field}.next_node_key`,
-            message: `Button ${i + 1} points to non-existent node "${b.next_node_key}".`,
+            messageKey: "flows.validation.node.buttonNextNotFound",
+            messageParams: { index, key: b.next_node_key },
           });
         }
       });
@@ -419,7 +426,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "text",
-          message: "Send-list node needs a text body.",
+          messageKey: "flows.validation.node.sendListTextRequired",
         });
       }
       if (!cfg.button_label?.trim()) {
@@ -428,7 +435,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "button_label",
-          message: "Send-list needs a button label (the tap-to-expand text).",
+          messageKey: "flows.validation.node.sendListButtonLabelRequired",
         });
       }
       const sections = cfg.sections ?? [];
@@ -442,7 +449,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "sections",
-          message: "Send-list needs at least one row.",
+          messageKey: "flows.validation.node.sendListMinRows",
         });
       }
       if (totalRows > INTERACTIVE_LIMITS.maxListRowsTotal) {
@@ -451,7 +458,8 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "sections",
-          message: `Send-list allows at most ${INTERACTIVE_LIMITS.maxListRowsTotal} rows total across sections.`,
+          messageKey: "flows.validation.node.sendListMaxRows",
+          messageParams: { max: INTERACTIVE_LIMITS.maxListRowsTotal },
         });
       }
       const seenIds = new Set<string>();
@@ -459,13 +467,16 @@ function validateNode(
         const rows = section.rows ?? [];
         rows.forEach((row, ri) => {
           const field = `sections.${si}.rows.${ri}`;
+          const rowNum = ri + 1;
+          const sectionNum = si + 1;
           if (!row.reply_id?.trim()) {
             issues.push({
               severity: "error",
               scope: "node",
               node_key: node.node_key,
               field: `${field}.reply_id`,
-              message: `Row ${ri + 1} in section ${si + 1} needs a reply id.`,
+              messageKey: "flows.validation.node.listRowReplyIdRequired",
+              messageParams: { row: rowNum, section: sectionNum },
             });
           } else if (seenIds.has(row.reply_id)) {
             issues.push({
@@ -473,7 +484,8 @@ function validateNode(
               scope: "node",
               node_key: node.node_key,
               field: `${field}.reply_id`,
-              message: `Duplicate list row id "${row.reply_id}".`,
+              messageKey: "flows.validation.node.listDuplicateReplyId",
+              messageParams: { id: row.reply_id },
             });
           }
           if (row.reply_id) seenIds.add(row.reply_id);
@@ -484,7 +496,8 @@ function validateNode(
               scope: "node",
               node_key: node.node_key,
               field: `${field}.title`,
-              message: `Row ${ri + 1} needs a title.`,
+              messageKey: "flows.validation.node.listRowTitleRequired",
+              messageParams: { row: rowNum },
             });
           } else if (
             row.title.length > INTERACTIVE_LIMITS.listRowTitleMaxLength
@@ -494,7 +507,11 @@ function validateNode(
               scope: "node",
               node_key: node.node_key,
               field: `${field}.title`,
-              message: `Row ${ri + 1} title exceeds ${INTERACTIVE_LIMITS.listRowTitleMaxLength} chars.`,
+              messageKey: "flows.validation.node.listRowTitleTooLong",
+              messageParams: {
+                row: rowNum,
+                max: INTERACTIVE_LIMITS.listRowTitleMaxLength,
+              },
             });
           }
           if (
@@ -507,7 +524,11 @@ function validateNode(
               scope: "node",
               node_key: node.node_key,
               field: `${field}.description`,
-              message: `Row ${ri + 1} description exceeds ${INTERACTIVE_LIMITS.listRowDescriptionMaxLength} chars.`,
+              messageKey: "flows.validation.node.listRowDescriptionTooLong",
+              messageParams: {
+                row: rowNum,
+                max: INTERACTIVE_LIMITS.listRowDescriptionMaxLength,
+              },
             });
           }
           if (!row.next_node_key) {
@@ -516,7 +537,8 @@ function validateNode(
               scope: "node",
               node_key: node.node_key,
               field: `${field}.next_node_key`,
-              message: `Row ${ri + 1} needs a next node.`,
+              messageKey: "flows.validation.node.listRowNextRequired",
+              messageParams: { row: rowNum },
             });
           } else if (!knownKeys.has(row.next_node_key)) {
             issues.push({
@@ -524,7 +546,8 @@ function validateNode(
               scope: "node",
               node_key: node.node_key,
               field: `${field}.next_node_key`,
-              message: `Row ${ri + 1} points to non-existent node "${row.next_node_key}".`,
+              messageKey: "flows.validation.node.listRowNextNotFound",
+              messageParams: { row: rowNum, key: row.next_node_key },
             });
           }
         });
@@ -544,7 +567,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "prompt_text",
-          message: "Collect-input needs a prompt to send the customer.",
+          messageKey: "flows.validation.node.collectInputPromptRequired",
         });
       }
       if (!cfg.var_key?.trim()) {
@@ -553,7 +576,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "var_key",
-          message: "Collect-input needs a var_key to store the answer under.",
+          messageKey: "flows.validation.node.collectInputVarKeyRequired",
         });
       } else if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(cfg.var_key)) {
         issues.push({
@@ -561,7 +584,8 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "var_key",
-          message: `var_key "${cfg.var_key}" must be alphanumeric+underscore and start with a letter or underscore.`,
+          messageKey: "flows.validation.node.collectInputVarKeyInvalid",
+          messageParams: { key: cfg.var_key },
         });
       }
       if (!cfg.next_node_key) {
@@ -570,7 +594,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "next_node_key",
-          message: "Collect-input must point to a next node.",
+          messageKey: "flows.validation.node.collectInputNextRequired",
         });
       } else if (!knownKeys.has(cfg.next_node_key)) {
         issues.push({
@@ -578,7 +602,8 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "next_node_key",
-          message: `Collect-input points to non-existent node "${cfg.next_node_key}".`,
+          messageKey: "flows.validation.node.collectInputNextNotFound",
+          messageParams: { key: cfg.next_node_key },
         });
       }
       break;
@@ -599,7 +624,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "subject",
-          message: "Condition needs a subject (var / tag / contact_field).",
+          messageKey: "flows.validation.node.conditionSubjectRequired",
         });
       }
       if (!cfg.subject_key?.trim()) {
@@ -608,7 +633,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "subject_key",
-          message: "Condition needs a subject_key (var name, tag id, or field name).",
+          messageKey: "flows.validation.node.conditionSubjectKeyRequired",
         });
       }
       if (
@@ -620,7 +645,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "operator",
-          message: "Condition needs an operator.",
+          messageKey: "flows.validation.node.conditionOperatorRequired",
         });
       } else if (
         (cfg.operator === "equals" || cfg.operator === "contains") &&
@@ -631,18 +656,21 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "value",
-          message: `Operator "${cfg.operator}" usually expects a comparison value — empty value will only match empty subjects.`,
+          messageKey: "flows.validation.node.conditionValueEmpty",
+          messageParams: { operator: cfg.operator },
         });
       }
       for (const branch of ["true_next", "false_next"] as const) {
         const key = cfg[branch];
+        const branchLabel = branch === "true_next" ? "true" : "false";
         if (!key) {
           issues.push({
             severity: "error",
             scope: "node",
             node_key: node.node_key,
             field: branch,
-            message: `Condition needs a node for the "${branch === "true_next" ? "true" : "false"}" branch.`,
+            messageKey: "flows.validation.node.conditionBranchRequired",
+            messageParams: { branch: branchLabel },
           });
         } else if (!knownKeys.has(key)) {
           issues.push({
@@ -650,7 +678,8 @@ function validateNode(
             scope: "node",
             node_key: node.node_key,
             field: branch,
-            message: `Condition's "${branch}" points to non-existent node "${key}".`,
+            messageKey: "flows.validation.node.conditionBranchNotFound",
+            messageParams: { branch: branchLabel, key },
           });
         }
       }
@@ -669,7 +698,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "mode",
-          message: "Set-tag needs a mode (add or remove).",
+          messageKey: "flows.validation.node.setTagModeRequired",
         });
       }
       if (!cfg.tag_id) {
@@ -678,7 +707,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "tag_id",
-          message: "Set-tag needs a tag to apply.",
+          messageKey: "flows.validation.node.setTagTagRequired",
         });
       }
       if (!cfg.next_node_key) {
@@ -687,7 +716,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "next_node_key",
-          message: "Set-tag must point to a next node.",
+          messageKey: "flows.validation.node.setTagNextRequired",
         });
       } else if (!knownKeys.has(cfg.next_node_key)) {
         issues.push({
@@ -695,7 +724,8 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "next_node_key",
-          message: `Set-tag points to non-existent node "${cfg.next_node_key}".`,
+          messageKey: "flows.validation.node.setTagNextNotFound",
+          messageParams: { key: cfg.next_node_key },
         });
       }
       break;
@@ -703,8 +733,6 @@ function validateNode(
 
     case "handoff":
     case "end":
-      // Terminal nodes have no outgoing edges; nothing to validate
-      // beyond their existence.
       break;
 
     default:
@@ -712,16 +740,13 @@ function validateNode(
         severity: "error",
         scope: "node",
         node_key: node.node_key,
-        message: `Unknown node type "${node.node_type}".`,
+        messageKey: "flows.validation.node.unknownType",
+        messageParams: { type: node.node_type },
       });
   }
 
   return issues;
 }
-
-// ============================================================
-// Reachability — BFS from the entry, follow outgoing edges per node
-// ============================================================
 
 export function reachableFromEntry(
   entryKey: string,

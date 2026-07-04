@@ -79,14 +79,79 @@ export interface BuilderNode {
 
 export type NodeCategory = 'messaging' | 'logic' | 'flow';
 
-/** Category labels + the order they render in the add-step menu. */
-export const NODE_CATEGORIES: { id: NodeCategory; label: string }[] = [
-  { id: 'messaging', label: 'Messaging' },
-  { id: 'logic', label: 'Logic & data' },
-  { id: 'flow', label: 'Flow control' },
-];
+export type TranslateFn = (
+  key: string,
+  params?: Record<string, string | number>,
+) => string;
 
-export const NODE_META: Record<
+const NODE_META_STATIC: Record<
+  NodeType,
+  {
+    icon: typeof Workflow;
+    color: string;
+    category: NodeCategory;
+  }
+> = {
+  start: { icon: PlayCircle, color: 'text-emerald-400', category: 'flow' },
+  send_message: {
+    icon: MessageCircle,
+    color: 'text-sky-400',
+    category: 'messaging',
+  },
+  send_buttons: {
+    icon: ListChecks,
+    color: 'text-primary',
+    category: 'messaging',
+  },
+  send_list: {
+    icon: ListPlus,
+    color: 'text-indigo-400',
+    category: 'messaging',
+  },
+  send_media: {
+    icon: Paperclip,
+    color: 'text-cyan-400',
+    category: 'messaging',
+  },
+  collect_input: {
+    icon: Inbox,
+    color: 'text-teal-400',
+    category: 'logic',
+  },
+  condition: {
+    icon: GitFork,
+    color: 'text-fuchsia-400',
+    category: 'logic',
+  },
+  set_tag: { icon: Tag, color: 'text-pink-400', category: 'logic' },
+  handoff: {
+    icon: UserPlus,
+    color: 'text-amber-400',
+    category: 'flow',
+  },
+  end: {
+    icon: Flag,
+    color: 'text-muted-foreground',
+    category: 'flow',
+  },
+};
+
+export const nodeStaticMeta = NODE_META_STATIC;
+
+/** All node types in legend / add-menu order. */
+export const ALL_NODE_TYPES = Object.keys(NODE_META_STATIC) as NodeType[];
+
+export function getNodeCategories(
+  t: TranslateFn,
+): { id: NodeCategory; label: string }[] {
+  return [
+    { id: 'messaging', label: t('flows.categories.messaging') },
+    { id: 'logic', label: t('flows.categories.logic') },
+    { id: 'flow', label: t('flows.categories.flow') },
+  ];
+}
+
+export function getNodeMeta(t: TranslateFn): Record<
   NodeType,
   {
     label: string;
@@ -95,78 +160,29 @@ export const NODE_META: Record<
     blurb: string;
     category: NodeCategory;
   }
-> = {
-  start: {
-    label: 'Start',
-    icon: PlayCircle,
-    color: 'text-emerald-400',
-    blurb: 'Entry point of the flow',
-    category: 'flow',
-  },
-  send_message: {
-    label: 'Send message',
-    icon: MessageCircle,
-    color: 'text-sky-400',
-    blurb: 'Sends a WhatsApp text message',
-    category: 'messaging',
-  },
-  send_buttons: {
-    label: 'Send buttons',
-    icon: ListChecks,
-    color: 'text-primary',
-    blurb: 'Sends quick-reply buttons',
-    category: 'messaging',
-  },
-  send_list: {
-    label: 'Send list',
-    icon: ListPlus,
-    color: 'text-indigo-400',
-    blurb: 'Sends a tappable list of options',
-    category: 'messaging',
-  },
-  send_media: {
-    label: 'Send media',
-    icon: Paperclip,
-    color: 'text-cyan-400',
-    blurb: 'Sends an image, video, or document',
-    category: 'messaging',
-  },
-  collect_input: {
-    label: 'Collect input',
-    icon: Inbox,
-    color: 'text-teal-400',
-    blurb: 'Asks a question, saves the reply',
-    category: 'logic',
-  },
-  condition: {
-    label: 'If / else',
-    icon: GitFork,
-    color: 'text-fuchsia-400',
-    blurb: 'Branches on a rule',
-    category: 'logic',
-  },
-  set_tag: {
-    label: 'Tag contact',
-    icon: Tag,
-    color: 'text-pink-400',
-    blurb: 'Adds or removes a contact tag',
-    category: 'logic',
-  },
-  handoff: {
-    label: 'Handoff to agent',
-    icon: UserPlus,
-    color: 'text-amber-400',
-    blurb: 'Hands the conversation to a human',
-    category: 'flow',
-  },
-  end: {
-    label: 'End',
-    icon: Flag,
-    color: 'text-muted-foreground',
-    blurb: 'Ends the flow',
-    category: 'flow',
-  },
-};
+> {
+  return (ALL_NODE_TYPES as NodeType[]).reduce(
+    (acc, type) => {
+      const base = nodeStaticMeta[type];
+      acc[type] = {
+        ...base,
+        label: t(`flows.nodes.${type}.label`),
+        blurb: t(`flows.nodes.${type}.blurb`),
+      };
+      return acc;
+    },
+    {} as Record<
+      NodeType,
+      {
+        label: string;
+        icon: typeof Workflow;
+        color: string;
+        blurb: string;
+        category: NodeCategory;
+      }
+    >,
+  );
+}
 
 /**
  * Bucket an ordered list of node types by category, preserving both
@@ -175,13 +191,17 @@ export const NODE_META: Record<
  * canvas and list add-step menus so they stay in lockstep.
  */
 export function groupNodeTypesByCategory(
-  types: NodeType[]
+  types: NodeType[],
+  t: TranslateFn,
 ): { id: NodeCategory; label: string; types: NodeType[] }[] {
-  return NODE_CATEGORIES.map(({ id, label }) => ({
-    id,
-    label,
-    types: types.filter((t) => NODE_META[t].category === id),
-  })).filter((group) => group.types.length > 0);
+  const meta = getNodeMeta(t);
+  return getNodeCategories(t)
+    .map(({ id, label }) => ({
+      id,
+      label,
+      types: types.filter((type) => meta[type].category === id),
+    }))
+    .filter((group) => group.types.length > 0);
 }
 
 // ============================================================
@@ -257,7 +277,7 @@ export function NodeIconChip({
   iconSize?: number;
   className?: string;
 }) {
-  const meta = NODE_META[type];
+  const meta = nodeStaticMeta[type];
   const c = nodeColors(type);
   const Icon = meta.icon;
   return (
@@ -305,7 +325,10 @@ export function truncate(s: string, max = 80): string {
   return clean.slice(0, max - 1) + '…';
 }
 
-export function summarizeNode(node: BuilderNode): string | null {
+export function summarizeNode(
+  node: BuilderNode,
+  t: TranslateFn,
+): string | null {
   const cfg = node.config;
   switch (node.node_type) {
     case 'start':
@@ -342,11 +365,16 @@ export function summarizeNode(node: BuilderNode): string | null {
       }, 0);
       if (text.length > 0) {
         return rowCount > 0
-          ? `${truncate(text, 50)} · ${rowCount} option${rowCount === 1 ? '' : 's'}`
+          ? `${truncate(text, 50)} · ${t(rowCount === 1 ? 'flows.summarize.options' : 'flows.summarize.options_plural', { count: rowCount })}`
           : truncate(text);
       }
       return rowCount > 0
-        ? `${rowCount} option${rowCount === 1 ? '' : 's'} across ${sections.length} section${sections.length === 1 ? '' : 's'}`
+        ? t(
+            sections.length === 1
+              ? 'flows.summarize.optionsAcrossSections'
+              : 'flows.summarize.optionsAcrossSections_plural',
+            { count: rowCount, sections: sections.length },
+          )
         : null;
     }
     case 'send_media': {
@@ -357,8 +385,8 @@ export function summarizeNode(node: BuilderNode): string | null {
       const caption = typeof cfg.caption === 'string' ? cfg.caption : '';
       const label = mediaType
         ? mediaType.charAt(0).toUpperCase() + mediaType.slice(1)
-        : 'Media';
-      if (!url) return `${label} (no file uploaded)`;
+        : t('flows.summarize.media');
+      if (!url) return t('flows.summarize.noFile', { type: label });
       const name = filename || url.split('/').pop() || 'file';
       return caption
         ? `${label}: ${truncate(name, 30)} · ${truncate(caption, 40)}`
@@ -386,7 +414,7 @@ export function summarizeNode(node: BuilderNode): string | null {
             : 'var';
       const subjectStr =
         subject === 'tag'
-          ? `has tag ${truncate(subjectKey, 24)}`
+          ? `${t('flows.summarize.hasTag', { key: truncate(subjectKey, 24) })}`
           : `${subject}.${subjectKey}`;
       const op =
         cfg.operator === 'equals'
@@ -406,14 +434,15 @@ export function summarizeNode(node: BuilderNode): string | null {
       return subject === 'tag' ? subjectStr : `${subjectStr} ${op}${valStr}`;
     }
     case 'set_tag': {
-      const mode = cfg.mode === 'remove' ? 'Remove' : 'Add';
+      const removing = cfg.mode === 'remove';
       const tagId = typeof cfg.tag_id === 'string' ? cfg.tag_id : '';
-      // No tag name available without an async lookup here; show a
-      // short prefix of the UUID so users can disambiguate between
-      // multiple set_tag nodes at a glance.
       return tagId
-        ? `${mode} tag ${tagId.slice(0, 8)}…`
-        : `${mode} tag (none picked)`;
+        ? t(removing ? 'flows.summarize.removeTag' : 'flows.summarize.addTag', {
+            id: `${tagId.slice(0, 8)}…`,
+          })
+        : t(
+            removing ? 'flows.summarize.removeTagNone' : 'flows.summarize.addTagNone',
+          );
     }
     case 'handoff': {
       const note = typeof cfg.note === 'string' ? cfg.note : '';

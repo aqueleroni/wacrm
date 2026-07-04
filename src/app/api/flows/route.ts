@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/flows/admin-client'
+import { getLocale } from '@/i18n/config'
 import { getFlowTemplate } from '@/lib/flows/templates'
 
 /**
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
 
   // -------- Template clone path --------
   if (body.template_slug) {
-    const template = getFlowTemplate(body.template_slug)
+    const template = getFlowTemplate(body.template_slug, getLocale())
     if (!template) {
       return NextResponse.json(
         { error: `Unknown template_slug "${body.template_slug}"` },

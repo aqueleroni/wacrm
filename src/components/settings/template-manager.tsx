@@ -26,6 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { SettingsPanelHead } from './settings-panel-head';
+import { useT } from '@/hooks/use-i18n';
 import {
   Dialog,
   DialogContent,
@@ -124,6 +125,7 @@ function emptyButton(type: TemplateButton['type']): TemplateButton {
 }
 
 export function TemplateManager() {
+  const t = useT();
   const supabase = createClient();
   const { user, loading: authLoading } = useAuth();
 
@@ -197,7 +199,7 @@ export function TemplateManager() {
       setTemplates(data || []);
     } catch (err) {
       console.error('Failed to fetch templates:', err);
-      toast.error('Failed to load templates');
+      toast.error(t('settings.templates.toast.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -293,7 +295,7 @@ export function TemplateManager() {
       setEditingId(null);
     } catch (err) {
       console.error('Submit error:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to submit');
+      toast.error(err instanceof Error ? err.message : t('settings.templates.toast.submitFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -321,7 +323,7 @@ export function TemplateManager() {
         );
         const suffix =
           data.errors.length > 3 ? `, +${data.errors.length - 3} more` : '';
-        toast.error(`Failed to sync: ${preview.join(', ')}${suffix}`);
+        toast.error(t('settings.templates.toast.syncPartial', { names: preview.join(', '), suffix }));
       }
       if (data.truncated) {
         // Use error (not warning) so the message survives long
@@ -335,7 +337,7 @@ export function TemplateManager() {
       await fetchTemplates(user.id);
     } catch (err) {
       console.error('Template sync error:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to sync templates');
+      toast.error(err instanceof Error ? err.message : t('settings.templates.toast.syncFailed'));
     } finally {
       setSyncing(false);
     }
@@ -356,12 +358,12 @@ export function TemplateManager() {
       if (!res.ok) {
         throw new Error(data?.error || `Delete failed (HTTP ${res.status})`);
       }
-      toast.success('Template deleted');
+      toast.success(t('settings.templates.toast.deleted'));
       setTemplates((prev) => prev.filter((t) => t.id !== target.id));
       setTemplateToDelete(null);
     } catch (err) {
       console.error('Delete error:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to delete template');
+      toast.error(err instanceof Error ? err.message : t('settings.templates.toast.deleteFailed'));
     } finally {
       setDeletingId(null);
     }
@@ -458,7 +460,7 @@ export function TemplateManager() {
 
   async function handleHeaderImageFile(file: File) {
     if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      toast.error('Header image must be a JPEG or PNG.');
+      toast.error(t('settings.templates.toast.headerImageType'));
       return;
     }
     if (file.size > MEDIA_MAX_BYTES_BY_KIND.image) {
@@ -471,9 +473,9 @@ export function TemplateManager() {
     try {
       const { publicUrl } = await uploadAccountMedia('chat-media', file);
       setForm((f) => ({ ...f, header_media_url: publicUrl }));
-      toast.success('Image uploaded.');
+      toast.success(t('settings.templates.toast.imageUploaded'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Upload failed.');
+      toast.error(err instanceof Error ? err.message : t('settings.templates.toast.uploadFailed'));
     } finally {
       setUploadingHeader(false);
     }
@@ -482,24 +484,22 @@ export function TemplateManager() {
   return (
     <section className="animate-in fade-in-50 space-y-4 duration-200">
       <SettingsPanelHead
-        title="Message templates"
-        description={
-          'Create templates and submit them to Meta for approval. Use "Sync from Meta" to pull templates approved elsewhere.'
-        }
+        title={t('settings.templates.title')}
+        description={t('settings.templates.description')}
         action={
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               onClick={handleSyncFromMeta}
               disabled={syncing}
-              title="Pull approved templates from your Meta WhatsApp Business Account"
+              title={t('settings.templates.syncTitle')}
             >
               <RefreshCw className={`size-4 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Syncing…' : 'Sync from Meta'}
+              {syncing ? t('settings.templates.syncing') : t('settings.templates.sync')}
             </Button>
             <Button onClick={openCreate}>
               <Plus className="size-4" />
-              New Template
+              {t('settings.templates.new')}
             </Button>
           </div>
         }
@@ -508,9 +508,9 @@ export function TemplateManager() {
       {templates.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-muted-foreground text-sm">No templates yet.</p>
+            <p className="text-muted-foreground text-sm">{t('settings.templates.empty')}</p>
             <p className="text-muted-foreground text-xs mt-1">
-              Create your first message template to get started.
+              {t('settings.templates.emptyHint')}
             </p>
           </CardContent>
         </Card>
@@ -547,7 +547,7 @@ export function TemplateManager() {
                                 ? 'text-yellow-400'
                                 : 'text-red-400'
                           }`}
-                          title="Meta quality score"
+                          title={t('settings.templates.qualityScore')}
                         >
                           {template.quality_score}
                         </span>
@@ -1096,11 +1096,15 @@ export function TemplateManager() {
       >
         <DialogContent className="bg-popover border-border sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-popover-foreground">Delete template?</DialogTitle>
+            <DialogTitle className="text-popover-foreground">{t('settings.templates.deleteDialog.title')}</DialogTitle>
             <DialogDescription className="text-muted-foreground">
               {templateToDelete?.meta_template_id
-                ? `"${templateToDelete?.name}" will be deleted from Meta and from wacrm. Active broadcasts using this template will start failing on their next send. This can't be undone.`
-                : `"${templateToDelete?.name}" will be deleted from wacrm. It was never submitted to Meta, so no remote cleanup is needed.`}
+                ? t('settings.templates.deleteDialog.meta', {
+                    name: templateToDelete?.name ?? '',
+                  })
+                : t('settings.templates.deleteDialog.local', {
+                    name: templateToDelete?.name ?? '',
+                  })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="bg-popover border-border">
@@ -1110,7 +1114,7 @@ export function TemplateManager() {
               disabled={deletingId !== null}
               className="border-border text-muted-foreground hover:bg-muted"
             >
-              Cancel
+              {t('common.actions.cancel')}
             </Button>
             <Button
               onClick={confirmDelete}
@@ -1120,10 +1124,10 @@ export function TemplateManager() {
               {deletingId !== null ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Deleting…
+                  {t('common.actions.deleting')}
                 </>
               ) : (
-                'Delete'
+                t('common.actions.delete')
               )}
             </Button>
           </DialogFooter>

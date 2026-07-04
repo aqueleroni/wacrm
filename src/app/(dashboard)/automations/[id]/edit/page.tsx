@@ -10,13 +10,14 @@ import {
   type BuilderInitial,
   type ServerStepNode,
 } from "@/components/automations/automation-builder"
-import type { AutomationTriggerType } from "@/types"
+import { useT } from "@/hooks/use-i18n"
 
 export default function EditAutomationPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
+  const t = useT()
   const { id } = use(params)
   const router = useRouter()
   const [initial, setInitial] = useState<BuilderInitial | null>(null)
@@ -27,7 +28,9 @@ export default function EditAutomationPage({
     async function load() {
       const res = await fetch(`/api/automations/${id}`)
       if (!res.ok) {
-        if (!cancelled) setError(`Failed to load (${res.status})`)
+        if (!cancelled) {
+          setError(t("common.errors.loadFailed") + ` (${res.status})`)
+        }
         return
       }
       const body = await res.json()
@@ -36,7 +39,7 @@ export default function EditAutomationPage({
         id: body.automation.id,
         name: body.automation.name ?? "",
         description: body.automation.description ?? "",
-        trigger_type: body.automation.trigger_type as AutomationTriggerType,
+        trigger_type: body.automation.trigger_type,
         trigger_config: body.automation.trigger_config ?? {},
         is_active: !!body.automation.is_active,
         steps: fromServerSteps((body.steps ?? []) as ServerStepNode[]),
@@ -46,7 +49,7 @@ export default function EditAutomationPage({
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, t])
 
   if (error) {
     return (
@@ -56,7 +59,7 @@ export default function EditAutomationPage({
           onClick={() => router.push("/automations")}
           className="text-sm text-primary hover:text-primary/80"
         >
-          Back to Automations
+          {t("automations.actions.back")}
         </button>
       </div>
     )

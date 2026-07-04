@@ -47,11 +47,13 @@ import { toast } from "sonner";
 
 import {
   validateFlowForActivation,
-  type ValidationIssue,
+  translateValidationIssues,
+  type TranslatedValidationIssue,
 } from "@/lib/flows/validate";
 import { unlinkNodeReferences } from "@/lib/flows/edges";
 import type { FlowNodeRow, FlowRow } from "@/lib/flows/types";
-import { NODE_META, slugify, type BuilderNode, type NodeType } from "./shared";
+import { useT } from "@/hooks/use-i18n";
+import { slugify, type BuilderNode, type NodeType } from "./shared";
 
 // ============================================================
 // State shape
@@ -87,7 +89,7 @@ export interface FlowEditorContextValue {
   dirty: boolean;
   saving: boolean;
   activating: boolean;
-  issues: ValidationIssue[];
+  issues: TranslatedValidationIssue[];
   canActivate: boolean;
 
   // Node mutations. addNode returns the generated key so the caller
@@ -237,6 +239,7 @@ export function FlowEditorProvider({
   children,
 }: ProviderProps) {
   const router = useRouter();
+  const t = useT();
 
   const [state, setStateRaw] = useState<BuilderState>(() => ({
     name: initialFlow.name,
@@ -308,18 +311,21 @@ export function FlowEditorProvider({
   }, [dirty]);
 
   // ---- Validation ----
-  const issues = useMemo<ValidationIssue[]>(
+  const issues = useMemo<TranslatedValidationIssue[]>(
     () =>
-      validateFlowForActivation(
-        {
-          name: state.name,
-          trigger_type: state.trigger_type,
-          trigger_config: state.trigger_config,
-          entry_node_id: state.entry_node_id,
-        },
-        state.nodes,
+      translateValidationIssues(
+        validateFlowForActivation(
+          {
+            name: state.name,
+            trigger_type: state.trigger_type,
+            trigger_config: state.trigger_config,
+            entry_node_id: state.entry_node_id,
+          },
+          state.nodes,
+        ),
+        t,
       ),
-    [state],
+    [state, t],
   );
   const canActivate = useMemo(
     () => issues.every((i) => i.severity !== "error"),
@@ -347,20 +353,20 @@ export function FlowEditorProvider({
         throw new Error(json.error ?? `Save failed: ${res.status}`);
       }
       setDirty(false);
-      toast.success("Saved.");
+      toast.success(t("flows.toast.saved"));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Save failed";
+      const msg = err instanceof Error ? err.message : t("flows.toast.saveFailed");
       toast.error(msg);
     } finally {
       setSaving(false);
     }
-  }, [initialFlow.id, state]);
+  }, [initialFlow.id, state, t]);
 
   // ---- Activate / Pause / Archive ----
   const setStatus = useCallback(
     async (next: BuilderState["status"]) => {
       if (next === "active" && !canActivate) {
-        toast.error("Fix the issues below before activating.");
+        toast.error(t("flows.toast.fixBeforeActivate"));
         return;
       }
       setActivating(true);
@@ -383,25 +389,26 @@ export function FlowEditorProvider({
         setStateRaw((s) => ({ ...s, status: next }));
         toast.success(
           next === "active"
-            ? "Flow activated."
+            ? t("flows.toast.activated")
             : next === "archived"
-              ? "Archived."
-              : "Saved as draft.",
+              ? t("flows.toast.archived")
+              : t("flows.toast.savedDraft"),
         );
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Status update failed";
+        const msg =
+          err instanceof Error ? err.message : t("flows.toast.statusFailed");
         toast.error(msg);
       } finally {
         setActivating(false);
       }
     },
-    [canActivate, save, initialFlow.id],
+    [canActivate, save, initialFlow.id, t],
   );
 
   // ---- Delete ----
   const deleteFlow = useCallback(async () => {
     const yes = window.confirm(
-      `Delete "${state.name}"? Any active runs end immediately. This can't be undone.`,
+      t("flows.delete.confirmEditor", { name: state.name }),
     );
     if (!yes) return;
     try {
@@ -411,10 +418,10 @@ export function FlowEditorProvider({
       if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
       router.push("/flows");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Delete failed";
+      const msg = err instanceof Error ? err.message : t("common.errors.deleteFailed");
       toast.error(msg);
     }
-  }, [initialFlow.id, router, state.name]);
+  }, [initialFlow.id, router, state.name, t]);
 
   // ---- Node mutations ----
   const updateNode = useCallback(
@@ -472,8 +479,7 @@ export function FlowEditorProvider({
 
   const addNode = useCallback(
     (type: NodeType): string => {
-      const meta = NODE_META[type];
-      const base = slugify(meta.label, type);
+      const base = slugify(type.replace(/_/g, " "), type);
       let createdKey = base;
       setState((s) => {
         const node_key = uniqueNodeKey(base, s.nodes);

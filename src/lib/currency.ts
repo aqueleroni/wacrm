@@ -44,6 +44,17 @@ export const CURRENCIES: CurrencyOption[] = [
   { code: "MXN", label: "Mexican Peso", symbol: "$" },
 ];
 
+/** Localized currency name for pickers; falls back to English label, then code. */
+export function getCurrencyLabel(
+  code: string,
+  t: (key: string) => string,
+): string {
+  const key = `currency.labels.${code}`;
+  const translated = t(key);
+  if (translated !== key) return translated;
+  return CURRENCIES.find((c) => c.code === code)?.label ?? code;
+}
+
 /**
  * Format a deal value as a currency string. Whole-number output
  * (no minor units) — deal values are tracked to the dollar across

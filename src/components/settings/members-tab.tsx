@@ -73,7 +73,8 @@ import {
 } from '@/components/presence/presence-dot';
 import { InviteMemberDialog } from './invite-member-dialog';
 import { SettingsPanelHead } from './settings-panel-head';
-import { ROLE_META } from './role-meta';
+import { useT } from '@/hooks/use-i18n';
+import { getRoleMeta } from './role-meta';
 
 interface Member {
   user_id: string;
@@ -101,7 +102,7 @@ const EDITABLE_ROLES: { value: AccountRole; label: string; hint: string }[] = [
 ];
 
 // Per-role chip metadata (icon / label / colour) lives in the shared
-// ROLE_META module so this roster and the Overview identity chip can't
+// getRoleMeta helper so this roster and the Overview identity chip can't
 // drift. The colour scale runs amber (owner — scarce, immutable) →
 // primary (admin) → muted (agent / viewer).
 
@@ -125,6 +126,8 @@ function fmtExpiresIn(iso: string): string {
 }
 
 export function MembersTab() {
+  const t = useT();
+  const roleMetaByRole = getRoleMeta(t);
   const { user, canManageMembers } = useAuth();
   const { getPresence, getRow, now } = usePresence();
 
@@ -324,7 +327,7 @@ export function MembersTab() {
         <CardContent className="p-0">
           <ul className="divide-y divide-border">
             {members.map((member) => {
-              const roleMeta = ROLE_META[member.role];
+              const roleMeta = roleMetaByRole[member.role];
               const RoleIcon = roleMeta.icon;
               const isSelf = member.user_id === user?.id;
               const isOwnerRow = member.role === 'owner';
@@ -514,7 +517,7 @@ export function MembersTab() {
               <CardContent className="p-0">
                 <ul className="divide-y divide-border">
                   {invitations.map((inv) => {
-                    const inviteRoleMeta = ROLE_META[inv.role];
+                    const inviteRoleMeta = roleMetaByRole[inv.role];
                     const InviteRoleIcon = inviteRoleMeta.icon;
                     return (
                     <li

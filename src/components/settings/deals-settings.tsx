@@ -6,7 +6,8 @@ import { Coins, Loader2 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { CURRENCIES } from "@/lib/currency";
+import { useT } from "@/hooks/use-i18n";
+import { CURRENCIES, getCurrencyLabel } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,14 +21,9 @@ import { SettingsPanelHead } from "./settings-panel-head";
 
 /**
  * Deals settings — account-wide default currency.
- *
- * One currency per account (issue #218): the chosen code seeds new
- * deals and formats every aggregated total. Existing deals keep their
- * own saved currency. Writes go straight to `accounts.default_currency`;
- * the `accounts_update` RLS policy (017) already restricts that to
- * admins+, so non-admins see a disabled, read-only control.
  */
 export function DealsSettings() {
+  const t = useT();
   const supabase = createClient();
   const {
     accountId,
@@ -40,8 +36,6 @@ export function DealsSettings() {
   const [selected, setSelected] = useState(defaultCurrency);
   const [saving, setSaving] = useState(false);
 
-  // Keep the select in sync once the profile (and its account default)
-  // resolves, and after a save round-trips through refreshProfile.
   useEffect(() => {
     setSelected(defaultCurrency);
   }, [defaultCurrency]);
@@ -56,38 +50,36 @@ export function DealsSettings() {
       .update({ default_currency: selected })
       .eq("id", accountId);
     if (error) {
-      toast.error("Failed to save default currency");
+      toast.error(t("settings.deals.toast.saveFailed"));
       setSaving(false);
       return;
     }
-    // Pull the new value back into the auth context so the deal form
-    // and every total pick it up without a full reload.
     await refreshProfile();
     setSaving(false);
-    toast.success("Default currency updated");
+    toast.success(t("settings.deals.toast.saved"));
   }
 
   return (
     <section className="max-w-2xl animate-in fade-in-50 duration-200">
       <SettingsPanelHead
-        title="Deals & currency"
-        description="The currency used for new deals and for pipeline and dashboard totals."
+        title={t("settings.deals.title")}
+        description={t("settings.deals.description")}
       />
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-foreground">
             <Coins className="size-4 text-primary" />
-            Default currency
+            {t("settings.deals.defaultCurrency")}
           </CardTitle>
           <CardDescription className="text-muted-foreground">
-            New deals default to this currency, and pipeline and
-            dashboard totals are shown in it. Existing deals keep the
-            currency they were saved with.
+            {t("settings.deals.cardDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-2 sm:max-w-xs">
-            <Label className="text-muted-foreground">Currency</Label>
+            <Label className="text-muted-foreground">
+              {t("settings.deals.currency")}
+            </Label>
             <select
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
@@ -96,13 +88,13 @@ export function DealsSettings() {
             >
               {CURRENCIES.map((c) => (
                 <option key={c.code} value={c.code}>
-                  {c.code} — {c.label}
+                  {c.code} — {getCurrencyLabel(c.code, t)}
                 </option>
               ))}
             </select>
             {!canEditSettings && (
               <p className="text-xs text-muted-foreground">
-                Only account admins can change the default currency.
+                {t("settings.deals.adminOnly")}
               </p>
             )}
           </div>
@@ -116,10 +108,10 @@ export function DealsSettings() {
               {saving ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Saving...
+                  {t("common.actions.saving")}
                 </>
               ) : (
-                "Save"
+                t("common.actions.save")
               )}
             </Button>
           )}

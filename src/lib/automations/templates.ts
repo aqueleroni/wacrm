@@ -3,29 +3,68 @@ import type {
   AutomationStepType,
   AutomationTriggerConfig,
   AutomationTriggerType,
-} from '@/types'
+} from '@/types';
+
+import type { TranslateFn } from './trigger-meta';
 
 export type TemplateSlug =
   | 'welcome_message'
   | 'out_of_office'
   | 'lead_qualifier'
-  | 'follow_up_reminder'
+  | 'follow_up_reminder';
 
 export interface TemplateStepSeed {
-  step_type: AutomationStepType
-  step_config: AutomationStepConfig
-  branch?: 'yes' | 'no' | null
+  step_type: AutomationStepType;
+  step_config: AutomationStepConfig;
+  branch?: 'yes' | 'no' | null;
   /** Index (within this seed list) of the Condition parent, if nested. */
-  parent_index?: number | null
+  parent_index?: number | null;
 }
 
 export interface AutomationTemplateDefinition {
-  slug: TemplateSlug
-  name: string
-  description: string
-  trigger_type: AutomationTriggerType
-  trigger_config: AutomationTriggerConfig
-  steps: TemplateStepSeed[]
+  slug: TemplateSlug;
+  name: string;
+  description: string;
+  trigger_type: AutomationTriggerType;
+  trigger_config: AutomationTriggerConfig;
+  steps: TemplateStepSeed[];
+}
+
+const TEMPLATE_UI_KEYS: Record<
+  TemplateSlug,
+  { name: string; description: string }
+> = {
+  welcome_message: {
+    name: 'automations.templates.welcomeMessage',
+    description: 'automations.templates.descriptions.welcomeMessage',
+  },
+  out_of_office: {
+    name: 'automations.templates.outOfOffice',
+    description: 'automations.templates.descriptions.outOfOffice',
+  },
+  lead_qualifier: {
+    name: 'automations.templates.leadQualifier',
+    description: 'automations.templates.descriptions.leadQualifier',
+  },
+  follow_up_reminder: {
+    name: 'automations.templates.followUpReminder',
+    description: 'automations.templates.descriptions.followUpReminder',
+  },
+};
+
+export function getAutomationTemplateMeta(
+  t: TranslateFn,
+): Record<TemplateSlug, { name: string; description: string }> {
+  return (Object.keys(TEMPLATE_UI_KEYS) as TemplateSlug[]).reduce(
+    (acc, slug) => {
+      acc[slug] = {
+        name: t(TEMPLATE_UI_KEYS[slug].name),
+        description: t(TEMPLATE_UI_KEYS[slug].description),
+      };
+      return acc;
+    },
+    {} as Record<TemplateSlug, { name: string; description: string }>,
+  );
 }
 
 export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefinition> = {
@@ -125,8 +164,8 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
       },
     ],
   },
-}
+};
 
 export function getTemplate(slug: string): AutomationTemplateDefinition | null {
-  return AUTOMATION_TEMPLATES[slug as TemplateSlug] ?? null
+  return AUTOMATION_TEMPLATES[slug as TemplateSlug] ?? null;
 }

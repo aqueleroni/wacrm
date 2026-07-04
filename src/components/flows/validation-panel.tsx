@@ -19,11 +19,13 @@
 
 import { CircleAlert, CircleCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ValidationIssue } from "@/lib/flows/validate";
+import type { TranslatedValidationIssue } from "@/lib/flows/validate";
+import { useT } from "@/hooks/use-i18n";
 import { useFlowEditor } from "./flow-editor-state";
 
 export function ValidationPanel() {
   const { issues, requestFlash } = useFlowEditor();
+  const t = useT();
 
   if (issues.length === 0) {
     // Slate-950 base + emerald accents so the panel stays readable when
@@ -32,7 +34,7 @@ export function ValidationPanel() {
     return (
       <div className="flex items-center gap-2 rounded-lg border border-emerald-600/50 bg-background p-3 text-sm font-medium text-emerald-300">
         <CircleCheck className="h-4 w-4 shrink-0" />
-        No issues. Ready to activate.
+        {t("flows.validation.panel.ready")}
       </div>
     );
   }
@@ -51,8 +53,19 @@ export function ValidationPanel() {
         ) : (
           <CircleAlert className="h-4 w-4 text-amber-400" />
         )}
-        {errors.length} error{errors.length === 1 ? "" : "s"},{" "}
-        {warnings.length} warning{warnings.length === 1 ? "" : "s"}
+        {t(
+          errors.length === 1
+            ? "flows.validation.panel.errors"
+            : "flows.validation.panel.errors_plural",
+          { count: errors.length },
+        )}
+        ,{" "}
+        {t(
+          warnings.length === 1
+            ? "flows.validation.panel.warnings"
+            : "flows.validation.panel.warnings_plural",
+          { count: warnings.length },
+        )}
       </div>
       <div className="flex flex-col gap-1">
         {issues.map((i, ix) => (
@@ -73,9 +86,10 @@ export function IssueLine({
   issue,
   onJump,
 }: {
-  issue: ValidationIssue;
+  issue: TranslatedValidationIssue;
   onJump?: (key: string) => void;
 }) {
+  const t = useT();
   const tone =
     issue.severity === "error" ? "text-red-300" : "text-amber-300";
   const iconTone =
@@ -106,7 +120,9 @@ export function IssueLine({
           "flex w-full items-start gap-2 rounded-md px-2 py-1 text-left text-xs transition-colors hover:bg-muted/60",
           tone,
         )}
-        aria-label={`Jump to node ${issue.node_key}`}
+        aria-label={t("flows.validation.panel.jumpToNode", {
+          node: issue.node_key!,
+        })}
       >
         {body}
       </button>
