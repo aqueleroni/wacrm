@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Sparkles, CheckCircle2, Trash2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
@@ -28,6 +28,11 @@ import { SettingsPanelHead } from './settings-panel-head';
 import { useT } from '@/hooks/use-i18n';
 import { AiKnowledgeCard } from './ai-knowledge';
 import { AI_PROVIDER_DEFAULT_MODEL } from '@/lib/ai/defaults';
+import {
+  getDefaultModel,
+  isKnownModel,
+  modelsForProvider,
+} from '@/lib/ai/models';
 import type { AiProvider } from '@/lib/ai/types';
 
 const MASKED_KEY = '••••••••••••••••';
@@ -39,7 +44,7 @@ const KEY_PLACEHOLDER: Record<AiProvider, string> = {
 
 export function AiConfig() {
   const t = useT();
-  const { accountId, accountRole, profileLoading } = useAuth();
+  const { accountId, accountRole, profileLoading, loading: authLoading, user } = useAuth();
   const canEdit = accountRole ? canEditSettings(accountRole) : false;
 
   const [loading, setLoading] = useState(true);
@@ -58,6 +63,7 @@ export function AiConfig() {
   const [embeddingsKeyEdited, setEmbeddingsKeyEdited] = useState(false);
   const [hasStoredEmbeddingsKey, setHasStoredEmbeddingsKey] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState('');
+  const [conversationExamples, setConversationExamples] = useState('');
   const [isActive, setIsActive] = useState(false);
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
   const [maxPerConversation, setMaxPerConversation] = useState(3);
@@ -82,6 +88,7 @@ export function AiConfig() {
         setProvider(data.provider);
         setModel(data.model);
         setSystemPrompt(data.system_prompt ?? '');
+        setConversationExamples(data.conversation_examples ?? '');
         setIsActive(data.is_active);
         setAutoReplyEnabled(data.auto_reply_enabled);
         setMaxPerConversation(data.auto_reply_max_per_conversation ?? 3);
@@ -100,21 +107,45 @@ export function AiConfig() {
   }, [t]);
 
   useEffect(() => {
-    if (!accountId || loadedAccountIdRef.current === accountId) return;
+    if (authLoading || profileLoading) return;
+    if (!user || !accountId) {
+      loadedAccountIdRef.current = null;
+      setLoading(false);
+      return;
+    }
+    if (loadedAccountIdRef.current === accountId) return;
     loadedAccountIdRef.current = accountId;
     void fetchConfig();
-  }, [accountId, fetchConfig]);
+  }, [authLoading, profileLoading, user, accountId, fetchConfig]);
 
   // Swap the model default when the provider changes, unless the user
-  // typed a custom model.
+  // picked a model from the previous provider's list.
   const handleProviderChange = (next: AiProvider) => {
     setProvider(next);
-    const isDefaultModel =
-      model === AI_PROVIDER_DEFAULT_MODEL.openai ||
-      model === AI_PROVIDER_DEFAULT_MODEL.anthropic ||
-      model.trim() === '';
-    if (isDefaultModel) setModel(AI_PROVIDER_DEFAULT_MODEL[next]);
+    if (isKnownModel(provider, model) || model.trim() === '') {
+      setModel(getDefaultModel(next));
+    }
   };
+
+  const modelOptions = useMemo(
+    () => modelsForProvider(provider, model),
+    [provider, model],
+  );
+
+  const modelLabel = (id: string) => {
+    const key = `settings.ai.provider.models.${id}.label`;
+    const translated = t(key);
+    return translated === key ? id : translated;
+  };
+
+  const modelField = (id: string, field: 'summary' | 'details') => {
+    const key = `settings.ai.provider.models.${id}.${field}`;
+    const translated = t(key);
+    return translated === key ? '' : translated;
+  };
+
+  const selectedModelSummary = modelField(model, 'summary');
+  const selectedModelDetails = modelField(model, 'details');
 
   const keyPayload = () => (keyEdited ? apiKey.trim() : undefined);
 
@@ -128,6 +159,7 @@ export function AiConfig() {
     api_key: keyPayload(),
     embeddings_api_key: embeddingsKeyPayload(),
     system_prompt: systemPrompt.trim() || null,
+    conversation_examples: conversationExamples.trim() || null,
     is_active: isActive,
     auto_reply_enabled: autoReplyEnabled,
     auto_reply_max_per_conversation: maxPerConversation,
@@ -264,15 +296,106 @@ export function AiConfig() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="ai-model">{t('settings.ai.provider.modelLabel')}</Label>
-                <Input
-                  id="ai-model"
+                <Select
                   value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder={AI_PROVIDER_DEFAULT_MODEL[provider]}
+                  onValueChange={(v) => {
+                    if (v) setModel(v);
+                  }}
                   disabled={disabled}
-                />
+                >
+                  <SelectTrigger
+                    id="ai-model"
+                    className="h-auto w-full gap-2 whitespace-normal py-2.5 pl-3 pr-2 data-[size=default]:!h-auto data-[size=default]:min-h-[3.25rem] [&_[data-slot=select-value]]:min-w-0 [&_[data-slot=select-value]]:flex-1 [&_[data-slot=select-value]]:flex-col [&_[data-slot=select-value]]:!items-start [&_[data-slot=select-value]]:justify-center [&_[data-slot=select-value]]:gap-1 [&_[data-slot=select-value]]:py-0.5 [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-normal"
+                  >
+                    <SelectValue placeholder={AI_PROVIDER_DEFAULT_MODEL[provider]}>
+                      {model ? (
+                        <>
+                          <span className="block w-full truncate text-sm font-medium leading-tight">
+                            {modelLabel(model)}
+                          </span>
+                          {selectedModelSummary ? (
+                            <span className="block w-full text-pretty text-xs leading-snug text-muted-foreground">
+                              {selectedModelSummary}
+                            </span>
+                          ) : null}
+                        </>
+                      ) : null}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent
+                    align="start"
+                    sideOffset={6}
+                    alignItemWithTrigger
+                    className="max-h-[min(var(--available-height),24rem)] w-(--anchor-width) min-w-0 overflow-y-auto p-1"
+                  >
+                    {modelOptions.map((option) => {
+                      const known = isKnownModel(provider, option.id);
+                      const summary = modelField(option.id, 'summary');
+                      const details = modelField(option.id, 'details');
+                      return (
+                        <SelectItem
+                          key={option.id}
+                          value={option.id}
+                          multiline
+                          className="rounded-md py-2.5"
+                        >
+                          <span className="flex min-w-0 flex-col gap-1.5 pr-1">
+                            <span className="flex flex-wrap items-center gap-1.5">
+                              <span className="font-medium leading-none">
+                                {modelLabel(option.id)}
+                              </span>
+                              {option.recommended ? (
+                                <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                                  {t('settings.ai.provider.modelRecommended')}
+                                </span>
+                              ) : null}
+                              {!known ? (
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                  {t('settings.ai.provider.modelCustom')}
+                                </span>
+                              ) : (
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                  {t(`settings.ai.provider.modelTiers.${option.tier}`)}
+                                </span>
+                              )}
+                            </span>
+                            {summary ? (
+                              <span className="text-xs font-medium leading-snug text-foreground/90">
+                                {summary}
+                              </span>
+                            ) : null}
+                            {details ? (
+                              <span className="text-xs leading-relaxed text-muted-foreground">
+                                {details}
+                              </span>
+                            ) : null}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                {(selectedModelSummary || selectedModelDetails) && (
+                  <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2.5">
+                    {selectedModelSummary ? (
+                      <p className="text-sm font-medium text-foreground">
+                        {selectedModelSummary}
+                      </p>
+                    ) : null}
+                    {selectedModelDetails ? (
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        {selectedModelDetails}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+                {!selectedModelDetails && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('settings.ai.provider.modelHint')}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -376,10 +499,38 @@ export function AiConfig() {
                 value={systemPrompt}
                 onChange={(e) => setSystemPrompt(e.target.value)}
                 placeholder={t('settings.ai.behaviour.promptPlaceholder')}
-                rows={5}
+                rows={8}
                 disabled={disabled}
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ai-examples">{t('settings.ai.behaviour.examplesLabel')}</Label>
+              <Textarea
+                id="ai-examples"
+                value={conversationExamples}
+                onChange={(e) => setConversationExamples(e.target.value)}
+                placeholder={t('settings.ai.behaviour.examplesPlaceholder')}
+                rows={6}
+                disabled={disabled}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('settings.ai.behaviour.examplesHint')}
+              </p>
+            </div>
+
+            {(conversationExamples.trim() || systemPrompt.trim()) && (
+              <div className="rounded-md border border-border/60 bg-muted/20 p-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                  {t('settings.ai.behaviour.previewTitle')}
+                </p>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+                  {conversationExamples.trim()
+                    ? conversationExamples.trim().split('\n').slice(0, 4).join('\n')
+                    : t('settings.ai.behaviour.previewEmpty')}
+                </p>
+              </div>
+            )}
 
             <div className="flex items-center justify-between gap-4 rounded-md border border-border p-3">
               <div>

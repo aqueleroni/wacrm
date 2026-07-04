@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bot, Sparkles, Settings2 } from 'lucide-react';
+import { Bot, Sparkles, Settings2, Brain, Loader2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { AiPlayground } from '@/components/agents/ai-playground';
+import { AiIntelligencePanel } from '@/components/agents/ai-intelligence-panel';
 import { AiConfig } from '@/components/settings/ai-config';
 import { useT } from '@/hooks/use-i18n';
 
-type Tab = 'playground' | 'setup';
+type Tab = 'playground' | 'setup' | 'intelligence';
 
 export default function AgentsPage() {
   const t = useT();
@@ -45,7 +46,12 @@ export default function AgentsPage() {
         {t('agents.subtitle')}
       </p>
 
-      {decided && (
+      {!decided ? (
+        <div className="mt-16 flex items-center justify-center text-muted-foreground">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          {t('common.actions.loading')}
+        </div>
+      ) : (
         <Tabs
           value={tab}
           onValueChange={(v) => setTab(v as Tab)}
@@ -58,6 +64,9 @@ export default function AgentsPage() {
             <TabsTrigger value="setup">
               <Settings2 className="mr-1.5 h-4 w-4" /> {t('agents.tabs.setup')}
             </TabsTrigger>
+            <TabsTrigger value="intelligence">
+              <Brain className="mr-1.5 h-4 w-4" /> {t('agents.tabs.intelligence')}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="playground" className="mt-4">
@@ -66,6 +75,10 @@ export default function AgentsPage() {
 
           <TabsContent value="setup" className="mt-4">
             <AiConfig />
+          </TabsContent>
+
+          <TabsContent value="intelligence" className="mt-4">
+            <AiIntelligencePanel onGoToSetup={() => setTab('setup')} />
           </TabsContent>
         </Tabs>
       )}

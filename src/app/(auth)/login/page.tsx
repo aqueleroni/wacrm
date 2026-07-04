@@ -15,8 +15,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { AppLogo } from "@/components/brand/app-logo";
-import { UsersRound, Eye, EyeOff } from "lucide-react";
+import { AuthPageLogo } from "@/components/brand/auth-page-logo";
+import { Eye, EyeOff } from "lucide-react";
 
 // `useSearchParams` opts the component out of static prerendering
 // unless it sits under a Suspense boundary. We split the form into
@@ -73,14 +73,8 @@ function LoginPageInner() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md border-border bg-card">
-        <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-primary p-2">
-            {inviteToken ? (
-              <UsersRound className="h-6 w-6 text-primary-foreground" />
-            ) : (
-              <AppLogo size={32} className="h-full w-full" />
-            )}
-          </div>
+        <CardHeader className="justify-items-center text-center">
+          <AuthPageLogo inviteMode={Boolean(inviteToken)} />
           <CardTitle className="text-xl text-foreground">
             {inviteToken
               ? t("auth.login.titleInvite")

@@ -494,14 +494,86 @@ export const settings = {
         openai: 'OpenAI',
         anthropic: 'Anthropic (Claude)',
       },
+      modelHint:
+        'Economy models work best for WhatsApp auto-replies. Premium models cost more tokens per message.',
+      modelTiers: {
+        economy: 'Economy',
+        balanced: 'Balanced',
+        premium: 'Premium',
+      },
+      modelRecommended: 'Recommended',
+      modelCustom: 'Saved model (not in list)',
+      models: {
+        'gpt-5.4-mini': {
+          label: 'GPT-5.4 mini',
+          summary: 'Best value for automated customer replies',
+          details:
+            'OpenAI’s latest compact model. Fast responses, strong instruction-following, and natural tone in short threads. Best for WhatsApp auto-reply, triage, and FAQs when volume is high and cost per message matters.',
+        },
+        'gpt-4o-mini': {
+          label: 'GPT-4o mini',
+          summary: 'Very cheap, great for high volume',
+          details:
+            'Lightweight and well-established. Handles repetitive questions, confirmations, and short answers well. Uses few tokens — pick this when maximum savings matter more than deep reasoning.',
+        },
+        'gpt-4.1-mini': {
+          label: 'GPT-4.1 mini',
+          summary: 'Low cost with solid general quality',
+          details:
+            'Balance of price and context understanding. Coping better with longer business instructions and varied customer phrasing than 4o mini. A good middle ground when you want savings with a bit more nuance.',
+        },
+        'gpt-5.4': {
+          label: 'GPT-5.4',
+          summary: 'Smarter — for harder customer questions',
+          details:
+            'Full model for ambiguous questions, multiple intents in one message, or a large knowledge base. Moderate cost per reply; use when mini models fall short and you can spend a little more per conversation.',
+        },
+        'gpt-4o': {
+          label: 'GPT-4o',
+          summary: 'Proven quality, moderate cost',
+          details:
+            'OpenAI’s stable chat benchmark. Strong persona and context adherence — useful for inbox drafts and auto-reply when questions vary. Costs more than mini models but is predictable and reliable.',
+        },
+        'claude-haiku-4-5-20251001': {
+          label: 'Claude Haiku 4.5',
+          summary: 'Best Anthropic value for WhatsApp',
+          details:
+            'Fastest and cheapest in the current Claude line. Great for short replies, warm tone, and handoff when unsure. Recommended default for auto-reply and high volume with an Anthropic key.',
+        },
+        'claude-3-5-haiku-20241022': {
+          label: 'Claude 3.5 Haiku',
+          summary: 'Affordable and stable at scale',
+          details:
+            'Previous generation, still very cost-efficient. Fine for direct messages and simple flows. Prefer Haiku 4.5 if your account has access — it follows context and instructions more accurately.',
+        },
+        'claude-sonnet-4-5-20250929': {
+          label: 'Claude Sonnet 4.5',
+          summary: 'Balance of intelligence and price',
+          details:
+            'Anthropic’s middle tier: sharper reasoning than Haiku, cheaper than Opus. Good for rich knowledge bases, objections, or when customers send long, detailed messages.',
+        },
+        'claude-opus-4-6-20250514': {
+          label: 'Claude Opus 4.6',
+          summary: 'Top capability — use sparingly',
+          details:
+            'Flagship for hard cases: sensitive negotiations, many business rules, or answers that need maximum precision. High cost per message — reserve for manual drafts or premium accounts, not bulk auto-reply.',
+        },
+      },
     },
     behaviour: {
-      title: 'Behaviour',
+      title: 'Persona & behaviour',
       description:
-        'Tell the assistant about your business — products, tone, what it may and may not promise. This context feeds both drafts and auto-replies.',
-      promptLabel: 'Business context & instructions',
+        'Who the agent is, tone of voice, and what it may or may not promise. Persona takes priority over generic system instructions.',
+      promptLabel: 'Persona & instructions',
       promptPlaceholder:
-        'e.g. We are Acme, a coffee-equipment store. Be warm and concise. Never quote prices or delivery dates — hand off to a human for those.',
+        'e.g. You are Gabriella from Wepost. Warm, concise WhatsApp tone. Introduce yourself on greetings…',
+      examplesLabel: 'Conversation examples (optional)',
+      examplesPlaceholder:
+        'Customer: hi good afternoon\nYou: Hi! I\'m Gabriella from Wepost…\n\nCustomer: how much does it cost?\nYou: Investment depends on scope…',
+      examplesHint:
+        'Customer/You pairs that show the desired tone. The agent adapts to context — does not copy verbatim.',
+      previewTitle: 'Tone preview',
+      previewEmpty: 'Set persona and examples to preview how the agent should sound.',
       enableTitle: 'Enable AI assistant',
       enableDescription:
         'Master switch. Turns on the “Draft with AI” button in the inbox.',

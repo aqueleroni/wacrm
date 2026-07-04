@@ -496,14 +496,86 @@ export const settings = {
         openai: 'OpenAI',
         anthropic: 'Anthropic (Claude)',
       },
+      modelHint:
+        'Modelos econômicos são ideais para respostas automáticas no WhatsApp. Premium gasta mais tokens por mensagem.',
+      modelTiers: {
+        economy: 'Econômico',
+        balanced: 'Equilibrado',
+        premium: 'Premium',
+      },
+      modelRecommended: 'Recomendado',
+      modelCustom: 'Modelo salvo (fora da lista)',
+      models: {
+        'gpt-5.4-mini': {
+          label: 'GPT-5.4 mini',
+          summary: 'Melhor custo-benefício para atendimento automático',
+          details:
+            'Versão compacta mais recente da OpenAI. Responde rápido, segue bem instruções de negócio e mantém tom natural em conversas curtas. Ideal para auto-reply, triagem e FAQs no WhatsApp quando o volume é alto e o custo por mensagem importa.',
+        },
+        'gpt-4o-mini': {
+          label: 'GPT-4o mini',
+          summary: 'Muito barato, ótimo para alto volume',
+          details:
+            'Modelo leve e consolidado. Bom para perguntas repetitivas, confirmações e respostas objetivas. Gasta poucos tokens — recomendado se você prioriza economia máxima e não precisa de raciocínio complexo.',
+        },
+        'gpt-4.1-mini': {
+          label: 'GPT-4.1 mini',
+          summary: 'Barato com qualidade geral sólida',
+          details:
+            'Equilíbrio entre preço e compreensão de contexto. Lida melhor com instruções mais longas e variações de linguagem do que o 4o mini. Boa opção intermediária para equipes que querem economia sem abrir mão de um pouco mais de nuance.',
+        },
+        'gpt-5.4': {
+          label: 'GPT-5.4',
+          summary: 'Mais inteligente — casos que exigem raciocínio',
+          details:
+            'Modelo completo, melhor para dúvidas ambíguas, múltiplas intenções na mesma mensagem ou quando a base de conhecimento é extensa. Custo médio por resposta; use quando o mini não resolve bem e você pode investir um pouco mais por conversa.',
+        },
+        'gpt-4o': {
+          label: 'GPT-4o',
+          summary: 'Qualidade comprovada, custo moderado',
+          details:
+            'Referência estável da OpenAI para chat. Boa aderência a persona e contexto, útil para rascunhos na inbox e auto-reply em negócios com perguntas variadas. Custo maior que os modelos mini, mas previsível e confiável.',
+        },
+        'claude-haiku-4-5-20251001': {
+          label: 'Claude Haiku 4.5',
+          summary: 'Melhor custo-benefício Anthropic para WhatsApp',
+          details:
+            'Mais rápido e econômico da linha Claude atual. Excelente para respostas curtas, tom cordial e handoff quando não sabe responder. Recomendado como padrão para auto-reply e alto volume com chave Anthropic.',
+        },
+        'claude-3-5-haiku-20241022': {
+          label: 'Claude 3.5 Haiku',
+          summary: 'Econômico e estável para volume alto',
+          details:
+            'Geração anterior, ainda muito eficiente em custo. Bom para mensagens diretas e fluxos simples. Prefira o Haiku 4.5 se sua conta tiver acesso — ele entende contexto e instruções com mais precisão.',
+        },
+        'claude-sonnet-4-5-20250929': {
+          label: 'Claude Sonnet 4.5',
+          summary: 'Equilíbrio entre inteligência e preço',
+          details:
+            'Meio-termo da Anthropic: melhor raciocínio que o Haiku, mais barato que o Opus. Indicado para atendimentos com base de conhecimento rica, objeções ou quando o cliente escreve mensagens longas e detalhadas.',
+        },
+        'claude-opus-4-6-20250514': {
+          label: 'Claude Opus 4.6',
+          summary: 'Máxima capacidade — use com parcimônia',
+          details:
+            'Topo de linha para casos difíceis: negociação sensível, muitas regras de negócio ou respostas que exigem máxima precisão. Custo alto por mensagem; reserve para rascunhos manuais ou contas premium, não para auto-reply em massa.',
+        },
+      },
     },
     behaviour: {
-      title: 'Comportamento',
+      title: 'Persona e comportamento',
       description:
-        'Conte ao assistente sobre seu negócio — produtos, tom de voz, o que pode ou não prometer. Esse contexto alimenta rascunhos e respostas automáticas.',
-      promptLabel: 'Contexto do negócio e instruções',
+        'Quem é o agente, tom de voz e o que pode ou não prometer. A persona tem prioridade sobre instruções genéricas do sistema.',
+      promptLabel: 'Persona e instruções',
       promptPlaceholder:
-        'Ex.: Somos a Acme, loja de equipamentos para café. Seja cordial e objetivo. Nunca informe preços ou prazos — encaminhe para um humano nesses casos.',
+        'Ex.: Você é Gabriella, da Wepost. Cordial, objetiva, estilo WhatsApp. Apresente-se em saudações…',
+      examplesLabel: 'Exemplos de conversa (opcional)',
+      examplesPlaceholder:
+        'Cliente: oi boa tarde\nVocê: Oi, boa tarde! Sou a Gabriella…\n\nCliente: quanto custa?\nVocê: O investimento depende do escopo…',
+      examplesHint:
+        'Pares Cliente/Você que mostram o tom desejado. O agente adapta ao contexto — não copia literalmente.',
+      previewTitle: 'Prévia do tom',
+      previewEmpty: 'Configure a persona e exemplos para ver como o agente deve soar.',
       enableTitle: 'Ativar assistente de IA',
       enableDescription:
         'Interruptor principal. Ativa o botão “Rascunhar com IA” na inbox.',

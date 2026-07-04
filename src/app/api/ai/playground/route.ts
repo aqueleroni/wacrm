@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import { loadAiConfig } from '@/lib/ai/config'
-import { retrieveKnowledge } from '@/lib/ai/knowledge'
+import { buildAgentContext } from '@/lib/ai/agent-context'
+import { buildCrmContext, formatCrmContextBlock } from '@/lib/ai/crm-context'
 import { generateReply } from '@/lib/ai/generate'
 import { buildSystemPrompt } from '@/lib/ai/defaults'
 import { latestUserMessage } from '@/lib/ai/query'
@@ -72,16 +73,28 @@ export async function POST(request: Request) {
       )
     }
 
-    const knowledge = await retrieveKnowledge(
-      supabase,
-      accountId,
-      config,
-      latestUserMessage(messages),
-    )
+    const contactId =
+      typeof body?.contact_id === 'string' ? body.contact_id : null
+
+    const query = latestUserMessage(messages)
+    const [ctx, crmParts] = await Promise.all([
+      buildAgentContext({
+        db: supabase,
+        accountId,
+        config,
+        queryText: query,
+        contactId,
+      }),
+      buildCrmContext(supabase, accountId, contactId),
+    ])
     const systemPrompt = buildSystemPrompt({
       userPrompt: config.systemPrompt,
+      conversationExamples: config.conversationExamples,
       mode: 'auto_reply',
-      knowledge,
+      knowledge: ctx.knowledge,
+      memory: ctx.memory,
+      skills: ctx.skills,
+      crmContext: formatCrmContextBlock(crmParts),
     })
 
     const { text, handoff } = await generateReply({ config, systemPrompt, messages })

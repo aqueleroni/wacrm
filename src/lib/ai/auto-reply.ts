@@ -1,7 +1,8 @@
 import { supabaseAdmin } from './admin-client'
 import { loadAiConfig } from './config'
 import { buildConversationContext } from './context'
-import { retrieveKnowledge } from './knowledge'
+import { buildAgentContext } from './agent-context'
+import { buildCrmContext, formatCrmContextBlock } from './crm-context'
 import { generateReply } from './generate'
 import { buildSystemPrompt } from './defaults'
 import { latestUserMessage } from './query'
@@ -79,18 +80,27 @@ export async function dispatchInboundToAiReply(
     const messages = await buildConversationContext(db, conversationId)
     if (messages.length === 0) return
 
-    // Ground the reply in the account's knowledge base (best-effort).
-    const knowledge = await retrieveKnowledge(
-      db,
-      accountId,
-      config,
-      latestUserMessage(messages),
-    )
+    // Ground the reply in KB, memory, and skills (best-effort).
+    const query = latestUserMessage(messages)
+    const [ctx, crmParts] = await Promise.all([
+      buildAgentContext({
+        db,
+        accountId,
+        config,
+        queryText: query,
+        contactId,
+      }),
+      buildCrmContext(db, accountId, contactId),
+    ])
 
     const systemPrompt = buildSystemPrompt({
       userPrompt: config.systemPrompt,
+      conversationExamples: config.conversationExamples,
       mode: 'auto_reply',
-      knowledge,
+      knowledge: ctx.knowledge,
+      memory: ctx.memory,
+      skills: ctx.skills,
+      crmContext: formatCrmContextBlock(crmParts),
     })
 
     const { text, handoff } = await generateReply({

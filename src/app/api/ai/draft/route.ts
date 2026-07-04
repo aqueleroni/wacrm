@@ -3,7 +3,8 @@ import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import { loadAiConfig } from '@/lib/ai/config'
 import { buildConversationContext } from '@/lib/ai/context'
-import { retrieveKnowledge } from '@/lib/ai/knowledge'
+import { buildAgentContext } from '@/lib/ai/agent-context'
+import { buildCrmContext, formatCrmContextBlock } from '@/lib/ai/crm-context'
 import { generateReply } from '@/lib/ai/generate'
 import { buildSystemPrompt } from '@/lib/ai/defaults'
 import { latestUserMessage } from '@/lib/ai/query'
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
     // row means "not yours / not found" either way.
     const { data: conversation, error: convErr } = await supabase
       .from('conversations')
-      .select('id')
+      .select('id, contact_id')
       .eq('id', conversationId)
       .maybeSingle()
     if (convErr) {
@@ -87,19 +88,26 @@ export async function POST(request: Request) {
       )
     }
 
-    // Ground the draft in the account's knowledge base (best-effort —
-    // returns [] when there's no KB or retrieval fails).
-    const knowledge = await retrieveKnowledge(
-      supabase,
-      accountId,
-      config,
-      latestUserMessage(messages),
-    )
+    const query = latestUserMessage(messages)
+    const [ctx, crmParts] = await Promise.all([
+      buildAgentContext({
+        db: supabase,
+        accountId,
+        config,
+        queryText: query,
+        contactId: conversation.contact_id,
+      }),
+      buildCrmContext(supabase, accountId, conversation.contact_id),
+    ])
 
     const systemPrompt = buildSystemPrompt({
       userPrompt: config.systemPrompt,
+      conversationExamples: config.conversationExamples,
       mode: 'draft',
-      knowledge,
+      knowledge: ctx.knowledge,
+      memory: ctx.memory,
+      skills: ctx.skills,
+      crmContext: formatCrmContextBlock(crmParts),
     })
 
     const { text } = await generateReply({ config, systemPrompt, messages })

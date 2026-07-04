@@ -62,6 +62,11 @@ git push origin main
 | Marca padrão | `public/logo-wepost.webp`, `AppLogo`, `nav.appName` | Logo wepost (branco invert) + nome **Wp CRM** |
 | White-label | `031_account_branding.sql`, `branding-settings.tsx`, `use-branding.tsx` | Nome, logo e cor de destaque **por conta** em Configurações → Aparência |
 | Sidebar | `sidebar.tsx` | Logo + nome dinâmicos via `useBranding()` |
+| IA — modelos | `src/lib/ai/models.ts`, `ai-config.tsx` | Select curado de modelos OpenAI/Anthropic com descrições |
+| IA — preset Wepost | `src/lib/ai/presets/wepost.ts` | System prompt + 5 docs de KB para [agenciawepost.com](https://agenciawepost.com/) |
+| IA — roadmap agente | `docs/ai-agent-evolution-plan.md` | Auditoria + plano por etapas (persona, memória, skills, Configurações) |
+| Canais omnichannel | `docs/omnichannel-channels-plan.md` | Plano Site (widget + embed) + Instagram DM + inbox unificada + IA por canal |
+| IA — Etapa 0 | `scripts/seed-wepost-knowledge.ts`, `docs/ai-agent-playground-checklist.md` | KB 5/5 seed + checklist + env doc |
 
 **Commits publicados:**
 - `54006c0` — toggle senha login/signup
@@ -84,6 +89,10 @@ git push origin main
 | 2026-07-04 | Marca Wp CRM + logo wepost (`AppLogo`, favicon, auth pages) |
 | 2026-07-04 | Modelos de fluxo: conteúdo PT-BR ao clonar template |
 | 2026-07-04 | **White-label v1:** migration `031_account_branding` — `brand_name`, `brand_logo_url`, `brand_primary_color` + bucket `account-branding`; UI em Configurações → Aparência → Marca |
+| 2026-07-04 | IA: select de modelos curados; preset Wepost (`presets/wepost.ts`) — comportamento + KB a partir de agenciawepost.com |
+| 2026-07-04 | Plano agente evolutivo: `docs/ai-agent-evolution-plan.md` (auditoria + 7 etapas; config em Settings) |
+| 2026-07-04 | **Etapa 0:** KB Wepost 5/5, checklist Playground, env doc, branch `feat/ai-agent-evolution`, `npm run seed:wepost-kb` |
+| 2026-07-04 | Plano omnichannel: `docs/omnichannel-channels-plan.md` — Site (widget), Instagram DM, inbox com filtro por canal, agente IA por canal |
 
 ## Onde customizar branding / UI (referência)
 

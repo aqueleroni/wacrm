@@ -6,6 +6,13 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { HEARTBEAT_MS, IDLE_AFTER_MS, type StoredPresence } from "@/lib/presence";
 
+/** Network / HMR glitches — presence is best-effort, don't alarm the console. */
+function isTransientPresenceError(message: string): boolean {
+  return /failed to fetch|networkerror|network request failed|load failed|aborted|fetch aborted/i.test(
+    message,
+  );
+}
+
 /**
  * PresenceHeartbeat — headless. Mount ONCE per signed-in dashboard tab
  * (in the dashboard shell, below the auth gate). Reports this tab's
@@ -20,18 +27,19 @@ import { HEARTBEAT_MS, IDLE_AFTER_MS, type StoredPresence } from "@/lib/presence
  * 'offline' from staleness — no unreliable unload write needed.
  */
 export function PresenceHeartbeat() {
-  const { accountId } = useAuth();
+  const { accountId, user, loading, profileLoading } = useAuth();
 
   // 0 = "never recorded"; set on mount so we don't read the clock during
   // render (impure). Until the effect runs the tab counts as active.
   const lastActivityRef = useRef<number>(0);
 
   useEffect(() => {
-    // Hold off until the account is known. Beating during the brief
+    // Hold off until auth + profile are settled. Beating during the brief
     // window on a fresh signup — authed but profile/account row not yet
-    // created — would make touch_presence raise "No account for caller"
-    // and log a spurious error. The effect re-runs once accountId lands.
-    if (!accountId) return;
+    // created — would make touch_presence raise "No account for caller".
+    // Beating before the session cookie is readable also causes transient
+    // "Failed to fetch" noise in dev (HMR / token refresh races).
+    if (!accountId || !user || loading || profileLoading) return;
 
     const supabase = createClient();
     let cancelled = false;
@@ -50,21 +58,39 @@ export function PresenceHeartbeat() {
 
     const beat = async () => {
       if (cancelled) return;
+      if (typeof navigator !== "undefined" && !navigator.onLine) return;
+
       // Coalesce bursts: a tab refocus fires visibilitychange AND focus
       // together, so skip a beat within 1s of the last to avoid two RPCs
       // in the same frame. The 30s interval is never affected.
       const t = Date.now();
       if (t - lastBeatAt < 1_000) return;
       lastBeatAt = t;
-      const { error } = await supabase.rpc("touch_presence", {
-        p_status: currentStatus(),
-      });
-      if (error && !cancelled) {
-        // Non-fatal: presence is best-effort. Log once per failure so a
-        // misconfigured RPC is visible without spamming.
-        console.error("[PresenceHeartbeat] touch_presence failed:", error.message);
+
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (cancelled || !session) return;
+
+        const { error } = await supabase.rpc("touch_presence", {
+          p_status: currentStatus(),
+        });
+        if (error && !cancelled && !isTransientPresenceError(error.message)) {
+          // Non-fatal: presence is best-effort. Log real RPC/auth errors only.
+          console.error("[PresenceHeartbeat] touch_presence failed:", error.message);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : String(err);
+        if (!isTransientPresenceError(message)) {
+          console.error("[PresenceHeartbeat] touch_presence threw:", message);
+        }
       }
     };
+
+    // Defer the first beat so it doesn't race dashboard mount / token refresh.
+    const bootTimer = window.setTimeout(() => void beat(), 750);
 
     // Activity listeners. `passive` so we never block scroll/input.
     const activityEvents: (keyof DocumentEventMap)[] = [
@@ -87,11 +113,11 @@ export function PresenceHeartbeat() {
     document.addEventListener("visibilitychange", onReturn);
     window.addEventListener("focus", onReturn);
 
-    void beat();
     const interval = setInterval(() => void beat(), HEARTBEAT_MS);
 
     return () => {
       cancelled = true;
+      clearTimeout(bootTimer);
       clearInterval(interval);
       activityEvents.forEach((e) =>
         document.removeEventListener(e, markActive),
@@ -99,7 +125,7 @@ export function PresenceHeartbeat() {
       document.removeEventListener("visibilitychange", onReturn);
       window.removeEventListener("focus", onReturn);
     };
-  }, [accountId]);
+  }, [accountId, user, loading, profileLoading]);
 
   return null;
 }
