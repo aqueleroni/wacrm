@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/hooks/use-theme";
+import { I18nProvider } from "@/hooks/use-i18n";
 import { ThemedToaster } from "@/components/themed-toaster";
+import { getLocale } from "@/i18n/config";
 import {
   DEFAULT_MODE,
   DEFAULT_THEME,
@@ -13,15 +15,17 @@ import {
   THEME_IDS,
 } from "@/lib/themes";
 
-const inter = Inter({
+const spaceGrotesk = localFont({
+  src: "./fonts/SpaceGrotesk-VariableFont_wght.ttf",
   variable: "--font-sans",
-  subsets: ["latin"],
+  weight: "300 700",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: {
-    default: "wacrm",
-    template: "%s — wacrm",
+    default: "Wp CRM",
+    template: "%s — Wp CRM",
   },
   description: "Self-hostable CRM template for WhatsApp.",
   robots: {
@@ -29,7 +33,7 @@ export const metadata: Metadata = {
     follow: false,
   },
   icons: {
-    icon: [{ url: "/icon" }],
+    icon: [{ url: "/logo-wepost.webp", type: "image/webp" }],
   },
   formatDetection: {
     email: false,
@@ -80,12 +84,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = getLocale();
+
   return (
     <html
-      lang="en"
+      lang={locale}
       data-theme={DEFAULT_THEME}
       data-mode={DEFAULT_MODE}
-      className={`${inter.variable} h-full antialiased`}
+      className={`${spaceGrotesk.variable} h-full antialiased`}
       // The `theme-boot` script below rewrites `data-theme` and
       // `data-mode` on <html> from localStorage before React hydrates,
       // so for any non-default choice the client DOM intentionally
@@ -103,10 +109,12 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full bg-background text-foreground font-sans">
-        <ThemeProvider>
-          {children}
-          <ThemedToaster />
-        </ThemeProvider>
+        <I18nProvider>
+          <ThemeProvider>
+            {children}
+            <ThemedToaster />
+          </ThemeProvider>
+        </I18nProvider>
       </body>
     </html>
   );

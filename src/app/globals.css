@@ -228,3 +228,19 @@ html[data-theme="rose"] {
     @apply font-sans;
   }
 }
+
+/* Inline brand color picker — one popover, no native OS dialog. */
+.brand-color-picker .react-colorful {
+  width: 13rem;
+  gap: 0.625rem;
+}
+
+.brand-color-picker .react-colorful__saturation {
+  border-radius: 0.5rem;
+}
+
+.brand-color-picker .react-colorful__hue,
+.brand-color-picker .react-colorful__alpha {
+  border-radius: 9999px;
+  height: 0.625rem;
+}

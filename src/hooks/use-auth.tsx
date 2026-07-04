@@ -43,6 +43,12 @@ interface AccountSummary {
   /** Default deal currency (ISO-4217). NOT NULL DEFAULT 'USD' in the
    *  DB (migration 021); narrowed to DEFAULT_CURRENCY when absent. */
   default_currency: string;
+  /** White-label display name in the sidebar (migration 031). */
+  brand_name: string | null;
+  /** Public URL of the account logo (migration 031). */
+  brand_logo_url: string | null;
+  /** Custom accent hex color, e.g. #7c3aed (migration 031). */
+  brand_primary_color: string | null;
 }
 
 interface AuthContextValue {
@@ -106,6 +112,59 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+const ACCOUNT_SELECT_WITH_BRANDING =
+  "id, name, default_currency, brand_name, brand_logo_url, brand_primary_color";
+const ACCOUNT_SELECT_BASE = "id, name, default_currency";
+
+type AccountRow = {
+  id: string;
+  name: string;
+  default_currency?: string | null;
+  brand_name?: string | null;
+  brand_logo_url?: string | null;
+  brand_primary_color?: string | null;
+};
+
+function toAccountSummary(account: AccountRow): AccountSummary {
+  return {
+    id: account.id,
+    name: account.name,
+    default_currency: account.default_currency ?? DEFAULT_CURRENCY,
+    brand_name: account.brand_name ?? null,
+    brand_logo_url: account.brand_logo_url ?? null,
+    brand_primary_color: account.brand_primary_color ?? null,
+  };
+}
+
+/** Point lookup by id — retries without branding cols if schema cache lags. */
+async function fetchAccountSummary(
+  supabase: ReturnType<typeof createClient>,
+  accountId: string,
+): Promise<{ account: AccountSummary | null; error: unknown }> {
+  let result = await supabase
+    .from("accounts")
+    .select(ACCOUNT_SELECT_WITH_BRANDING)
+    .eq("id", accountId)
+    .maybeSingle();
+
+  if (result.error) {
+    const retry = await supabase
+      .from("accounts")
+      .select(ACCOUNT_SELECT_BASE)
+      .eq("id", accountId)
+      .maybeSingle();
+    if (!retry.error && retry.data) {
+      return { account: toAccountSummary(retry.data), error: null };
+    }
+    return { account: null, error: result.error };
+  }
+
+  return {
+    account: result.data ? toAccountSummary(result.data) : null,
+    error: null,
+  };
+}
+
 /**
  * AuthProvider — wrap this around the dashboard layout.
  * Makes ONE getSession() call for the whole tree instead of one per
@@ -167,26 +226,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // account name lookup itself can't.
         let accountRow: AccountSummary | null = null;
         if (data.account_id) {
-          const { data: account, error: accountErr } = await supabase
-            .from("accounts")
-            // default_currency added in migration 021; narrowed to the
-            // USD fallback below for older schemas where it reads null.
-            .select("id, name, default_currency")
-            .eq("id", data.account_id)
-            .maybeSingle();
+          const { account, error: accountErr } = await fetchAccountSummary(
+            supabase,
+            data.account_id,
+          );
           if (accountErr) {
-            console.error("[AuthProvider] fetchAccount error:", {
-              message: accountErr.message,
-              details: accountErr.details,
-              hint: accountErr.hint,
-              code: accountErr.code,
-            });
+            console.error("[AuthProvider] fetchAccount error:", accountErr);
           } else if (account) {
-            accountRow = {
-              id: account.id,
-              name: account.name,
-              default_currency: account.default_currency ?? DEFAULT_CURRENCY,
-            };
+            accountRow = account;
           }
         }
 
