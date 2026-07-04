@@ -1,0 +1,46 @@
+---
+description: Contexto do fork CRM (aqueleroni/wacrm) — customizações, git upstream, setup
+alwaysApply: true
+---
+
+# Projeto CRM — regras persistentes
+
+**Leia `PROJECT.md` na raiz** antes de implementar qualquer coisa. Contém setup, git upstream, customizações e mapa de branding.
+
+## Sempre fazer
+
+- Responder em **português (BR)**
+- **Ler `PROJECT.md` no início** e **atualizá-lo no fim** de tarefas relevantes (customizações + histórico)
+- **i18n:** novas strings UI → chave em `src/i18n/locales/en/` + tradução em `pt-BR/`; usar `useT()` / `t()`
+- Preservar customizações do fork (ver tabela em `PROJECT.md`)
+- Diff mínimo; seguir convenções wacrm existentes
+- Nunca commitar `.env.local`, `.tmp_*`, `.apply_*`, secrets
+- Commits **só quando o usuário pedir**
+
+## Identidade do fork
+
+- Marca padrão: **Wp CRM** + logo `public/logo-wepost.webp`
+- White-label por conta: Configurações → Aparência → Marca (`031_account_branding`)
+- Locale padrão: **pt-BR** (`NEXT_PUBLIC_LOCALE`)
+
+## Git upstream (quando pedirem atualizar do criador)
+
+```bash
+git fetch upstream && git merge upstream/main
+```
+
+Remotes: `origin` = fork aqueleroni, `upstream` = ArnasDon/wacrm.
+
+## Customizações já feitas (não reverter sem pedir)
+
+- Auth: olho show/hide senha (login + signup)
+- i18n completo PT-BR (`src/i18n/`)
+- Fonte Space Grotesk
+- Wp CRM + AppLogo + white-label (nome, logo, cor por conta)
+- Flow templates com textos PT ao clonar
+
+## Supabase
+
+- Project ref: `tvssbeqafnodzvgzfbsp`
+- Migrations até **031** (branding)
+- MCP em `.cursor/mcp.json`
