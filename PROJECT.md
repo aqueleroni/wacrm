@@ -63,9 +63,12 @@ git push origin main
 | White-label | `031_account_branding.sql`, `branding-settings.tsx`, `use-branding.tsx` | Nome, logo e cor de destaque **por conta** em Configurações → Aparência |
 | Sidebar | `sidebar.tsx` | Logo + nome dinâmicos via `useBranding()` |
 
-**Commits publicados:** `54006c0` — toggle senha login/signup
-
-**Pendente de commit (working tree):** i18n completo, fonte, moedas, Wp CRM, white-label, migration 031, etc.
+**Commits publicados:**
+- `54006c0` — toggle senha login/signup
+- `831ab14` — i18n pt-BR
+- `3e4452f` — Wp CRM + white-label
+- `3961102` — PROJECT.md + cursor rules
+- `656bf24` — agent skills Supabase
 
 ## Histórico do fork (atualizar a cada sessão)
 
