@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import type { MemoryKind, MemoryStatus } from '@/lib/ai/memory'
+import { invalidatePresence } from '@/lib/ai/presence-cache'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -52,6 +53,7 @@ export async function PATCH(request: Request, { params }: Params) {
       return NextResponse.json({ error: 'Failed to update memory' }, { status: 500 })
     }
     if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    invalidatePresence('memory', accountId)
     return NextResponse.json({ success: true })
   } catch (err) {
     return toErrorResponse(err)
@@ -74,6 +76,7 @@ export async function DELETE(_request: Request, { params }: Params) {
       console.error('[ai/memory/[id] DELETE] error:', error)
       return NextResponse.json({ error: 'Failed to delete memory' }, { status: 500 })
     }
+    invalidatePresence('memory', accountId)
     return NextResponse.json({ success: true })
   } catch (err) {
     return toErrorResponse(err)

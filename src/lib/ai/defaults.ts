@@ -16,6 +16,14 @@ export const HANDOFF_SENTINEL = '[[HANDOFF]]'
 export { promptLocale }
 export type { PromptLocale }
 
+/** Resolve the scaffold locale for a reply: the account's configured
+ *  locale if set, else the deploy default (AI_PROMPT_LOCALE). */
+export function resolvePromptLocale(
+  configLocale: PromptLocale | null | undefined,
+): PromptLocale {
+  return configLocale ?? promptLocale()
+}
+
 /** Default model per provider — mirrors the recommended pick in `models.ts`. */
 export const AI_PROVIDER_DEFAULT_MODEL: Record<AiProvider, string> = {
   openai: getDefaultModel('openai'),

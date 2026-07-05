@@ -683,20 +683,26 @@ async function processMessage(
   })
 
   if (msgError) {
+    // 23505 = unique violation on idx_messages_conv_wamid_unique
+    // (migration 036): Meta re-delivered a webhook we already processed
+    // (it retries when it doesn't get a timely 200). Stop here so the
+    // retry can't double-bump unread, re-fire automations/flows, or make
+    // the AI reply twice.
+    if (msgError.code === '23505') return
     console.error('Error inserting message:', msgError)
     return
   }
 
-  // Update conversation
-  const { error: convError } = await supabaseAdmin()
-    .from('conversations')
-    .update({
-      last_message_text: contentText || `[${message.type}]`,
-      last_message_at: new Date().toISOString(),
-      unread_count: (conversation.unread_count || 0) + 1,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', conversation.id)
+  // Update conversation. Atomic RPC (migration 036) — incrementing
+  // unread_count in SQL instead of read-modify-write here, so two
+  // simultaneous inbounds can't lose an increment.
+  const { error: convError } = await supabaseAdmin().rpc(
+    'bump_conversation_inbound',
+    {
+      p_conversation_id: conversation.id,
+      p_last_text: contentText || `[${message.type}]`,
+    },
+  )
 
   if (convError) {
     console.error('Error updating conversation:', convError)
@@ -796,6 +802,7 @@ async function processMessage(
       conversationId: conversation.id,
       contactId: contactRecord.id,
       configOwnerUserId,
+      inboundText,
     })
   }
 

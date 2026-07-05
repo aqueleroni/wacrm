@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getCachedPresence, setCachedPresence } from './presence-cache'
 
 export type MemoryKind = 'fact' | 'preference' | 'objection' | 'note'
 export type MemorySource = 'manual' | 'extracted' | 'import'
@@ -36,15 +37,23 @@ export async function retrieveMemory(
   const query = queryText.trim()
   if (!query || k <= 0) return []
 
-  try {
-    const { count, error } = await db
-      .from('ai_agent_memory')
-      .select('id', { count: 'exact', head: true })
-      .eq('account_id', accountId)
-      .eq('status', 'approved')
-    if (error || !count) return []
-  } catch {
-    return []
+  // Existence check cached for 60s per account (see presence-cache.ts)
+  // so active conversations don't pay this COUNT on every reply.
+  const cached = getCachedPresence('memory', accountId)
+  if (cached === false) return []
+  if (cached === null) {
+    try {
+      const { count, error } = await db
+        .from('ai_agent_memory')
+        .select('id', { count: 'exact', head: true })
+        .eq('account_id', accountId)
+        .eq('status', 'approved')
+      if (error) return []
+      setCachedPresence('memory', accountId, !!count)
+      if (!count) return []
+    } catch {
+      return []
+    }
   }
 
   const picked = new Map<string, string>()

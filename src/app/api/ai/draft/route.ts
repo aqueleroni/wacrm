@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import { loadAiConfig } from '@/lib/ai/config'
+import { supabaseAdmin } from '@/lib/ai/admin-client'
 import { buildConversationContext } from '@/lib/ai/context'
 import { buildAgentContext } from '@/lib/ai/agent-context'
 import { buildCrmContext, formatCrmContextBlock } from '@/lib/ai/crm-context'
 import { generateReply } from '@/lib/ai/generate'
-import { buildSystemPrompt } from '@/lib/ai/defaults'
-import { latestUserMessage } from '@/lib/ai/query'
+import { buildSystemPrompt, resolvePromptLocale } from '@/lib/ai/defaults'
+import { retrievalQuery } from '@/lib/ai/query'
+import { logGeneration } from '@/lib/ai/generation-log'
 import { AiError } from '@/lib/ai/types'
 
 /**
@@ -57,7 +59,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
     }
 
-    const config = await loadAiConfig(supabase, accountId).catch((err) => {
+    // The provider key column is no longer SELECT-able by the
+    // authenticated role (migration 038 — B5), so read the config with
+    // the service-role client, scoped to the session's own accountId.
+    const config = await loadAiConfig(supabaseAdmin(), accountId).catch((err) => {
       // Decrypt failure — surface distinctly from "not configured".
       console.error('[ai/draft] loadAiConfig error:', err)
       throw new AiError('Stored API key could not be decrypted.', {
@@ -88,7 +93,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const query = latestUserMessage(messages)
+    const query = retrievalQuery(messages)
     const [ctx, crmParts] = await Promise.all([
       buildAgentContext({
         db: supabase,
@@ -104,13 +109,42 @@ export async function POST(request: Request) {
       userPrompt: config.systemPrompt,
       conversationExamples: config.conversationExamples,
       mode: 'draft',
+      locale: resolvePromptLocale(config.promptLocale),
       knowledge: ctx.knowledge,
       memory: ctx.memory,
       skills: ctx.skills,
       crmContext: formatCrmContextBlock(crmParts),
     })
 
-    const { text } = await generateReply({ config, systemPrompt, messages })
+    const startedAt = Date.now()
+    let text: string
+    let usage
+    try {
+      ;({ text, usage } = await generateReply({ config, systemPrompt, messages }))
+    } catch (genErr) {
+      await logGeneration({
+        accountId,
+        conversationId,
+        mode: 'draft',
+        provider: config.provider,
+        model: config.model,
+        latencyMs: Date.now() - startedAt,
+        outcome: 'error',
+        errorCode: genErr instanceof AiError ? genErr.code : 'unknown',
+      })
+      throw genErr
+    }
+
+    await logGeneration({
+      accountId,
+      conversationId,
+      mode: 'draft',
+      provider: config.provider,
+      model: config.model,
+      usage,
+      latencyMs: Date.now() - startedAt,
+      outcome: 'draft',
+    })
     return NextResponse.json({ draft: text })
   } catch (err) {
     if (err instanceof AiError) {

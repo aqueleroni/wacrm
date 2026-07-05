@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import { loadAiConfig } from '@/lib/ai/config'
+import { supabaseAdmin } from '@/lib/ai/admin-client'
 import { buildAgentContext } from '@/lib/ai/agent-context'
 import { buildCrmContext, formatCrmContextBlock } from '@/lib/ai/crm-context'
 import { generateReply } from '@/lib/ai/generate'
-import { buildSystemPrompt } from '@/lib/ai/defaults'
-import { latestUserMessage } from '@/lib/ai/query'
+import { buildSystemPrompt, resolvePromptLocale } from '@/lib/ai/defaults'
+import { retrievalQuery } from '@/lib/ai/query'
+import { logGeneration } from '@/lib/ai/generation-log'
 import { AiError, type ChatMessage } from '@/lib/ai/types'
 
 // Keep the tested transcript bounded, mirroring the live context window.
@@ -54,7 +56,10 @@ export async function POST(request: Request) {
       )
     }
 
-    const config = await loadAiConfig(supabase, accountId, {
+    // Service-role read: the provider key column is not SELECT-able by
+    // the authenticated role after migration 038 (B5). Scoped to the
+    // session's own accountId.
+    const config = await loadAiConfig(supabaseAdmin(), accountId, {
       requireActive: false,
     }).catch((err) => {
       console.error('[ai/playground] loadAiConfig error:', err)
@@ -76,7 +81,7 @@ export async function POST(request: Request) {
     const contactId =
       typeof body?.contact_id === 'string' ? body.contact_id : null
 
-    const query = latestUserMessage(messages)
+    const query = retrievalQuery(messages)
     const [ctx, crmParts] = await Promise.all([
       buildAgentContext({
         db: supabase,
@@ -91,13 +96,41 @@ export async function POST(request: Request) {
       userPrompt: config.systemPrompt,
       conversationExamples: config.conversationExamples,
       mode: 'auto_reply',
+      locale: resolvePromptLocale(config.promptLocale),
       knowledge: ctx.knowledge,
       memory: ctx.memory,
       skills: ctx.skills,
       crmContext: formatCrmContextBlock(crmParts),
     })
 
-    const { text, handoff } = await generateReply({ config, systemPrompt, messages })
+    const startedAt = Date.now()
+    let text: string
+    let handoff: boolean
+    let usage
+    try {
+      ;({ text, handoff, usage } = await generateReply({ config, systemPrompt, messages }))
+    } catch (genErr) {
+      await logGeneration({
+        accountId,
+        mode: 'playground',
+        provider: config.provider,
+        model: config.model,
+        latencyMs: Date.now() - startedAt,
+        outcome: 'error',
+        errorCode: genErr instanceof AiError ? genErr.code : 'unknown',
+      })
+      throw genErr
+    }
+
+    await logGeneration({
+      accountId,
+      mode: 'playground',
+      provider: config.provider,
+      model: config.model,
+      usage,
+      latencyMs: Date.now() - startedAt,
+      outcome: handoff ? 'handoff' : 'draft',
+    })
     return NextResponse.json({ reply: text, handoff })
   } catch (err) {
     if (err instanceof AiError) {

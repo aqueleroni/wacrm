@@ -2,6 +2,7 @@ import { AiError, type AiConfig, type ChatMessage, type GenerateResult } from '.
 import { HANDOFF_SENTINEL, aiRequestTimeoutMs } from './defaults'
 import { generateOpenAi } from './providers/openai'
 import { generateAnthropic } from './providers/anthropic'
+import { withRetries } from './providers/shared'
 
 export interface GenerateArgs {
   config: AiConfig
@@ -27,13 +28,13 @@ export async function generateReply(args: GenerateArgs): Promise<GenerateResult>
     timeoutMs,
   }
 
-  let raw: string
+  let result
   switch (config.provider) {
     case 'openai':
-      raw = await generateOpenAi(providerArgs)
+      result = await withRetries(() => generateOpenAi(providerArgs))
       break
     case 'anthropic':
-      raw = await generateAnthropic(providerArgs)
+      result = await withRetries(() => generateAnthropic(providerArgs))
       break
     default:
       throw new AiError(`Unsupported AI provider: ${config.provider}`, {
@@ -42,7 +43,7 @@ export async function generateReply(args: GenerateArgs): Promise<GenerateResult>
       })
   }
 
-  return parseGeneration(raw)
+  return { ...parseGeneration(result.text), usage: result.usage }
 }
 
 /**

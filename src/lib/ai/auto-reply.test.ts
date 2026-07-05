@@ -10,7 +10,10 @@ const h = vi.hoisted(() => ({
   engineSendText: vi.fn(),
   state: {
     conv: null as Record<string, unknown> | null,
-    autoResponders: [] as { id: string }[],
+    autoResponders: [] as {
+      trigger_type: string
+      trigger_config?: Record<string, unknown>
+    }[],
     claim: true as boolean,
     updatePayload: null as Record<string, unknown> | null,
     rpcCalls: [] as { name: string; args: unknown }[],
@@ -26,12 +29,11 @@ vi.mock('./admin-client', () => ({
   supabaseAdmin: () => ({
     from: (table: string) => {
       if (table === 'automations') {
-        // .select().eq().eq().in().limit() → active auto-responders
+        // .select().eq().eq().in() → active auto-responders
         const chain = {
           select: () => chain,
           eq: () => chain,
-          in: () => chain,
-          limit: () =>
+          in: () =>
             Promise.resolve({ data: h.state.autoResponders, error: null }),
         }
         return chain
@@ -64,6 +66,7 @@ const ARGS = {
   conversationId: 'conv-1',
   contactId: 'contact-1',
   configOwnerUserId: 'user-1',
+  inboundText: 'hi, can you help me?',
 }
 
 function aiConfig(overrides: Partial<AiConfig> = {}): AiConfig {
@@ -77,6 +80,7 @@ function aiConfig(overrides: Partial<AiConfig> = {}): AiConfig {
     autoReplyMaxPerConversation: 3,
     embeddingsApiKey: null,
     conversationExamples: null,
+    promptLocale: null,
     ...overrides,
   }
 }
@@ -120,11 +124,36 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     expect(systemPrompt).toContain('Returns accepted within 30 days.')
   })
 
-  it('stands down when an active message-level automation exists', async () => {
-    h.state.autoResponders = [{ id: 'auto-1' }]
+  it('stands down when a new_message_received automation is active', async () => {
+    h.state.autoResponders = [{ trigger_type: 'new_message_received' }]
     await dispatchInboundToAiReply(ARGS)
     expect(h.generateReply).not.toHaveBeenCalled()
     expect(h.engineSendText).not.toHaveBeenCalled()
+  })
+
+  it('stands down when a keyword automation matches the inbound text', async () => {
+    h.state.autoResponders = [
+      {
+        trigger_type: 'keyword_match',
+        trigger_config: { keywords: ['help'], match_type: 'contains' },
+      },
+    ]
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReply).not.toHaveBeenCalled()
+    expect(h.engineSendText).not.toHaveBeenCalled()
+  })
+
+  it('still replies when a keyword automation does NOT match', async () => {
+    h.state.autoResponders = [
+      {
+        trigger_type: 'keyword_match',
+        trigger_config: { keywords: ['promo'], match_type: 'contains' },
+      },
+    ]
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: 'conv-1', text: 'Hello!' }),
+    )
   })
 
   it('does not send when the atomic slot claim loses the race', async () => {

@@ -19,9 +19,9 @@ describe('buildConversationContext', () => {
   it('maps sender_type to role and returns chronological order', async () => {
     // DB returns newest-first (created_at DESC); the fn reverses it.
     const rows = [
-      { sender_type: 'customer', content_text: 'third' },
-      { sender_type: 'agent', content_text: 'second' },
-      { sender_type: 'customer', content_text: 'first' },
+      { sender_type: 'customer', content_type: 'text', content_text: 'third' },
+      { sender_type: 'agent', content_type: 'text', content_text: 'second' },
+      { sender_type: 'customer', content_type: 'text', content_text: 'first' },
     ]
     const out = await buildConversationContext(fakeDb(rows), 'conv-1')
     expect(out).toEqual([
@@ -33,21 +33,46 @@ describe('buildConversationContext', () => {
 
   it('treats bot messages as assistant', async () => {
     const out = await buildConversationContext(
-      fakeDb([{ sender_type: 'bot', content_text: 'auto reply' }]),
+      fakeDb([{ sender_type: 'bot', content_type: 'text', content_text: 'auto reply' }]),
       'conv-1',
     )
     expect(out).toEqual([{ role: 'assistant', content: 'auto reply' }])
   })
 
-  it('drops empty / whitespace-only messages', async () => {
+  it('drops empty / whitespace-only text messages', async () => {
     const out = await buildConversationContext(
       fakeDb([
-        { sender_type: 'customer', content_text: '   ' },
-        { sender_type: 'customer', content_text: null },
-        { sender_type: 'customer', content_text: 'real' },
+        { sender_type: 'customer', content_type: 'text', content_text: '   ' },
+        { sender_type: 'customer', content_type: 'text', content_text: null },
+        { sender_type: 'customer', content_type: 'text', content_text: 'real' },
       ]),
       'conv-1',
     )
     expect(out).toEqual([{ role: 'user', content: 'real' }])
+  })
+
+  it('renders media as a bracketed placeholder (with caption when present)', async () => {
+    const out = await buildConversationContext(
+      fakeDb([
+        { sender_type: 'customer', content_type: 'image', content_text: 'esse aqui' },
+        { sender_type: 'customer', content_type: 'audio', content_text: null },
+        { sender_type: 'bot', content_type: 'document', content_text: null },
+      ]),
+      'conv-1',
+    )
+    // DB rows come in newest-first; the fn reverses to chronological.
+    expect(out).toEqual([
+      { role: 'assistant', content: '[o negócio enviou um documento]' },
+      { role: 'user', content: '[o cliente enviou um áudio]' },
+      { role: 'user', content: '[o cliente enviou uma imagem com a legenda: "esse aqui"]' },
+    ])
+  })
+
+  it('keeps interactive taps as text', async () => {
+    const out = await buildConversationContext(
+      fakeDb([{ sender_type: 'customer', content_type: 'interactive', content_text: 'Ver planos' }]),
+      'conv-1',
+    )
+    expect(out).toEqual([{ role: 'user', content: 'Ver planos' }])
   })
 })

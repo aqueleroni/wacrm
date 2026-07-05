@@ -12,10 +12,11 @@ interface AiConfigRow {
   auto_reply_max_per_conversation: number
   embeddings_api_key: string | null
   conversation_examples: string | null
+  prompt_locale: 'pt-BR' | 'en' | null
 }
 
 const CONFIG_COLUMNS =
-  'provider, model, api_key, system_prompt, conversation_examples, is_active, auto_reply_enabled, auto_reply_max_per_conversation, embeddings_api_key'
+  'provider, model, api_key, system_prompt, conversation_examples, is_active, auto_reply_enabled, auto_reply_max_per_conversation, embeddings_api_key, prompt_locale'
 
 /**
  * Load and decrypt the account's AI config for *use* (draft or
@@ -79,6 +80,7 @@ export async function loadAiConfig(
     autoReplyMaxPerConversation: row.auto_reply_max_per_conversation,
     embeddingsApiKey,
     conversationExamples: row.conversation_examples,
+    promptLocale: row.prompt_locale ?? null,
   }
 }
 

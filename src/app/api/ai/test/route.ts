@@ -3,6 +3,7 @@ import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import { validateAiCredentials } from '@/lib/ai/validate'
+import { supabaseAdmin } from '@/lib/ai/admin-client'
 import { AiError, type AiProvider } from '@/lib/ai/types'
 
 /**
@@ -16,7 +17,7 @@ import { AiError, type AiProvider } from '@/lib/ai/types'
  */
 export async function POST(request: Request) {
   try {
-    const { supabase, accountId, userId } = await requireRole('admin')
+    const { accountId, userId } = await requireRole('admin')
 
     const limit = checkRateLimit(`ai-test:${userId}`, RATE_LIMITS.adminAction)
     if (!limit.success) return rateLimitResponse(limit)
@@ -41,7 +42,8 @@ export async function POST(request: Request) {
     const rawKey = typeof body.api_key === 'string' ? body.api_key.trim() : ''
     let apiKeyPlain = rawKey
     if (!apiKeyPlain) {
-      const { data: existing } = await supabase
+      // api_key is service-role-only after migration 038 (B5).
+      const { data: existing } = await supabaseAdmin()
         .from('ai_configs')
         .select('api_key')
         .eq('account_id', accountId)
@@ -73,6 +75,7 @@ export async function POST(request: Request) {
         autoReplyMaxPerConversation: 3,
         embeddingsApiKey: null,
         conversationExamples: null,
+        promptLocale: null,
       })
     } catch (err) {
       if (err instanceof AiError) {

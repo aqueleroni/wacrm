@@ -9,7 +9,7 @@ import {
 describe('AI provider models', () => {
   it('returns a recommended default per provider', () => {
     expect(getDefaultModel('openai')).toBe('gpt-5.4-mini')
-    expect(getDefaultModel('anthropic')).toBe('claude-haiku-4-5-20251001')
+    expect(getDefaultModel('anthropic')).toBe('claude-haiku-4-5')
   })
 
   it('recognises curated model ids', () => {

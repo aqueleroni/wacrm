@@ -31,21 +31,31 @@ export async function runMemoryConsolidation(
     skipped: 0,
   }
 
-  for (const conv of conversations) {
-    try {
-      const extract = await extractMemoryFromConversation(
-        db,
-        conv.account_id,
-        conv.id,
-        conv.contact_id,
-      )
-      result.processed++
-      result.inserted += extract.inserted
-      result.proposed += extract.proposed
-      result.skipped += extract.skipped
-    } catch (err) {
-      console.error('[ai memory consolidate] extract failed:', conv.id, err)
-    }
+  // Small concurrent batches instead of fully serial: each extraction
+  // is an LLM call (~2-5s), and 20 in series would flirt with the cron
+  // invocation's timeout. One failed item never aborts the batch.
+  const BATCH_SIZE = 4
+  for (let i = 0; i < conversations.length; i += BATCH_SIZE) {
+    const batch = conversations.slice(i, i + BATCH_SIZE)
+    const settled = await Promise.allSettled(
+      batch.map((conv) =>
+        extractMemoryFromConversation(db, conv.account_id, conv.id, conv.contact_id),
+      ),
+    )
+    settled.forEach((outcome, j) => {
+      if (outcome.status === 'fulfilled') {
+        result.processed++
+        result.inserted += outcome.value.inserted
+        result.proposed += outcome.value.proposed
+        result.skipped += outcome.value.skipped
+      } else {
+        console.error(
+          '[ai memory consolidate] extract failed:',
+          batch[j].id,
+          outcome.reason,
+        )
+      }
+    })
   }
 
   return result

@@ -8,6 +8,7 @@ import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit
 import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
 import { validateAiCredentials } from '@/lib/ai/validate'
 import { embedTexts } from '@/lib/ai/embeddings'
+import { supabaseAdmin } from '@/lib/ai/admin-client'
 import { AiError, type AiProvider } from '@/lib/ai/types'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -71,9 +72,12 @@ function bad(message: string) {
  */
 export async function GET() {
   try {
-    const { supabase, accountId } = await getCurrentAccount()
+    const { accountId } = await getCurrentAccount()
 
-    const { data, error } = await loadConfigRow(supabase, accountId)
+    // Reads the encrypted key columns to derive has_* flags — those are
+    // service-role-only after migration 038 (B5), and the ciphertext is
+    // never returned to the client anyway. accountId is session-resolved.
+    const { data, error } = await loadConfigRow(supabaseAdmin(), accountId)
 
     if (error) {
       console.error('[ai/config GET] fetch error:', error)
@@ -137,6 +141,12 @@ export async function POST(request: Request) {
     const autoReplyEnabled = body.auto_reply_enabled === true
     const memoryAutoExtract = body.memory_auto_extract === true
 
+    // Optional per-account scaffold locale; null/absent = deploy default.
+    const promptLocale =
+      body.prompt_locale === 'pt-BR' || body.prompt_locale === 'en'
+        ? body.prompt_locale
+        : null
+
     let maxPer = Number(body.auto_reply_max_per_conversation)
     if (!Number.isFinite(maxPer)) maxPer = 3
     maxPer = Math.min(20, Math.max(1, Math.floor(maxPer)))
@@ -152,8 +162,10 @@ export async function POST(request: Request) {
         : ''
     const clearEmbeddingsKey = body.embeddings_api_key === null
 
-    // Reuse the stored key when the form didn't send a fresh one.
-    const { data: existing } = await supabase
+    // Reuse the stored key when the form didn't send a fresh one. Reads
+    // api_key (service-role-only after migration 038 — B5); accountId is
+    // session-resolved so the admin read stays account-scoped.
+    const { data: existing } = await supabaseAdmin()
       .from('ai_configs')
       .select('id, provider, model, api_key')
       .eq('account_id', accountId)
@@ -194,6 +206,7 @@ export async function POST(request: Request) {
           autoReplyMaxPerConversation: maxPer,
           embeddingsApiKey: null,
           conversationExamples: null,
+          promptLocale: null,
         })
       } catch (err) {
         if (err instanceof AiError) {
@@ -234,6 +247,7 @@ export async function POST(request: Request) {
       auto_reply_enabled: autoReplyEnabled,
       auto_reply_max_per_conversation: maxPer,
       memory_auto_extract: memoryAutoExtract,
+      prompt_locale: promptLocale,
     }
     if (rawEmbeddingsKey) {
       shared.embeddings_api_key = encrypt(rawEmbeddingsKey)

@@ -19,6 +19,24 @@ export interface MatchedSkill {
   instructions: string
 }
 
+/** Escape a user-supplied trigger for safe use inside a RegExp. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Does `trigger` occur in `haystack` on word boundaries? Beats plain
+ * `includes`: "promo" no longer fires inside "compromisso", and a
+ * trailing "s" plural still matches via the boundary at the word end.
+ * For multi-word or non-word triggers (emoji, punctuation), the `\b`
+ * anchors would misbehave, so those fall back to substring containment.
+ */
+function triggerHit(haystack: string, trigger: string): boolean {
+  if (!/^[\p{L}\p{N}]+$/u.test(trigger)) return haystack.includes(trigger)
+  const re = new RegExp(`\\b${escapeRegExp(trigger)}\\b`, 'u')
+  return re.test(haystack)
+}
+
 /**
  * Match active skills against the customer's message. v1: keyword overlap
  * on comma/semicolon-separated trigger hints, ordered by priority then score.
@@ -52,7 +70,7 @@ export async function matchSkills(
           .filter(Boolean)
         let score = 0
         for (const trigger of triggers) {
-          if (query.includes(trigger)) score += trigger.length
+          if (triggerHit(query, trigger)) score += trigger.length
         }
         return { skill, score }
       })

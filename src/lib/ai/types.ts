@@ -27,6 +27,9 @@ export interface AiConfig {
   embeddingsApiKey: string | null
   /** Optional few-shot examples (tone/format) appended after persona. */
   conversationExamples: string | null
+  /** Per-account prompt-scaffold language; null falls back to the
+   *  deploy default (AI_PROMPT_LOCALE). */
+  promptLocale: 'pt-BR' | 'en' | null
 }
 
 /** A single conversation turn in the shape both providers accept. */
@@ -35,12 +38,27 @@ export interface ChatMessage {
   content: string
 }
 
+/** Token counts a provider reports for one call (null when absent). */
+export interface TokenUsage {
+  inputTokens: number | null
+  outputTokens: number | null
+}
+
+/** What a provider adapter returns: raw text plus reported usage. */
+export interface ProviderResult {
+  text: string
+  usage: TokenUsage | null
+}
+
 /** Outcome of a generation call. */
 export interface GenerateResult {
   /** The reply text, with any handoff sentinel stripped. */
   text: string
   /** True when the model asked to hand off to a human (auto-reply mode). */
   handoff: boolean
+  /** Provider-reported token usage, when available — for cost/latency
+   *  observability (ai_generation_logs). */
+  usage?: TokenUsage | null
 }
 
 /**
@@ -51,10 +69,26 @@ export interface GenerateResult {
 export class AiError extends Error {
   readonly code: string
   readonly status: number
-  constructor(message: string, opts: { code?: string; status?: number } = {}) {
+  /** True when the failure is transient (429 / provider 5xx / network
+   *  blip) and the same request is worth retrying. Never true for
+   *  invalid_key or malformed-request failures. */
+  readonly retryable: boolean
+  /** Provider-suggested wait before retrying (from `Retry-After`). */
+  readonly retryAfterMs?: number
+  constructor(
+    message: string,
+    opts: {
+      code?: string
+      status?: number
+      retryable?: boolean
+      retryAfterMs?: number
+    } = {},
+  ) {
     super(message)
     this.name = 'AiError'
     this.code = opts.code ?? 'ai_error'
     this.status = opts.status ?? 502
+    this.retryable = opts.retryable ?? false
+    this.retryAfterMs = opts.retryAfterMs
   }
 }

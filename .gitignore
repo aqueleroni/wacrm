@@ -39,6 +39,15 @@ yarn-error.log*
 # vercel
 .vercel
 
+# agent / migration temp artifacts (never commit)
+.apply_*
+.mcp_017_out.json
+.mcp_call.json
+.remaining_migrations.json
+.tmp_*
+skills-lock.json
+supabase/.temp/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

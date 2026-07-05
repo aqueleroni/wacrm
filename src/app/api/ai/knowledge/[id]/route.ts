@@ -7,6 +7,8 @@ import {
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import { loadEmbeddingsKey } from '@/lib/ai/config'
 import { ingestDocument } from '@/lib/ai/knowledge'
+import { supabaseAdmin } from '@/lib/ai/admin-client'
+import { invalidatePresence } from '@/lib/ai/presence-cache'
 import { AiError } from '@/lib/ai/types'
 
 type Params = { params: Promise<{ id: string }> }
@@ -77,8 +79,9 @@ export async function PATCH(request: Request, { params }: Params) {
     if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     if (content !== undefined) {
+      // Embeddings key column is service-role-only after migration 038 (B5).
       const { key: embeddingsApiKey, corrupt } = await loadEmbeddingsKey(
-        supabase,
+        supabaseAdmin(),
         accountId,
       )
       try {
@@ -125,6 +128,7 @@ export async function DELETE(_request: Request, { params }: Params) {
       console.error('[ai/knowledge/[id] DELETE] error:', error)
       return NextResponse.json({ error: 'Failed to delete document' }, { status: 500 })
     }
+    invalidatePresence('kb', accountId)
     return NextResponse.json({ success: true })
   } catch (err) {
     return toErrorResponse(err)

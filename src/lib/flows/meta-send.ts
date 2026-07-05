@@ -79,7 +79,7 @@ export async function engineSendText(
 
   const { data: config, error: configErr } = await db
     .from('whatsapp_config')
-    .select('*')
+    .select('phone_number_id, access_token')
     .eq('account_id', args.accountId)
     .single()
   if (configErr || !config) {
@@ -188,7 +188,7 @@ export async function engineSendMedia(
 
   const { data: config, error: configErr } = await db
     .from('whatsapp_config')
-    .select('*')
+    .select('phone_number_id, access_token')
     .eq('account_id', args.accountId)
     .single()
   if (configErr || !config) {
@@ -340,7 +340,7 @@ async function sendInteractiveViaMeta(
 
   const { data: config, error: configErr } = await db
     .from('whatsapp_config')
-    .select('*')
+    .select('phone_number_id, access_token')
     .eq('account_id', input.accountId)
     .single()
   if (configErr || !config) {

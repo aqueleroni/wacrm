@@ -22,10 +22,14 @@ export const AI_PROVIDER_MODELS: Record<AiProvider, readonly AiModelOption[]> = 
     { id: 'gpt-4o', tier: 'balanced' },
   ],
   anthropic: [
-    { id: 'claude-haiku-4-5-20251001', tier: 'economy', recommended: true },
-    { id: 'claude-3-5-haiku-20241022', tier: 'economy' },
+    // IDs sem sufixo de data (aliases) não aposentam silenciosamente.
+    // Ver auditoria B1: 'claude-3-5-haiku-20241022' foi aposentado e
+    // 'claude-opus-4-6-20250514' nunca existiu (data do Opus 4, não do 4.6).
+    { id: 'claude-haiku-4-5', tier: 'economy', recommended: true },
+    { id: 'claude-sonnet-5', tier: 'balanced' },
+    { id: 'claude-sonnet-4-6', tier: 'balanced' },
     { id: 'claude-sonnet-4-5-20250929', tier: 'balanced' },
-    { id: 'claude-opus-4-6-20250514', tier: 'premium' },
+    { id: 'claude-opus-4-8', tier: 'premium' },
   ],
 }
 

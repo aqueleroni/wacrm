@@ -6,6 +6,7 @@ import {
 } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import type { MemoryKind, MemorySource, MemoryStatus } from '@/lib/ai/memory'
+import { invalidatePresence } from '@/lib/ai/presence-cache'
 
 const KINDS: MemoryKind[] = ['fact', 'preference', 'objection', 'note']
 const STATUSES: MemoryStatus[] = ['pending', 'approved', 'rejected', 'archived']
@@ -83,6 +84,7 @@ export async function POST(request: Request) {
       console.error('[ai/memory POST] error:', error)
       return NextResponse.json({ error: 'Failed to save memory' }, { status: 500 })
     }
+    invalidatePresence('memory', accountId)
     return NextResponse.json({ success: true, id: data.id })
   } catch (err) {
     return toErrorResponse(err)

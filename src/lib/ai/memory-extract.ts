@@ -160,12 +160,23 @@ async function hasSimilarMemory(
   content: string,
 ): Promise<boolean> {
   const normalized = content.toLowerCase().replace(/\s+/g, ' ').trim()
-  const { data } = await db
+  // Compare against the memories a duplicate could actually collide
+  // with: this contact's plus the account-wide ones, newest first. An
+  // unscoped/unordered fetch degrades to an arbitrary subset once the
+  // account passes the row limit, and the dedupe silently stops working.
+  let query = db
     .from('ai_agent_memory')
     .select('content')
     .eq('account_id', accountId)
     .in('status', ['pending', 'approved', 'rejected'])
-    .limit(50)
+  if (contactId) {
+    query = query.or(`contact_id.is.null,contact_id.eq.${contactId}`)
+  } else {
+    query = query.is('contact_id', null)
+  }
+  const { data } = await query
+    .order('updated_at', { ascending: false })
+    .limit(100)
 
   if (!data?.length) return false
   return data.some((row) => {
@@ -174,7 +185,15 @@ async function hasSimilarMemory(
   })
 }
 
-/** Find idle conversations eligible for automatic extraction. */
+/**
+ * Find idle conversations eligible for automatic extraction.
+ *
+ * Delegates to the `find_conversations_for_memory_extract` RPC
+ * (migration 036) so the "not yet extracted OR active since last
+ * extraction" filter runs in SQL. Filtering client-side over a bounded
+ * window starves: dormant already-extracted conversations occupy the
+ * window forever and the cron degrades to processing zero rows.
+ */
 export async function findConversationsForExtract(
   db: SupabaseClient,
   idleMinutes = 30,
@@ -182,34 +201,20 @@ export async function findConversationsForExtract(
 ): Promise<{ id: string; account_id: string; contact_id: string | null }[]> {
   const cutoff = new Date(Date.now() - idleMinutes * 60_000).toISOString()
 
-  const { data: configs } = await db
-    .from('ai_configs')
-    .select('account_id')
-    .eq('memory_auto_extract', true)
-    .eq('is_active', true)
+  const { data, error } = await db.rpc('find_conversations_for_memory_extract', {
+    p_cutoff: cutoff,
+    p_limit: limit,
+  })
+  if (error || !Array.isArray(data)) {
+    if (error) console.error('[ai memory extract] find RPC failed:', error)
+    return []
+  }
 
-  const accountIds = (configs ?? []).map((c) => c.account_id as string)
-  if (accountIds.length === 0) return []
-
-  const { data, error } = await db
-    .from('conversations')
-    .select('id, account_id, contact_id, updated_at, ai_memory_extracted_at')
-    .in('account_id', accountIds)
-    .lt('updated_at', cutoff)
-    .order('updated_at', { ascending: true })
-    .limit(limit * 3)
-
-  if (error || !data) return []
-
-  return data
-    .filter((c) => {
-      if (!c.ai_memory_extracted_at) return true
-      return new Date(c.updated_at as string) > new Date(c.ai_memory_extracted_at as string)
-    })
-    .slice(0, limit)
-    .map((c) => ({
-      id: c.id as string,
-      account_id: c.account_id as string,
-      contact_id: (c.contact_id as string | null) ?? null,
-    }))
+  return (data as { id: string; account_id: string; contact_id: string | null }[]).map(
+    (c) => ({
+      id: c.id,
+      account_id: c.account_id,
+      contact_id: c.contact_id ?? null,
+    }),
+  )
 }
