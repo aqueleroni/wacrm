@@ -148,6 +148,10 @@ export const inbox = {
     draftFailed: "Couldn't draft a reply.",
     noReply: "The assistant didn't return a reply.",
     unreachable: "Couldn't reach the AI assistant.",
+    extractMemory: 'Extract learnings from this conversation',
+    extractSuccess: '{count} suggestion(s) sent for review in Agents → Intelligence.',
+    extractEmpty: 'No new facts to propose — short thread or already analyzed.',
+    extractFailed: 'Failed to extract learnings.',
   },
   media: {
     uploadFailed: 'Upload failed.',

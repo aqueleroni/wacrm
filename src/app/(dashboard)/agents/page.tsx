@@ -7,6 +7,7 @@ import { AiPlayground } from '@/components/agents/ai-playground';
 import { AiIntelligencePanel } from '@/components/agents/ai-intelligence-panel';
 import { AiConfig } from '@/components/settings/ai-config';
 import { useT } from '@/hooks/use-i18n';
+import { cn } from '@/lib/utils';
 
 type Tab = 'playground' | 'setup' | 'intelligence';
 
@@ -14,6 +15,7 @@ export default function AgentsPage() {
   const t = useT();
   const [tab, setTab] = useState<Tab>('playground');
   const [decided, setDecided] = useState(false);
+  const [pendingMemoryCount, setPendingMemoryCount] = useState(0);
 
   // Land first-time users on Setup, returning users on the Playground.
   useEffect(() => {
@@ -33,6 +35,25 @@ export default function AgentsPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!decided) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/ai/memory?status=pending');
+        const data = await res.json().catch(() => ({}));
+        if (!cancelled && res.ok) {
+          setPendingMemoryCount(Array.isArray(data.memories) ? data.memories.length : 0);
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [decided, tab]);
 
   return (
     <div>
@@ -64,8 +85,18 @@ export default function AgentsPage() {
             <TabsTrigger value="setup">
               <Settings2 className="mr-1.5 h-4 w-4" /> {t('agents.tabs.setup')}
             </TabsTrigger>
-            <TabsTrigger value="intelligence">
+            <TabsTrigger value="intelligence" className="relative">
               <Brain className="mr-1.5 h-4 w-4" /> {t('agents.tabs.intelligence')}
+              {pendingMemoryCount > 0 && (
+                <span
+                  className={cn(
+                    'ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full',
+                    'bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white',
+                  )}
+                >
+                  {pendingMemoryCount > 99 ? '99+' : pendingMemoryCount}
+                </span>
+              )}
             </TabsTrigger>
           </TabsList>
 

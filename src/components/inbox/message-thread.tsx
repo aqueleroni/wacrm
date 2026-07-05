@@ -27,6 +27,7 @@ import {
   RefreshCw,
   PanelRightOpen,
   PanelRightClose,
+  Brain,
 } from "lucide-react";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,7 @@ import {
   type SendMediaPayload,
 } from "./message-composer";
 import { deleteAccountMedia } from "@/lib/storage/upload-media";
+import { canEditSettings } from "@/lib/auth/roles";
 import { TemplatePicker } from "./template-picker";
 import { buildReplyPreview } from "./reply-quote";
 import { toast } from "sonner";
@@ -167,7 +169,8 @@ export function MessageThread({
   onToggleContactPanel,
 }: MessageThreadProps) {
   const t = useT();
-  const { user } = useAuth();
+  const { user, accountRole } = useAuth();
+  const canExtractMemory = accountRole ? canEditSettings(accountRole) : false;
   const { getPresence, getRow, now } = usePresence();
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -179,6 +182,7 @@ export function MessageThread({
   // parent's resyncToken); the 700ms spin is just feedback so the click
   // doesn't feel like a no-op. Cleared via the timer ref on unmount.
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [extractingMemory, setExtractingMemory] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     return () => {
@@ -196,6 +200,35 @@ export function MessageThread({
       refreshTimerRef.current = null;
     }, 700);
   }, [isRefreshing, onRefresh]);
+
+  const handleExtractMemory = useCallback(async () => {
+    if (!conversation || extractingMemory) return;
+    setExtractingMemory(true);
+    try {
+      const res = await fetch("/api/ai/memory/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation_id: conversation.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error ?? t("inbox.ai.extractFailed"));
+        return;
+      }
+      if (data.inserted > 0) {
+        toast.success(
+          t("inbox.ai.extractSuccess", { count: data.inserted as number }),
+        );
+      } else {
+        toast.info(t("inbox.ai.extractEmpty"));
+      }
+    } catch {
+      toast.error(t("inbox.ai.extractFailed"));
+    } finally {
+      setExtractingMemory(false);
+    }
+  }, [conversation, extractingMemory, t]);
+
   const [replyTo, setReplyTo] = useState<ReplyDraft | null>(null);
 
   // Profiles are bounded by RLS to rows the current user is allowed to
@@ -887,6 +920,23 @@ export function MessageThread({
               ) : (
                 <PanelRightOpen className="h-4 w-4" />
               )}
+            </button>
+          )}
+
+          {canExtractMemory && conversation && (
+            <button
+              type="button"
+              onClick={() => void handleExtractMemory()}
+              disabled={extractingMemory}
+              aria-label={t("inbox.ai.extractMemory")}
+              title={t("inbox.ai.extractMemory")}
+              className={cn(
+                "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60",
+              )}
+            >
+              <Brain
+                className={cn("h-3.5 w-3.5", extractingMemory && "animate-pulse")}
+              />
             </button>
           )}
 

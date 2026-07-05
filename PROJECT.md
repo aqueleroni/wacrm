@@ -29,7 +29,7 @@ npm run dev                          # http://localhost:3000
 - **Supabase project ref:** `tvssbeqafnodzvgzfbsp`
 - **MCP Supabase:** configurado em `.cursor/mcp.json`
 - **Agent Skills:** `.agents/skills/supabase` e `supabase-postgres-best-practices`
-- **Migrations:** `supabase/migrations/` (001–**031**) — rodar novas migrations via MCP ou SQL Editor após sync upstream
+- **Migrations:** `supabase/migrations/` (001–**034**) — rodar novas migrations via MCP ou SQL Editor após sync upstream
 - **Locale padrão:** `NEXT_PUBLIC_LOCALE=pt-BR` em `.env.local`
 - **Sem senha padrão** — conta criada em `/signup`
 
@@ -67,6 +67,7 @@ git push origin main
 | IA — roadmap agente | `docs/ai-agent-evolution-plan.md` | Auditoria + plano por etapas (persona, memória, skills, Configurações) |
 | Canais omnichannel | `docs/omnichannel-channels-plan.md` | Plano Site (widget + embed) + Instagram DM + inbox unificada + IA por canal |
 | IA — Etapa 0 | `scripts/seed-wepost-knowledge.ts`, `docs/ai-agent-playground-checklist.md` | KB 5/5 seed + checklist + env doc |
+| IA — Etapa 6 | `docs/ai-agent-etapa-6-cron.md`, cron `/api/ai/cron/consolidate` | Aprendizado supervisionado: extract → pending → aprovação humana |
 
 **Commits publicados:**
 - `54006c0` — toggle senha login/signup
@@ -93,6 +94,7 @@ git push origin main
 | 2026-07-04 | Plano agente evolutivo: `docs/ai-agent-evolution-plan.md` (auditoria + 7 etapas; config em Settings) |
 | 2026-07-04 | **Etapa 0:** KB Wepost 5/5, checklist Playground, env doc, branch `feat/ai-agent-evolution`, `npm run seed:wepost-kb` |
 | 2026-07-04 | Plano omnichannel: `docs/omnichannel-channels-plan.md` — Site (widget), Instagram DM, inbox com filtro por canal, agente IA por canal |
+| 2026-07-05 | **Etapa 6:** aprendizado supervisionado — cron consolidate, badge pendentes, extrair na inbox, doc cron |
 
 ## Onde customizar branding / UI (referência)
 

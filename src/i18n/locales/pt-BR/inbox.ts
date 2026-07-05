@@ -148,6 +148,10 @@ export const inbox = {
     draftFailed: 'Não foi possível gerar a resposta.',
     noReply: 'O assistente não retornou uma resposta.',
     unreachable: 'Não foi possível conectar ao assistente de IA.',
+    extractMemory: 'Extrair aprendizados desta conversa',
+    extractSuccess: '{count} sugestão(ões) enviada(s) para revisão em Agentes → Inteligência.',
+    extractEmpty: 'Nenhum fato novo para propor — conversa curta ou já analisada.',
+    extractFailed: 'Falha ao extrair aprendizados.',
   },
   media: {
     uploadFailed: 'Falha no envio.',

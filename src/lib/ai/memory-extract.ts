@@ -164,7 +164,7 @@ async function hasSimilarMemory(
     .from('ai_agent_memory')
     .select('content')
     .eq('account_id', accountId)
-    .in('status', ['pending', 'approved'])
+    .in('status', ['pending', 'approved', 'rejected'])
     .limit(50)
 
   if (!data?.length) return false

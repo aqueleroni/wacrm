@@ -1,46 +1,53 @@
+import { timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/ai/admin-client'
-import {
-  extractMemoryFromConversation,
-  findConversationsForExtract,
-} from '@/lib/ai/memory-extract'
+import { runMemoryConsolidation } from '@/lib/ai/memory-consolidate'
 
-/**
- * POST /api/ai/cron/consolidate
- *
- * Analyzes idle conversations and proposes memory candidates (pending).
- * Auth: x-cron-secret header matching AUTOMATION_CRON_SECRET.
- */
-export async function POST(request: Request) {
+function authorizeCron(request: Request): NextResponse | null {
   const expected = process.env.AUTOMATION_CRON_SECRET
   if (!expected) {
     return NextResponse.json({ error: 'cron not configured' }, { status: 503 })
   }
-  const supplied = request.headers.get('x-cron-secret')
-  if (supplied !== expected) {
+  const supplied = request.headers.get('x-cron-secret') ?? ''
+  const suppliedBuf = Buffer.from(supplied)
+  const expectedBuf = Buffer.from(expected)
+  if (
+    suppliedBuf.length !== expectedBuf.length ||
+    !timingSafeEqual(suppliedBuf, expectedBuf)
+  ) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  return null
+}
+
+/**
+ * GET/POST /api/ai/cron/consolidate
+ *
+ * Analyzes idle conversations (30 min+) for accounts with
+ * `memory_auto_extract` enabled and proposes memory rows as pending.
+ *
+ * Auth: x-cron-secret header matching AUTOMATION_CRON_SECRET.
+ * Schedule alongside /api/automations/cron and /api/flows/cron.
+ */
+async function handleConsolidate(request: Request) {
+  const denied = authorizeCron(request)
+  if (denied) return denied
 
   const db = supabaseAdmin()
-  const conversations = await findConversationsForExtract(db)
+  const result = await runMemoryConsolidation(db)
 
-  let processed = 0
-  let inserted = 0
+  return NextResponse.json({
+    processed: result.processed,
+    inserted: result.inserted,
+    proposed: result.proposed,
+    skipped: result.skipped,
+  })
+}
 
-  for (const conv of conversations) {
-    try {
-      const result = await extractMemoryFromConversation(
-        db,
-        conv.account_id,
-        conv.id,
-        conv.contact_id,
-      )
-      processed++
-      inserted += result.inserted
-    } catch (err) {
-      console.error('[ai/cron/consolidate] extract failed:', conv.id, err)
-    }
-  }
+export async function GET(request: Request) {
+  return handleConsolidate(request)
+}
 
-  return NextResponse.json({ processed, inserted, candidates: inserted })
+export async function POST(request: Request) {
+  return handleConsolidate(request)
 }

@@ -396,32 +396,36 @@ Ver **`docs/ai-agent-etapa-7-ml-plan.md`** — fases 7.1–7.6 (embeddings, feed
 
 ---
 
-### Etapa 6 — Aprendizado supervisionado (4–5 dias)
+### Etapa 6 — Aprendizado supervisionado (4–5 dias) ✅ concluída 2026-07-05
 
 **Objetivo:** agente propõe memórias; humano aprova (default).
 
 **Backend**
 
-- [ ] `POST /api/ai/cron/consolidate` (auth: `AUTOMATION_CRON_SECRET` ou novo `AI_CRON_SECRET`)
-- [ ] `extractMemoryFromConversation()` — LLM structured output → rows `pending`
-- [ ] Disparadores v1:
+- [x] `GET/POST /api/ai/cron/consolidate` (auth: `AUTOMATION_CRON_SECRET`)
+- [x] `extractMemoryFromConversation()` — LLM structured output → rows `pending`
+- [x] Disparadores v1:
   - Cron: conversas idle > 30 min sem pending extract
-  - Opcional: fire-and-forget após auto-reply (webhook `after()`)
-- [ ] `ai_configs.memory_auto_extract` toggle
-- [ ] **Nunca** auto-approve preços/promessas (heurística + blocklist)
+  - Manual: `POST /api/ai/memory/extract` + botão na inbox
+- [x] `ai_configs.memory_auto_extract` toggle
+- [x] **Nunca** auto-approve preços/promessas (heurística + blocklist)
+- [x] Rejeitadas não re-propostas (dedup)
 - [ ] Opcional: `conversations.ai_summary` update no mesmo job
 
 **Frontend**
 
-- [ ] Atendimento tab: "Extrair aprendizados automaticamente" (off por default)
-- [ ] Memória tab: fila **Pendentes** em destaque
-- [ ] Notificação/badge no settings rail quando pending > 0
+- [x] Inteligência → Memória: "Aprendizado automático" (off por default)
+- [x] Memória tab: fila **Pendentes** em destaque
+- [x] Badge na aba Inteligência quando pending > 0
+- [x] Botão extrair na inbox (admin+)
 
 **Aceite**
 
 - Após conversa teste, aparece 1–3 sugestões pending
 - Admin aprova → próxima conversa usa o fato
 - Rejeitar não reaparece
+
+**Doc:** `docs/ai-agent-etapa-6-cron.md`
 
 ---
 
