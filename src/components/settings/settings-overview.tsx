@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { useT } from '@/hooks/use-i18n';
 import { useTheme } from '@/hooks/use-theme';
-import { THEMES } from '@/lib/themes';
+import { getThemes } from '@/lib/themes';
 import { getCurrencyLabel } from '@/lib/currency';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
@@ -141,14 +141,55 @@ export function SettingsOverview({
     };
   }, [user?.id, accountId, canManageMembers]);
 
-  const displayName = profile?.full_name || profile?.email || 'Your account';
+  const displayName = profile?.full_name || profile?.email || t('settings.overview.yourAccount');
   const initial = (profile?.full_name || profile?.email || 'U').charAt(0).toUpperCase();
   const roleMeta = accountRole ? roleMetaByRole[accountRole] : null;
   const RoleIcon = roleMeta?.icon;
 
   const currencyLabel = getCurrencyLabel(defaultCurrency, t);
-  const themeName = THEMES.find((t) => t.id === theme)?.name ?? theme;
-  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const themes = getThemes(t);
+  const themeName = themes.find((th) => th.id === theme)?.name ?? theme;
+  const modeLabel =
+    mode === 'light'
+      ? t('settings.appearance.mode.light')
+      : t('settings.appearance.mode.dark');
+
+  const membersSubtitle = () => {
+    if (counts?.members == null) return t('settings.overview.members.viewTeam');
+    const base =
+      counts.members === 1
+        ? t('settings.overview.members.count', { count: counts.members })
+        : t('settings.overview.members.count_plural', { count: counts.members });
+    if (!counts.pendingInvites) return base;
+    const pending =
+      counts.pendingInvites === 1
+        ? t('settings.overview.members.pendingInvite', { count: counts.pendingInvites })
+        : t('settings.overview.members.pendingInvites', { count: counts.pendingInvites });
+    return `${base} · ${pending}`;
+  };
+
+  const templatesSubtitle = () => {
+    if (counts?.templates == null) return t('settings.overview.templates.manage');
+    const base =
+      counts.templates === 1
+        ? t('settings.overview.templates.count', { count: counts.templates })
+        : t('settings.overview.templates.count_plural', { count: counts.templates });
+    if (!counts.templatesPending) return base;
+    return `${base} · ${t('settings.overview.templates.pendingReview', {
+      count: counts.templatesPending,
+    })}`;
+  };
+
+  const fieldsSubtitle = () => {
+    if (counts?.tags == null && counts?.customFields == null) {
+      return t('settings.overview.fields.summary');
+    }
+    const tags = counts?.tags ?? 0;
+    const fields = counts?.customFields ?? 0;
+    return tags === 1 && fields === 1
+      ? t('settings.overview.fields.tagsAndFields', { tags, fields })
+      : t('settings.overview.fields.tagsAndFields_plural', { tags, fields });
+  };
 
   // Per-tile loading + subtitle. `null` counts render as a graceful
   // fallback so a single failed query never blanks a tile.
@@ -161,42 +202,26 @@ export function SettingsOverview({
       section: 'whatsapp',
       loading: whatsappLoading,
       subtitle: !whatsapp?.configured ? (
-        'Not set up yet'
+        t('settings.overview.whatsapp.notSetup')
       ) : whatsapp.connected ? (
         <>
-          <StatusDot tone="ok" /> Connected
+          <StatusDot tone="ok" /> {t('settings.overview.whatsapp.connected')}
         </>
       ) : (
         <>
-          <StatusDot tone="muted" /> Needs reconnecting
+          <StatusDot tone="muted" /> {t('settings.overview.whatsapp.needsReconnect')}
         </>
       ),
     },
     {
       section: 'members',
       loading: countsLoading,
-      subtitle:
-        counts?.members == null
-          ? 'View team members'
-          : `${counts.members} member${counts.members === 1 ? '' : 's'}${
-              counts.pendingInvites
-                ? ` · ${counts.pendingInvites} pending invite${
-                    counts.pendingInvites === 1 ? '' : 's'
-                  }`
-                : ''
-            }`,
+      subtitle: membersSubtitle(),
     },
     {
       section: 'templates',
       loading: countsLoading,
-      subtitle:
-        counts?.templates == null
-          ? 'Manage message templates'
-          : `${counts.templates} template${counts.templates === 1 ? '' : 's'}${
-              counts.templatesPending
-                ? ` · ${counts.templatesPending} pending review`
-                : ''
-            }`,
+      subtitle: templatesSubtitle(),
     },
     {
       section: 'deals',
@@ -206,17 +231,15 @@ export function SettingsOverview({
     {
       section: 'fields',
       loading: countsLoading,
-      subtitle:
-        counts?.tags == null && counts?.customFields == null
-          ? 'Tags and custom fields'
-          : `${counts?.tags ?? 0} tag${counts?.tags === 1 ? '' : 's'} · ${
-              counts?.customFields ?? 0
-            } custom field${counts?.customFields === 1 ? '' : 's'}`,
+      subtitle: fieldsSubtitle(),
     },
     {
       section: 'appearance',
       loading: false,
-      subtitle: `${cap(mode)} mode · ${themeName} accent`,
+      subtitle: t('settings.overview.appearance.subtitle', {
+        mode: modeLabel,
+        theme: themeName,
+      }),
     },
   ];
 
@@ -275,7 +298,7 @@ export function SettingsOverview({
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                   {loading ? (
                     <>
-                      <Loader2 className="size-3 animate-spin" /> Loading…
+                      <Loader2 className="size-3 animate-spin" /> {t('settings.overview.loading')}
                     </>
                   ) : (
                     subtitle
