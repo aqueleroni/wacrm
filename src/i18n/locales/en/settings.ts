@@ -322,7 +322,7 @@ export const settings = {
       lastFailed: 'Last attempt failed with: "{error}".',
       retryHint: 'Enter (or correct) the 2-step PIN below and click Save Configuration to retry.',
       legacyHint:
-        'This number was saved before registration tracking existed, or registration was skipped. Enter the 2-step PIN below and click Save Configuration to subscribe it.',
+        'This number is not fully registered yet (skipped or saved before tracking existed). If Meta requires a 2-step PIN, enter it below and click Save Configuration. Test numbers often have no PIN — in that case configure the webhook in Meta and click Verify with Meta.',
       diagnostic: 'Diagnostic — last run:',
       live: 'live',
       notLive: 'not live',

@@ -107,6 +107,7 @@ git push origin main
 | 2026-07-12 | i18n: passos de setup WhatsApp + aba Membros da equipe (títulos, presença, convites) |
 | 2026-07-12 | Fix rolagem dupla em Configurações: `min-h-0` no shell + layout contido (só o painel rola) |
 | 2026-07-12 | Reverte layout contido de Settings (quebrava clique abaixo de Modelos); mantém `min-h-0` no shell |
+| 2026-07-12 | i18n: textos de status de registro WhatsApp (antes hardcoded EN) via `useT()` |
 
 ## Onde customizar branding / UI (referência)
 

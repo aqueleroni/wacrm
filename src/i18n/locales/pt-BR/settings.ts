@@ -323,7 +323,7 @@ export const settings = {
       retryHint:
         'Informe (ou corrija) o PIN de 2 etapas abaixo e clique em Salvar configuração para tentar novamente.',
       legacyHint:
-        'Este número foi salvo antes do rastreamento de registro existir, ou o registro foi ignorado. Informe o PIN de 2 etapas abaixo e clique em Salvar configuração para inscrevê-lo.',
+        'O registro deste número ainda não foi concluído (foi pulado ou ainda não havia rastreamento). Se a Meta pedir PIN de 2 etapas, informe abaixo e clique em Salvar configuração. Número de teste costuma não ter PIN — nesse caso configure o webhook na Meta e clique em Verificar com a Meta.',
       diagnostic: 'Diagnóstico — última execução:',
       live: 'ativo',
       notLive: 'inativo',

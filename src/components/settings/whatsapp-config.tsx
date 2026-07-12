@@ -505,38 +505,33 @@ export function WhatsAppConfig() {
             <AlertDescription className="text-muted-foreground mt-2 text-xs leading-relaxed">
               {isRegistered ? (
                 <>
-                  Subscribed since{' '}
-                  {config.registered_at
-                    ? new Date(config.registered_at).toLocaleString()
-                    : 'unknown'}
-                  . Click <strong>Verify with Meta</strong> if events
-                  stop arriving.
+                  {t('settings.whatsapp.registration.subscribedSince', {
+                    date: config.registered_at
+                      ? new Date(config.registered_at).toLocaleString()
+                      : t('settings.whatsapp.registration.subscribedUnknown'),
+                  })}{' '}
+                  {t('settings.whatsapp.registration.verifyHint')}
                 </>
               ) : lastRegistrationError ? (
                 <>
-                  Last attempt failed with:{' '}
-                  <span className="text-red-300">
-                    &quot;{lastRegistrationError}&quot;
-                  </span>
-                  . Enter (or correct) the 2-step PIN below and click
-                  Save Configuration to retry.
+                  {t('settings.whatsapp.registration.lastFailed', {
+                    error: lastRegistrationError,
+                  })}{' '}
+                  {t('settings.whatsapp.registration.retryHint')}
                 </>
               ) : (
-                <>
-                  This number was saved before registration tracking
-                  existed, or registration was skipped. Enter the
-                  2-step PIN below and click Save Configuration to
-                  subscribe it.
-                </>
+                t('settings.whatsapp.registration.legacyHint')
               )}
             </AlertDescription>
 
             {registrationProbe && (
               <div className="mt-3 rounded border border-border bg-card/60 px-3 py-2 space-y-1.5 text-[11px]">
                 <p className="font-medium text-foreground">
-                  Diagnostic — last run: {' '}
+                  {t('settings.whatsapp.registration.diagnostic')}{' '}
                   <span className={registrationProbe.live ? 'text-emerald-400' : 'text-amber-400'}>
-                    {registrationProbe.live ? 'live' : 'not live'}
+                    {registrationProbe.live
+                      ? t('settings.whatsapp.registration.live')
+                      : t('settings.whatsapp.registration.notLive')}
                   </span>
                 </p>
                 <ul className="space-y-0.5 text-muted-foreground">
