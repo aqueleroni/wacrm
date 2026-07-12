@@ -23,4 +23,34 @@ export const interactive = {
   idPlaceholder: 'id',
   previewBody: 'Corpo da mensagem…',
   previewButton: 'Botão',
+  errors: {
+    payload_required: 'O payload da mensagem interativa é obrigatório.',
+    body_required: 'O texto do corpo da mensagem interativa é obrigatório.',
+    body_too_long: 'O corpo excede o limite de {max} caracteres.',
+    header_too_long: 'O cabeçalho excede o limite de {max} caracteres.',
+    footer_too_long: 'O rodapé excede o limite de {max} caracteres.',
+    buttons_min: 'Adicione pelo menos um botão de resposta.',
+    buttons_max: 'Uma mensagem com botões permite no máximo {max} botões.',
+    button_id_required: 'Todo botão precisa de um id.',
+    button_id_duplicate: 'Id de botão duplicado "{id}".',
+    button_label_required: 'Todo botão precisa de um rótulo.',
+    button_label_too_long:
+      'O rótulo "{title}" excede o limite de {max} caracteres.',
+    list_button_required: 'A lista precisa de um rótulo no botão.',
+    list_button_too_long:
+      'O rótulo do botão da lista excede o limite de {max} caracteres.',
+    list_section_min: 'Adicione pelo menos uma seção na lista.',
+    list_section_max: 'Uma lista permite no máximo {max} seções.',
+    list_section_rows_required: 'Toda seção da lista precisa de linhas.',
+    list_row_id_required: 'Toda linha da lista precisa de um id.',
+    list_row_id_duplicate: 'Id de linha duplicado "{id}".',
+    list_row_title_required: 'Toda linha da lista precisa de um título.',
+    list_row_title_too_long:
+      'O título "{title}" excede o limite de {max} caracteres.',
+    list_row_description_too_long:
+      'A descrição da linha excede o limite de {max} caracteres.',
+    list_row_min: 'Adicione pelo menos uma linha na lista.',
+    list_row_max: 'Uma lista permite no máximo {max} linhas no total.',
+    kind_invalid: 'A mensagem interativa deve ser botões de resposta ou lista.',
+  },
 } as const;

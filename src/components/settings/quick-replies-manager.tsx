@@ -21,10 +21,36 @@ import {
 } from "@/components/interactive/interactive-builder";
 import {
   interactivePayloadPreviewText,
+  translateInteractiveError,
+  type InteractiveErrorCode,
+  type InteractiveErrorParams,
   type InteractiveMessagePayload,
 } from "@/lib/whatsapp/interactive";
 import type { QuickReply, QuickReplyKind } from "@/types";
 import { useT } from "@/hooks/use-i18n";
+
+function toastApiInteractiveError(
+  t: (key: string, params?: Record<string, string | number>) => string,
+  data: {
+    error?: string;
+    code?: InteractiveErrorCode;
+    params?: InteractiveErrorParams;
+  },
+  fallback: string,
+) {
+  if (data.code) {
+    toast.error(
+      translateInteractiveError(t, {
+        ok: false,
+        code: data.code,
+        params: data.params,
+        error: data.error ?? fallback,
+      }),
+    );
+    return;
+  }
+  toast.error(data.error ?? fallback);
+}
 
 interface DraftState {
   id?: string;
@@ -99,7 +125,11 @@ export function QuickRepliesManager() {
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(data.error ?? t("settings.quickReplies.saveFailed"));
+        toastApiInteractiveError(
+          t,
+          data,
+          t("settings.quickReplies.saveFailed"),
+        );
         return;
       }
       toast.success(

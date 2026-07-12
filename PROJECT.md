@@ -71,6 +71,7 @@ git push origin main
 | Sync upstream | merge `upstream/main` (2026-07-12) | Mantido `useT` (shim `use-translations`); **não** adotar next-intl |
 | Quick replies | `quick-replies-manager.tsx`, `?tab=quick-replies` | Respostas rápidas + mensagens interativas no composer |
 | i18n interativos/inbox | `interactive-builder.tsx`, `interactive-preview.tsx`, `locales/pt-BR/inbox.ts` | Builder e prévia interativos via `useT()`; novas seções da inbox traduzidas |
+| i18n erros interativos | `interactive.ts` + `locales/*/interactive.ts` | Validação com `code`/`params`; UI traduz erros via `translateInteractiveError` |
 | AI usage | `agents/ai-usage.tsx`, tab Usage | Dashboard de tokens (admin) |
 
 **Commits publicados:**
@@ -102,6 +103,7 @@ git push origin main
 | 2026-07-12 | **Sync upstream/main:** merge de 51 commits; mantido i18n próprio (`useT`) + branding Wp CRM; incorporados interactive WhatsApp, quick replies, AI usage, MCP server, security fixes; migration slot grant renomeada `031`→`037` (evitar colisão com branding) |
 | 2026-07-12 | Supabase remoto: aplicadas migrations `032`–`037` (knowledge INVOKER, AI polish, profiles RLS, interactive/quick_replies, dedup conversas, slot grant) |
 | 2026-07-12 | i18n pós-sync: builder/prévia de mensagens interativas conectados ao `useT()` e seções restantes da inbox traduzidas para PT-BR |
+| 2026-07-12 | Erros de validação interativa: códigos estáveis + chaves `interactive.errors.*` (EN/PT); toasts e builder usam `translateInteractiveError` |
 
 ## Onde customizar branding / UI (referência)
 

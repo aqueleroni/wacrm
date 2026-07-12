@@ -11,6 +11,7 @@ import { slugify } from "@/components/flows/shared";
 import { INTERACTIVE_LIMITS } from "@/lib/whatsapp/meta-api";
 import { useT } from "@/hooks/use-i18n";
 import {
+  translateInteractiveError,
   validateInteractivePayload,
   type InteractiveButtonsPayload,
   type InteractiveListPayload,
@@ -163,7 +164,9 @@ export function InteractiveBuilder({
         </label>
 
         {!validation.ok && (
-          <p className="text-xs text-red-400">{validation.error}</p>
+          <p className="text-xs text-red-400">
+            {translateInteractiveError(t, validation)}
+          </p>
         )}
       </div>
 

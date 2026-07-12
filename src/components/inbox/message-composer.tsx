@@ -52,7 +52,10 @@ import {
   InteractiveBuilder,
   blankButtonsPayload,
 } from "@/components/interactive/interactive-builder";
-import { validateInteractivePayload } from "@/lib/whatsapp/interactive";
+import {
+  translateInteractiveError,
+  validateInteractivePayload,
+} from "@/lib/whatsapp/interactive";
 import type { InteractiveMessagePayload, QuickReply } from "@/types";
 import { QuickReplyPicker } from "./quick-reply-picker";
 
@@ -311,19 +314,19 @@ export function MessageComposer({
   const sendInteractive = useCallback(() => {
     const result = validateInteractivePayload(interactivePayload);
     if (!result.ok) {
-      toast.error(result.error);
+      toast.error(translateInteractiveError(t, result));
       return;
     }
     onSendInteractive(interactivePayload, replyTo?.id);
     setInteractiveOpen(false);
     onClearReply?.();
-  }, [interactivePayload, onSendInteractive, replyTo?.id, onClearReply]);
+  }, [interactivePayload, onSendInteractive, replyTo?.id, onClearReply, t]);
 
   // Persist the current builder payload as a reusable interactive snippet.
   const saveAsQuickReply = useCallback(async () => {
     const result = validateInteractivePayload(interactivePayload);
     if (!result.ok) {
-      toast.error(result.error);
+      toast.error(translateInteractiveError(t, result));
       return;
     }
     const title = window
@@ -343,7 +346,18 @@ export function MessageComposer({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(data.error ?? t("quickReplySaveError"));
+        if (data.code) {
+          toast.error(
+            translateInteractiveError(t, {
+              ok: false,
+              code: data.code,
+              params: data.params,
+              error: data.error ?? t("quickReplySaveError"),
+            }),
+          );
+        } else {
+          toast.error(data.error ?? t("quickReplySaveError"));
+        }
         return;
       }
       toast.success(t("quickReplySaved"));

@@ -23,4 +23,33 @@ export const interactive = {
   idPlaceholder: 'id',
   previewBody: 'Message body…',
   previewButton: 'Button',
+  errors: {
+    payload_required: 'Interactive message payload is required.',
+    body_required: 'Interactive message body text is required.',
+    body_too_long: 'Body text exceeds the {max}-character limit.',
+    header_too_long: 'Header exceeds the {max}-character limit.',
+    footer_too_long: 'Footer exceeds the {max}-character limit.',
+    buttons_min: 'Add at least one reply button.',
+    buttons_max: 'A reply-button message allows at most {max} buttons.',
+    button_id_required: 'Every button needs an id.',
+    button_id_duplicate: 'Duplicate button id "{id}".',
+    button_label_required: 'Every button needs a label.',
+    button_label_too_long:
+      'Button label "{title}" exceeds the {max}-character limit.',
+    list_button_required: 'The list needs a button label.',
+    list_button_too_long: 'List button label exceeds the {max}-character limit.',
+    list_section_min: 'Add at least one list section.',
+    list_section_max: 'A list allows at most {max} sections.',
+    list_section_rows_required: 'Every list section needs rows.',
+    list_row_id_required: 'Every list row needs an id.',
+    list_row_id_duplicate: 'Duplicate list row id "{id}".',
+    list_row_title_required: 'Every list row needs a title.',
+    list_row_title_too_long:
+      'List row title "{title}" exceeds the {max}-character limit.',
+    list_row_description_too_long:
+      'List row description exceeds the {max}-character limit.',
+    list_row_min: 'Add at least one list row.',
+    list_row_max: 'A list allows at most {max} rows in total.',
+    kind_invalid: 'Interactive message must be reply buttons or a list.',
+  },
 } as const;
