@@ -346,6 +346,28 @@ export const settings = {
       webhookCopied: 'Webhook URL copied to clipboard',
     },
   },
+  quickReplies: {
+    title: 'Quick replies',
+    description:
+      'Reusable snippets — plain text or a saved interactive message — that agents can insert from the inbox composer.',
+    new: 'New quick reply',
+    empty: 'No quick replies yet. Create one to reuse it across conversations.',
+    editTitle: 'Edit quick reply',
+    createTitle: 'New quick reply',
+    nameLabel: 'Name',
+    namePlaceholder: 'e.g. Business hours',
+    nameRequired: 'Give the quick reply a name.',
+    kindText: 'Text',
+    kindInteractive: 'Interactive',
+    textPlaceholder: 'The message text to insert',
+    cancel: 'Cancel',
+    save: 'Save',
+    created: 'Quick reply created.',
+    updated: 'Quick reply updated.',
+    saveFailed: "Couldn't save the quick reply.",
+    deleteConfirm: 'Delete this quick reply?',
+    deleteFailed: "Couldn't delete the quick reply.",
+  },
   templates: {
     title: 'Message templates',
     description:

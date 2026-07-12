@@ -348,6 +348,28 @@ export const settings = {
       webhookCopied: 'URL do webhook copiada',
     },
   },
+  quickReplies: {
+    title: 'Respostas rápidas',
+    description:
+      'Trechos reutilizáveis — texto simples ou mensagem interativa salva — que agentes podem inserir no compositor da caixa de entrada.',
+    new: 'Nova resposta rápida',
+    empty: 'Nenhuma resposta rápida ainda. Crie uma para reutilizar nas conversas.',
+    editTitle: 'Editar resposta rápida',
+    createTitle: 'Nova resposta rápida',
+    nameLabel: 'Nome',
+    namePlaceholder: 'ex.: Horário de atendimento',
+    nameRequired: 'Dê um nome à resposta rápida.',
+    kindText: 'Texto',
+    kindInteractive: 'Interativa',
+    textPlaceholder: 'Texto da mensagem a inserir',
+    cancel: 'Cancelar',
+    save: 'Salvar',
+    created: 'Resposta rápida criada.',
+    updated: 'Resposta rápida atualizada.',
+    saveFailed: 'Não foi possível salvar a resposta rápida.',
+    deleteConfirm: 'Excluir esta resposta rápida?',
+    deleteFailed: 'Não foi possível excluir a resposta rápida.',
+  },
   templates: {
     title: 'Modelos de mensagem',
     description:
