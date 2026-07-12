@@ -29,7 +29,7 @@ npm run dev                          # http://localhost:3000
 - **Supabase project ref:** `tvssbeqafnodzvgzfbsp`
 - **MCP Supabase:** configurado em `.cursor/mcp.json`
 - **Agent Skills:** `.agents/skills/supabase` e `supabase-postgres-best-practices`
-- **Migrations:** `supabase/migrations/` (001–**031**) — rodar novas migrations via MCP ou SQL Editor após sync upstream
+- **Migrations:** `supabase/migrations/` (001–**037**) — rodar novas migrations via MCP ou SQL Editor após sync upstream
 - **Locale padrão:** `NEXT_PUBLIC_LOCALE=pt-BR` em `.env.local`
 - **Sem senha padrão** — conta criada em `/signup`
 
@@ -62,6 +62,9 @@ git push origin main
 | Marca padrão | `public/logo-wepost.webp`, `AppLogo`, `nav.appName` | Logo wepost (branco invert) + nome **Wp CRM** |
 | White-label | `031_account_branding.sql`, `branding-settings.tsx`, `use-branding.tsx` | Nome, logo e cor de destaque **por conta** em Configurações → Aparência |
 | Sidebar | `sidebar.tsx` | Logo + nome dinâmicos via `useBranding()` |
+| Sync upstream | merge `upstream/main` (2026-07-12) | Mantido `useT` (shim `use-translations`); **não** adotar next-intl |
+| Quick replies | `quick-replies-manager.tsx`, `?tab=quick-replies` | Respostas rápidas + mensagens interativas no composer |
+| AI usage | `agents/ai-usage.tsx`, tab Usage | Dashboard de tokens (admin) |
 
 **Commits publicados:**
 - `54006c0` — toggle senha login/signup
@@ -84,6 +87,7 @@ git push origin main
 | 2026-07-04 | Marca Wp CRM + logo wepost (`AppLogo`, favicon, auth pages) |
 | 2026-07-04 | Modelos de fluxo: conteúdo PT-BR ao clonar template |
 | 2026-07-04 | **White-label v1:** migration `031_account_branding` — `brand_name`, `brand_logo_url`, `brand_primary_color` + bucket `account-branding`; UI em Configurações → Aparência → Marca |
+| 2026-07-12 | **Sync upstream/main:** merge de 51 commits; mantido i18n próprio (`useT`) + branding Wp CRM; incorporados interactive WhatsApp, quick replies, AI usage, MCP server, security fixes; migration slot grant renomeada `031`→`037` (evitar colisão com branding) |
 
 ## Onde customizar branding / UI (referência)
 

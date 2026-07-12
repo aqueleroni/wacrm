@@ -4,6 +4,7 @@ export const agents = {
   tabs: {
     playground: 'Playground',
     setup: 'Setup',
+    usage: 'Usage',
   },
   playground: {
     title: 'Playground',

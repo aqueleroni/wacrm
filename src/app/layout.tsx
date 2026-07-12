@@ -79,7 +79,7 @@ const THEME_BOOT_SCRIPT = `
 })();
 `;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;

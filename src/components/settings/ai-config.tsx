@@ -29,8 +29,14 @@ import { useT } from '@/hooks/use-i18n';
 import { AiKnowledgeCard } from './ai-knowledge';
 import { AI_PROVIDER_DEFAULT_MODEL } from '@/lib/ai/defaults';
 import type { AiProvider } from '@/lib/ai/types';
+import type { AccountMember } from '@/types';
+import { fetchAccountMembers, memberLabel } from '@/lib/account/members';
 
 const MASKED_KEY = '••••••••••••••••';
+
+// Radix Select can't use an empty-string item value, so the "leave
+// unassigned" choice gets a sentinel that maps to null in the payload.
+const HANDOFF_QUEUE = '__queue__';
 
 const KEY_PLACEHOLDER: Record<AiProvider, string> = {
   openai: 'sk-...',
@@ -61,6 +67,9 @@ export function AiConfig() {
   const [isActive, setIsActive] = useState(false);
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
   const [maxPerConversation, setMaxPerConversation] = useState(3);
+  // Empty string = leave unassigned (shared queue).
+  const [handoffAgentId, setHandoffAgentId] = useState('');
+  const [members, setMembers] = useState<AccountMember[]>([]);
 
   // Guard keyed on the account (not a bare boolean) so an in-place
   // account switch — ownership transfer, multi-account membership —
@@ -85,6 +94,7 @@ export function AiConfig() {
         setIsActive(data.is_active);
         setAutoReplyEnabled(data.auto_reply_enabled);
         setMaxPerConversation(data.auto_reply_max_per_conversation ?? 3);
+        setHandoffAgentId(data.handoff_agent_id ?? '');
         setHasStoredKey(Boolean(data.has_key));
         setApiKey(data.has_key ? MASKED_KEY : '');
         setKeyEdited(false);
@@ -103,6 +113,10 @@ export function AiConfig() {
     if (!accountId || loadedAccountIdRef.current === accountId) return;
     loadedAccountIdRef.current = accountId;
     void fetchConfig();
+    // Members populate the handoff-target picker. Best-effort — on an
+    // older deployment without the endpoint the picker just shows the
+    // queue option.
+    void fetchAccountMembers().then(setMembers);
   }, [accountId, fetchConfig]);
 
   // Swap the model default when the provider changes, unless the user
@@ -131,6 +145,7 @@ export function AiConfig() {
     is_active: isActive,
     auto_reply_enabled: autoReplyEnabled,
     auto_reply_max_per_conversation: maxPerConversation,
+    handoff_agent_id: handoffAgentId || null,
   });
 
   const handleTest = async () => {
@@ -197,6 +212,7 @@ export function AiConfig() {
         setKeyEdited(false);
         setIsActive(false);
         setAutoReplyEnabled(false);
+        setHandoffAgentId('');
         setSystemPrompt('');
       } else {
         const data = await res.json();
@@ -434,6 +450,34 @@ export function AiConfig() {
                 disabled={disabled || !autoReplyEnabled}
                 className="w-20"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ai-handoff">{t('settings.ai.behaviour.handoffTo')}</Label>
+              <p className="text-xs text-muted-foreground">
+                {t('settings.ai.behaviour.handoffToDesc')}
+              </p>
+              <Select
+                value={handoffAgentId || HANDOFF_QUEUE}
+                onValueChange={(v) =>
+                  setHandoffAgentId(!v || v === HANDOFF_QUEUE ? '' : v)
+                }
+                disabled={disabled || !autoReplyEnabled}
+              >
+                <SelectTrigger id="ai-handoff">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={HANDOFF_QUEUE}>
+                    {t('settings.ai.behaviour.handoffQueue')}
+                  </SelectItem>
+                  {members.map((m) => (
+                    <SelectItem key={m.user_id} value={m.user_id}>
+                      {memberLabel(m)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
