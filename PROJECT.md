@@ -104,6 +104,8 @@ git push origin main
 | 2026-07-12 | Supabase remoto: aplicadas migrations `032`–`037` (knowledge INVOKER, AI polish, profiles RLS, interactive/quick_replies, dedup conversas, slot grant) |
 | 2026-07-12 | i18n pós-sync: builder/prévia de mensagens interativas conectados ao `useT()` e seções restantes da inbox traduzidas para PT-BR |
 | 2026-07-12 | Erros de validação interativa: códigos estáveis + chaves `interactive.errors.*` (EN/PT); toasts e builder usam `translateInteractiveError` |
+| 2026-07-12 | i18n: passos de setup WhatsApp + aba Membros da equipe (títulos, presença, convites) |
+| 2026-07-12 | Fix rolagem dupla em Configurações: `min-h-0` no shell + layout contido (só o painel rola) |
 
 ## Onde customizar branding / UI (referência)
 

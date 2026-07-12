@@ -779,15 +779,15 @@ export function WhatsAppConfig() {
                 <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">1</span>
-                    Create a Meta App
+                    {t('settings.whatsapp.setup.steps.createApp.title')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>Go to <span className="text-primary">developers.facebook.com</span></li>
-                    <li>Click &quot;My Apps&quot; and then &quot;Create App&quot;</li>
-                    <li>Select &quot;Business&quot; as the app type</li>
-                    <li>Fill in app details and create</li>
+                    <li>{t('settings.whatsapp.setup.steps.createApp.item1')}</li>
+                    <li>{t('settings.whatsapp.setup.steps.createApp.item2')}</li>
+                    <li>{t('settings.whatsapp.setup.steps.createApp.item3')}</li>
+                    <li>{t('settings.whatsapp.setup.steps.createApp.item4')}</li>
                   </ol>
                 </AccordionContent>
               </AccordionItem>
@@ -796,14 +796,14 @@ export function WhatsAppConfig() {
                 <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</span>
-                    Add WhatsApp Product
+                    {t('settings.whatsapp.setup.steps.addProduct.title')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>In your app dashboard, click &quot;Add Product&quot;</li>
-                    <li>Find &quot;WhatsApp&quot; and click &quot;Set Up&quot;</li>
-                    <li>Follow the setup wizard to link your business</li>
+                    <li>{t('settings.whatsapp.setup.steps.addProduct.item1')}</li>
+                    <li>{t('settings.whatsapp.setup.steps.addProduct.item2')}</li>
+                    <li>{t('settings.whatsapp.setup.steps.addProduct.item3')}</li>
                   </ol>
                 </AccordionContent>
               </AccordionItem>
@@ -812,15 +812,31 @@ export function WhatsAppConfig() {
                 <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">3</span>
-                    Get API Credentials
+                    {t('settings.whatsapp.setup.steps.credentials.title')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>Go to WhatsApp &gt; API Setup</li>
-                    <li>Copy your <strong className="text-foreground">Phone Number ID</strong></li>
-                    <li>Copy your <strong className="text-foreground">WhatsApp Business Account ID</strong></li>
-                    <li>Generate a <strong className="text-foreground">Permanent Access Token</strong> from Business Settings &gt; System Users</li>
+                    <li>{t('settings.whatsapp.setup.steps.credentials.item1')}</li>
+                    <li>
+                      {t('settings.whatsapp.setup.steps.credentials.item2Before')}{' '}
+                      <strong className="text-foreground">
+                        {t('settings.whatsapp.setup.steps.credentials.phoneNumberId')}
+                      </strong>
+                    </li>
+                    <li>
+                      {t('settings.whatsapp.setup.steps.credentials.item3Before')}{' '}
+                      <strong className="text-foreground">
+                        {t('settings.whatsapp.setup.steps.credentials.wabaId')}
+                      </strong>
+                    </li>
+                    <li>
+                      {t('settings.whatsapp.setup.steps.credentials.item4Before')}{' '}
+                      <strong className="text-foreground">
+                        {t('settings.whatsapp.setup.steps.credentials.permanentToken')}
+                      </strong>{' '}
+                      {t('settings.whatsapp.setup.steps.credentials.item4After')}
+                    </li>
                   </ol>
                 </AccordionContent>
               </AccordionItem>
@@ -829,16 +845,28 @@ export function WhatsAppConfig() {
                 <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">4</span>
-                    Configure Webhooks
+                    {t('settings.whatsapp.setup.steps.webhooks.title')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>Go to WhatsApp &gt; Configuration</li>
-                    <li>Click &quot;Edit&quot; on the Webhook section</li>
-                    <li>Paste the <strong className="text-foreground">Webhook Callback URL</strong> from above</li>
-                    <li>Enter the same <strong className="text-foreground">Verify Token</strong> you set here</li>
-                    <li>Subscribe to &quot;messages&quot; webhook field</li>
+                    <li>{t('settings.whatsapp.setup.steps.webhooks.item1')}</li>
+                    <li>{t('settings.whatsapp.setup.steps.webhooks.item2')}</li>
+                    <li>
+                      {t('settings.whatsapp.setup.steps.webhooks.item3Before')}{' '}
+                      <strong className="text-foreground">
+                        {t('settings.whatsapp.setup.steps.webhooks.callbackUrl')}
+                      </strong>{' '}
+                      {t('settings.whatsapp.setup.steps.webhooks.item3After')}
+                    </li>
+                    <li>
+                      {t('settings.whatsapp.setup.steps.webhooks.item4Before')}{' '}
+                      <strong className="text-foreground">
+                        {t('settings.whatsapp.setup.steps.webhooks.verifyToken')}
+                      </strong>{' '}
+                      {t('settings.whatsapp.setup.steps.webhooks.item4After')}
+                    </li>
+                    <li>{t('settings.whatsapp.setup.steps.webhooks.item5')}</li>
                   </ol>
                 </AccordionContent>
               </AccordionItem>
