@@ -342,13 +342,19 @@ export const settings = {
       accessToken: 'Permanent Access Token',
       accessTokenPlaceholder: 'Enter your access token',
       tokenHidden: 'Token is hidden for security. Re-enter it to update configuration.',
+      tokenCantReveal:
+        'For security the saved token cannot be shown. Paste it again only if you need to change it.',
       verifyToken: 'Webhook Verify Token',
       verifyTokenPlaceholder: 'Create a custom verify token',
       verifyTokenHint:
         'A custom string you create. Must match the token you set in Meta webhook settings.',
+      verifyTokenSaved:
+        'Verify token already saved. Click the field only if you want to replace it.',
       pin: 'Two-step verification PIN',
       pinOptional: '(optional)',
       pinPlaceholder: '6-digit PIN from Meta WhatsApp Manager',
+      pinHint:
+        'Needed only to wire inbound messages for a production number. Set it in Meta Business Manager → WhatsApp Accounts → Phone Numbers → Two-step verification, then paste it here so wacrm can subscribe the number. Meta test numbers have no PIN and are pre-registered — leave this blank for them. Leaving it blank also keeps an existing registration untouched.',
     },
     webhook: {
       title: 'Webhook Configuration',

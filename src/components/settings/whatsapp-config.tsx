@@ -69,6 +69,7 @@ export function WhatsAppConfig() {
   const [verifyToken, setVerifyToken] = useState('');
   const [pin, setPin] = useState('');
   const [tokenEdited, setTokenEdited] = useState(false);
+  const [verifyEdited, setVerifyEdited] = useState(false);
 
   // True once /register has succeeded on Meta's side (timestamp set
   // in the row). When false, the saved config is metadata-only and
@@ -118,9 +119,12 @@ export function WhatsAppConfig() {
         setPhoneNumberId(data.phone_number_id || '');
         setWabaId(data.waba_id || '');
         setAccessToken(MASKED_TOKEN);
-        setVerifyToken('');
+        // Never echo secrets back — show a mask when one is stored so
+        // Save doesn't wipe verify_token by sending an empty string.
+        setVerifyToken(data.verify_token ? MASKED_TOKEN : '');
         setPin('');
         setTokenEdited(false);
+        setVerifyEdited(false);
       } else {
         setConfig(null);
         setPhoneNumberId('');
@@ -129,6 +133,7 @@ export function WhatsAppConfig() {
         setVerifyToken('');
         setPin('');
         setTokenEdited(false);
+        setVerifyEdited(false);
       }
       // Clear any stale probe result when reloading the row.
       setRegistrationProbe(null);
@@ -202,7 +207,6 @@ export function WhatsAppConfig() {
       const payload: Record<string, unknown> = {
         phone_number_id: phoneNumberId.trim(),
         waba_id: wabaId.trim() || null,
-        verify_token: verifyToken.trim() || null,
         // Optional — only sent when the user filled it in. The server
         // requires it on first save or when changing numbers; for a
         // simple token rotation, leaving it blank skips re-register.
@@ -212,13 +216,21 @@ export function WhatsAppConfig() {
       if (tokenEdited && accessToken !== MASKED_TOKEN && accessToken.trim()) {
         payload.access_token = accessToken.trim();
       } else if (config) {
-        // Existing config — reuse stored encrypted token by decrypting on the
-        // server. But our POST handler requires an access_token to verify
-        // with Meta. If the user didn't change the token, we need to signal
-        // that. Simplest: require token re-entry if they're updating.
-        toast.error(t('settings.whatsapp.toast.reenterToken'));
+        // Reuse the encrypted token already in the DB — user is only
+        // updating webhook verify token / ids, not rotating Meta auth.
+        payload.reuse_stored_token = true;
+      } else {
+        toast.error(t('settings.whatsapp.toast.tokenRequired'));
         setSaving(false);
         return;
+      }
+
+      if (verifyEdited && verifyToken !== MASKED_TOKEN) {
+        payload.verify_token = verifyToken.trim() || null;
+      } else if (config?.verify_token) {
+        payload.keep_verify_token = true;
+      } else {
+        payload.verify_token = verifyToken.trim() || null;
       }
 
       const res = await fetch('/api/whatsapp/config', {
@@ -359,6 +371,7 @@ export function WhatsAppConfig() {
       setAccessToken('');
       setVerifyToken('');
       setTokenEdited(false);
+      setVerifyEdited(false);
       setConnectionStatus('disconnected');
       setResetReason(null);
       setStatusMessage('');
@@ -610,7 +623,13 @@ export function WhatsAppConfig() {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowToken(!showToken)}
+                  onClick={() => {
+                    if (accessToken === MASKED_TOKEN) {
+                      toast.message(t('settings.whatsapp.credentials.tokenCantReveal'));
+                      return;
+                    }
+                    setShowToken(!showToken);
+                  }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showToken ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -626,13 +645,25 @@ export function WhatsAppConfig() {
             <div className="space-y-2">
               <Label className="text-muted-foreground">{t('settings.whatsapp.credentials.verifyToken')}</Label>
               <Input
+                type="password"
                 placeholder={t('settings.whatsapp.credentials.verifyTokenPlaceholder')}
                 value={verifyToken}
-                onChange={(e) => setVerifyToken(e.target.value)}
+                onChange={(e) => {
+                  setVerifyToken(e.target.value);
+                  setVerifyEdited(true);
+                }}
+                onFocus={() => {
+                  if (verifyToken === MASKED_TOKEN) {
+                    setVerifyToken('');
+                    setVerifyEdited(true);
+                  }
+                }}
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
               <p className="text-xs text-muted-foreground">
-                {t('settings.whatsapp.credentials.verifyTokenHint')}
+                {config?.verify_token && !verifyEdited
+                  ? t('settings.whatsapp.credentials.verifyTokenSaved')
+                  : t('settings.whatsapp.credentials.verifyTokenHint')}
               </p>
             </div>
 
@@ -653,20 +684,7 @@ export function WhatsAppConfig() {
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground tracking-widest"
               />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Needed only to wire <strong className="text-muted-foreground">inbound</strong> messages
-                for a <strong className="text-muted-foreground">production</strong> number. Set it in{' '}
-                <strong className="text-muted-foreground">
-                  Meta Business Manager → WhatsApp Accounts → Phone
-                  Numbers → Two-step verification
-                </strong>
-                , then paste it here so wacrm can subscribe the number —
-                otherwise Meta routes inbound events to whichever app
-                last claimed it (the symptom that hits second numbers
-                under a shared WABA).{' '}
-                <strong className="text-muted-foreground">Meta test numbers</strong> have no
-                PIN and are pre-registered — leave this blank for them.
-                Leaving it blank also keeps an existing registration
-                untouched.
+                {t('settings.whatsapp.credentials.pinHint')}
               </p>
             </div>
           </CardContent>

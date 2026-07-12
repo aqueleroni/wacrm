@@ -344,13 +344,19 @@ export const settings = {
       accessTokenPlaceholder: 'Informe seu token de acesso',
       tokenHidden:
         'O token está oculto por segurança. Informe-o novamente para atualizar a configuração.',
+      tokenCantReveal:
+        'Por segurança o token salvo não pode ser exibido. Cole de novo só se for trocá-lo.',
       verifyToken: 'Token de verificação do webhook',
       verifyTokenPlaceholder: 'Crie um token de verificação personalizado',
       verifyTokenHint:
         'Uma string personalizada que você cria. Deve coincidir com o token definido nas configurações de webhook da Meta.',
+      verifyTokenSaved:
+        'Token de verificação já salvo. Clique no campo só se quiser trocá-lo.',
       pin: 'PIN de verificação em duas etapas',
       pinOptional: '(opcional)',
       pinPlaceholder: 'PIN de 6 dígitos do Gerenciador WhatsApp da Meta',
+      pinHint:
+        'Só é necessário para receber mensagens de entrada em um número de produção. Defina o PIN em Meta Business Manager → Contas WhatsApp → Números de telefone → Verificação em duas etapas e cole aqui para o wacrm inscrever o número. Números de teste da Meta não têm PIN e já vêm pré-registrados — deixe em branco. Em branco também não altera um registro que já exista.',
     },
     webhook: {
       title: 'Configuração do webhook',

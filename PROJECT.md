@@ -108,6 +108,8 @@ git push origin main
 | 2026-07-12 | Fix rolagem dupla em Configurações: `min-h-0` no shell + layout contido (só o painel rola) |
 | 2026-07-12 | Reverte layout contido de Settings (quebrava clique abaixo de Modelos); mantém `min-h-0` no shell |
 | 2026-07-12 | i18n: textos de status de registro WhatsApp (antes hardcoded EN) via `useT()` |
+| 2026-07-12 | i18n: hint do PIN WhatsApp (produção vs número de teste) em PT-BR |
+| 2026-07-12 | WhatsApp config: token/verify mascarados sem apagar no save; olho explica que não revela secret |
 
 ## Onde customizar branding / UI (referência)
 
