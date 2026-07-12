@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { BarChart3, Bot, PencilLine } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { useT } from '@/hooks/use-i18n';
 import { canEditSettings } from '@/lib/auth/roles';
 import {
   Card,
@@ -23,6 +24,8 @@ import { Skeleton } from '@/components/dashboard/skeleton';
 import { BarChart } from '@/components/tremor/bar-chart';
 import { formatCompactNumber } from '@/lib/currency';
 import { format, parseISO } from 'date-fns';
+import { ptBR, enUS } from 'date-fns/locale';
+import { getLocale } from '@/i18n/config';
 
 interface UsageResponse {
   window_days: number;
@@ -54,34 +57,40 @@ const WINDOWS = [7, 30, 90] as const;
  * `GET /api/ai/usage` route. Renders nothing for non-admins.
  */
 export function AiUsageCard() {
+  const t = useT();
   const { accountId, accountRole, profileLoading } = useAuth();
   const canView = accountRole ? canEditSettings(accountRole) : false;
+  const dateLocale = getLocale() === 'pt-BR' ? ptBR : enUS;
+  const seriesKey = t('agents.usage.chartSeries');
 
   const [days, setDays] = useState<number>(30);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<UsageResponse | null>(null);
   const loadedRef = useRef<string | null>(null);
 
-  const fetchUsage = useCallback(async (windowDays: number) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/ai/usage?days=${windowDays}`, {
-        cache: 'no-store',
-      });
-      const json = await res.json().catch(() => null);
-      if (!res.ok) {
-        toast.error(json?.error ?? 'Failed to load usage');
+  const fetchUsage = useCallback(
+    async (windowDays: number) => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/ai/usage?days=${windowDays}`, {
+          cache: 'no-store',
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) {
+          toast.error(json?.error ?? t('agents.usage.loadFailed'));
+          setData(null);
+          return;
+        }
+        setData(json as UsageResponse);
+      } catch {
+        toast.error(t('agents.usage.loadFailed'));
         setData(null);
-        return;
+      } finally {
+        setLoading(false);
       }
-      setData(json as UsageResponse);
-    } catch {
-      toast.error('Failed to load usage');
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [t],
+  );
 
   useEffect(() => {
     if (!canView || !accountId) return;
@@ -95,8 +104,10 @@ export function AiUsageCard() {
   if (profileLoading || !canView) return null;
 
   const chartData =
-    data?.daily.map((d) => ({ day: format(parseISO(d.date), 'MMM d'), Tokens: d.tokens })) ??
-    [];
+    data?.daily.map((d) => ({
+      day: format(parseISO(d.date), 'MMM d', { locale: dateLocale }),
+      [seriesKey]: d.tokens,
+    })) ?? [];
   const hasSpend = (data?.totals.total_tokens ?? 0) > 0;
 
   return (
@@ -105,24 +116,21 @@ export function AiUsageCard() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
-              <BarChart3 className="h-4 w-4 text-primary" /> Token usage
+              <BarChart3 className="h-4 w-4 text-primary" /> {t('agents.usage.title')}
             </CardTitle>
-            <CardDescription>
-              Tokens spent on your provider key by drafts and the auto-reply
-              bot. Counts only — no message content is stored here.
-            </CardDescription>
+            <CardDescription>{t('agents.usage.description')}</CardDescription>
           </div>
           <Select
             value={String(days)}
             onValueChange={(v) => setDays(Number(v))}
           >
-            <SelectTrigger className="w-32 flex-shrink-0">
+            <SelectTrigger className="w-36 flex-shrink-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {WINDOWS.map((w) => (
                 <SelectItem key={w} value={String(w)}>
-                  Last {w} days
+                  {t('agents.usage.lastDays', { days: w })}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -135,23 +143,27 @@ export function AiUsageCard() {
         ) : !hasSpend ? (
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-sm text-muted-foreground">
             <BarChart3 className="h-8 w-8 opacity-40" />
-            <p>No AI usage in the last {data.window_days} days yet.</p>
-            <p className="text-xs">
-              This fills in as the assistant drafts and auto-replies.
-            </p>
+            <p>{t('agents.usage.empty', { days: data.window_days })}</p>
+            <p className="text-xs">{t('agents.usage.emptyHint')}</p>
           </div>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Stat label="Total tokens" value={formatCompactNumber(data.totals.total_tokens)} />
-              <Stat label="LLM calls" value={String(data.totals.calls)} />
               <Stat
-                label="Auto-reply"
+                label={t('agents.usage.totalTokens')}
+                value={formatCompactNumber(data.totals.total_tokens)}
+              />
+              <Stat
+                label={t('agents.usage.llmCalls')}
+                value={String(data.totals.calls)}
+              />
+              <Stat
+                label={t('agents.usage.autoReply')}
                 value={formatCompactNumber(data.by_mode.auto_reply.tokens)}
                 icon={Bot}
               />
               <Stat
-                label="Drafts"
+                label={t('agents.usage.drafts')}
                 value={formatCompactNumber(data.by_mode.draft.tokens)}
                 icon={PencilLine}
               />
@@ -159,12 +171,12 @@ export function AiUsageCard() {
 
             <div>
               <p className="mb-2 text-xs font-medium text-muted-foreground">
-                Tokens per day
+                {t('agents.usage.tokensPerDay')}
               </p>
               <BarChart
                 data={chartData}
                 index="day"
-                categories={['Tokens']}
+                categories={[seriesKey]}
                 colors={['violet']}
                 valueFormatter={(v) => formatCompactNumber(v)}
                 showLegend={false}
@@ -176,7 +188,7 @@ export function AiUsageCard() {
             {data.by_model.length > 0 && (
               <div>
                 <p className="mb-2 text-xs font-medium text-muted-foreground">
-                  By model
+                  {t('agents.usage.byModel')}
                 </p>
                 <ul className="divide-y divide-border rounded-md border border-border">
                   {data.by_model.map((m) => (
@@ -191,8 +203,11 @@ export function AiUsageCard() {
                         </span>
                       </span>
                       <span className="flex-shrink-0 tabular-nums text-muted-foreground">
-                        {formatCompactNumber(m.tokens)} tok · {m.calls}{' '}
-                        {m.calls === 1 ? 'call' : 'calls'}
+                        {formatCompactNumber(m.tokens)} {t('agents.usage.tokensAbbrev')} ·{' '}
+                        {m.calls}{' '}
+                        {m.calls === 1
+                          ? t('agents.usage.call')
+                          : t('agents.usage.calls')}
                       </span>
                     </li>
                   ))}
@@ -202,8 +217,7 @@ export function AiUsageCard() {
 
             {data.truncated && (
               <p className="text-xs text-muted-foreground">
-                Showing a partial window — usage is high enough that only the
-                most recent records are summarized here.
+                {t('agents.usage.truncated')}
               </p>
             )}
           </>

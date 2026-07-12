@@ -150,4 +150,25 @@ export const agents = {
       removed: 'Skill removida',
     },
   },
+  usage: {
+    title: 'Uso de tokens',
+    description:
+      'Tokens gastos na sua chave do provedor com rascunhos e o bot de resposta automática. Só contagens — nenhum conteúdo de mensagem fica aqui.',
+    lastDays: 'Últimos {days} dias',
+    loadFailed: 'Falha ao carregar o uso',
+    empty: 'Nenhum uso de IA nos últimos {days} dias ainda.',
+    emptyHint: 'Isso se preenche conforme o assistente rascunha e responde automaticamente.',
+    totalTokens: 'Total de tokens',
+    llmCalls: 'Chamadas ao LLM',
+    autoReply: 'Resposta automática',
+    drafts: 'Rascunhos',
+    tokensPerDay: 'Tokens por dia',
+    chartSeries: 'Tokens',
+    byModel: 'Por modelo',
+    call: 'chamada',
+    calls: 'chamadas',
+    tokensAbbrev: 'tok',
+    truncated:
+      'Mostrando uma janela parcial — o uso é alto o bastante para resumir só os registros mais recentes.',
+  },
 } as const;

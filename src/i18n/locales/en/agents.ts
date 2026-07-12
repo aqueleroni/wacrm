@@ -150,4 +150,25 @@ export const agents = {
       removed: 'Skill removed',
     },
   },
+  usage: {
+    title: 'Token usage',
+    description:
+      'Tokens spent on your provider key by drafts and the auto-reply bot. Counts only — no message content is stored here.',
+    lastDays: 'Last {days} days',
+    loadFailed: 'Failed to load usage',
+    empty: 'No AI usage in the last {days} days yet.',
+    emptyHint: 'This fills in as the assistant drafts and auto-replies.',
+    totalTokens: 'Total tokens',
+    llmCalls: 'LLM calls',
+    autoReply: 'Auto-reply',
+    drafts: 'Drafts',
+    tokensPerDay: 'Tokens per day',
+    chartSeries: 'Tokens',
+    byModel: 'By model',
+    call: 'call',
+    calls: 'calls',
+    tokensAbbrev: 'tok',
+    truncated:
+      'Showing a partial window — usage is high enough that only the most recent records are summarized here.',
+  },
 } as const;
