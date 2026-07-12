@@ -54,9 +54,7 @@ export function SettingsRail({
       className={cn(
         'flex gap-1 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         'border-b border-border',
-        // Desktop: column inside a dedicated scroll port on the settings
-        // page — sticky is unnecessary (and fought the old page scroll).
-        'lg:flex-col lg:overflow-visible lg:border-b-0 lg:pb-0',
+        'lg:sticky lg:top-0 lg:flex-col lg:overflow-visible lg:border-b-0 lg:pb-0',
       )}
     >
       {railGroups.map(({ label, group }) => {

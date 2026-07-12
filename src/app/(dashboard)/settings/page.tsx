@@ -68,11 +68,8 @@ export default function SettingsPage() {
   };
 
   return (
-    // Contained height so only the panel scrolls — the rail stays put
-    // (and can scroll on its own if the section list is long). Mirrors
-    // the inbox full-bleed pattern; negative margin cancels main padding.
-    <div className="-m-4 flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden sm:-m-6">
-      <div className="shrink-0 px-4 pt-4 sm:px-6 sm:pt-6">
+    <div>
+      <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
           {t('settings.title')}
         </h1>
@@ -81,13 +78,14 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <div className="mt-6 flex min-h-0 flex-1 flex-col gap-6 px-4 pb-4 sm:px-6 sm:pb-6 lg:flex-row lg:items-stretch">
-        <div className="shrink-0 lg:flex lg:w-[236px] lg:flex-col lg:overflow-y-auto">
+      {/* Single page scroll (via dashboard main). Rail stays sticky on
+          desktop — avoid a nested flex scrollport here; it was clipping
+          hit-targets on lower workspace items (templates and below). */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-[236px_minmax(0,1fr)] lg:items-start">
+        <aside className="relative z-10 min-w-0 lg:sticky lg:top-0 lg:self-start">
           <SettingsRail active={section} onSelect={go} hints={hints} />
-        </div>
-        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
-          {panel[section]}
-        </div>
+        </aside>
+        <div className="relative z-0 min-w-0">{panel[section]}</div>
       </div>
     </div>
   );
