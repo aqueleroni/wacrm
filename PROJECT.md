@@ -88,6 +88,7 @@ git push origin main
 | 2026-07-04 | Modelos de fluxo: conteúdo PT-BR ao clonar template |
 | 2026-07-04 | **White-label v1:** migration `031_account_branding` — `brand_name`, `brand_logo_url`, `brand_primary_color` + bucket `account-branding`; UI em Configurações → Aparência → Marca |
 | 2026-07-12 | **Sync upstream/main:** merge de 51 commits; mantido i18n próprio (`useT`) + branding Wp CRM; incorporados interactive WhatsApp, quick replies, AI usage, MCP server, security fixes; migration slot grant renomeada `031`→`037` (evitar colisão com branding) |
+| 2026-07-12 | Supabase remoto: aplicadas migrations `032`–`037` (knowledge INVOKER, AI polish, profiles RLS, interactive/quick_replies, dedup conversas, slot grant) |
 
 ## Onde customizar branding / UI (referência)
 
