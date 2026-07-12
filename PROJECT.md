@@ -110,6 +110,7 @@ git push origin main
 | 2026-07-12 | i18n: textos de status de registro WhatsApp (antes hardcoded EN) via `useT()` |
 | 2026-07-12 | i18n: hint do PIN WhatsApp (produção vs número de teste) em PT-BR |
 | 2026-07-12 | WhatsApp config: token/verify mascarados sem apagar no save; olho explica que não revela secret |
+| 2026-07-12 | Settings rail: `max-h` + scroll no aside (cliques abaixo de Modelos não “furavam” mais o menu) |
 
 ## Onde customizar branding / UI (referência)
 

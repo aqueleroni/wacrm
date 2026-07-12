@@ -18,6 +18,7 @@ import { DealsSettings } from '@/components/settings/deals-settings';
 import { MembersTab } from '@/components/settings/members-tab';
 import { ApiKeysSettings } from '@/components/settings/api-keys-settings';
 import { useT } from '@/hooks/use-i18n';
+import { cn } from '@/lib/utils';
 import {
   resolveSection,
   type SettingsSection,
@@ -78,14 +79,20 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {/* Single page scroll (via dashboard main). Rail stays sticky on
-          desktop — avoid a nested flex scrollport here; it was clipping
-          hit-targets on lower workspace items (templates and below). */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-[236px_minmax(0,1fr)] lg:items-start">
-        <aside className="relative z-10 min-w-0 lg:sticky lg:top-0 lg:self-start">
+      {/* Rail must stay within the viewport hit-box. A tall sticky column
+          without max-height paints lower items but lets clicks fall through
+          to the panel (items below Modelos looked clickable and weren't). */}
+      <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start">
+        <aside
+          className={cn(
+            'relative z-20 w-full shrink-0',
+            'lg:sticky lg:top-0 lg:w-[236px]',
+            'lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto lg:overscroll-contain',
+          )}
+        >
           <SettingsRail active={section} onSelect={go} hints={hints} />
         </aside>
-        <div className="relative z-0 min-w-0">{panel[section]}</div>
+        <div className="relative z-0 min-w-0 flex-1">{panel[section]}</div>
       </div>
     </div>
   );
