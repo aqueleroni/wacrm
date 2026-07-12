@@ -1,18 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bot, Sparkles, Settings2, Brain, Loader2 } from 'lucide-react';
+import { Bot, Sparkles, Settings2, Brain, Loader2, BarChart3 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { AiPlayground } from '@/components/agents/ai-playground';
 import { AiIntelligencePanel } from '@/components/agents/ai-intelligence-panel';
+import { AiUsageCard } from '@/components/agents/ai-usage';
 import { AiConfig } from '@/components/settings/ai-config';
+import { useAuth } from '@/hooks/use-auth';
+import { canEditSettings } from '@/lib/auth/roles';
 import { useT } from '@/hooks/use-i18n';
 import { cn } from '@/lib/utils';
 
-type Tab = 'playground' | 'setup' | 'intelligence';
+type Tab = 'playground' | 'setup' | 'intelligence' | 'usage';
 
 export default function AgentsPage() {
   const t = useT();
+  const { accountRole } = useAuth();
+  const canViewUsage = accountRole ? canEditSettings(accountRole) : false;
   const [tab, setTab] = useState<Tab>('playground');
   const [decided, setDecided] = useState(false);
   const [pendingMemoryCount, setPendingMemoryCount] = useState(0);
@@ -98,6 +103,11 @@ export default function AgentsPage() {
                 </span>
               )}
             </TabsTrigger>
+            {canViewUsage && (
+              <TabsTrigger value="usage">
+                <BarChart3 className="mr-1.5 h-4 w-4" /> {t('agents.tabs.usage')}
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="playground" className="mt-4">
@@ -111,6 +121,12 @@ export default function AgentsPage() {
           <TabsContent value="intelligence" className="mt-4">
             <AiIntelligencePanel onGoToSetup={() => setTab('setup')} />
           </TabsContent>
+
+          {canViewUsage && (
+            <TabsContent value="usage" className="mt-4">
+              <AiUsageCard />
+            </TabsContent>
+          )}
         </Tabs>
       )}
     </div>

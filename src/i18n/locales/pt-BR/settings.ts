@@ -16,6 +16,7 @@ export const settings = {
     appearance: 'Aparência',
     whatsapp: 'WhatsApp',
     templates: 'Modelos',
+    quickReplies: 'Respostas rápidas',
     fields: 'Campos e tags',
     deals: 'Negócios e moeda',
     members: 'Membros da equipe',
@@ -585,6 +586,10 @@ export const settings = {
       maxRepliesLabel: 'Máx. de respostas automáticas por conversa',
       maxRepliesDescription:
         'Após esse número de respostas do bot em uma conversa, o bot para de responder.',
+      handoffTo: 'Encaminhar para',
+      handoffToDesc:
+        'Quando o bot não puder ajudar, atribui a conversa a este membro (ou deixa na fila compartilhada).',
+      handoffQueue: 'Fila compartilhada (sem atribuição)',
     },
     knowledge: {
       title: 'Base de conhecimento',

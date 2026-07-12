@@ -9,6 +9,7 @@ import {
   Tags,
   User,
   UsersRound,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -27,6 +28,7 @@ export const SETTINGS_SECTIONS = [
   'appearance',
   'whatsapp',
   'templates',
+  'quick-replies',
   'fields',
   'deals',
   'members',
@@ -86,6 +88,12 @@ export function getSectionMeta(t: TranslateFn): Record<SettingsSection, SectionM
       id: 'templates',
       label: t('settings.sections.templates'),
       icon: FileText,
+      group: 'workspace',
+    },
+    'quick-replies': {
+      id: 'quick-replies',
+      label: t('settings.sections.quickReplies'),
+      icon: Zap,
       group: 'workspace',
     },
     fields: {

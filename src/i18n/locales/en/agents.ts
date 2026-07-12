@@ -5,6 +5,7 @@ export const agents = {
     playground: 'Playground',
     setup: 'Setup',
     intelligence: 'Intelligence',
+    usage: 'Usage',
   },
   playground: {
     title: 'Playground',

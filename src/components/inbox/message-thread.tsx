@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { useT } from "@/hooks/use-i18n";
 import { usePresence } from "@/hooks/use-presence";
 import { PresenceDot } from "@/components/presence/presence-dot";
 import { presenceLabel } from "@/lib/presence";
@@ -16,6 +15,7 @@ import type {
   ConversationStatus,
   MessageTemplate,
   Profile,
+  InteractiveMessagePayload,
 } from "@/types";
 import {
   MessageSquare,
@@ -30,6 +30,8 @@ import {
   Brain,
 } from "lucide-react";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
+import { useTranslations } from "@/hooks/use-translations";
+import { useT } from "@/hooks/use-i18n";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -38,7 +40,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageBubble } from "./message-bubble";
 import { MessageActions } from "./message-actions";
 import {
@@ -49,6 +50,7 @@ import {
 import { deleteAccountMedia } from "@/lib/storage/upload-media";
 import { canEditSettings } from "@/lib/auth/roles";
 import { TemplatePicker } from "./template-picker";
+import { AiThreadBanner } from "./ai-thread-banner";
 import { buildReplyPreview } from "./reply-quote";
 import { toast } from "sonner";
 
@@ -111,10 +113,10 @@ interface MessageThreadProps {
   onToggleContactPanel?: () => void;
 }
 
-function formatDateSeparator(dateStr: string, t: (key: string) => string): string {
+function formatDateSeparator(dateStr: string, t: ReturnType<typeof useTranslations>): string {
   const date = new Date(dateStr);
-  if (isToday(date)) return t("inbox.thread.today");
-  if (isYesterday(date)) return t("inbox.thread.yesterday");
+  if (isToday(date)) return t("today");
+  if (isYesterday(date)) return t("yesterday");
   return format(date, "MMMM d, yyyy");
 }
 
@@ -135,10 +137,10 @@ function groupMessagesByDate(messages: Message[]) {
   return groups;
 }
 
-const STATUS_KEYS: { key: string; value: ConversationStatus; color: string }[] = [
-  { key: "inbox.status.open", value: "open", color: "text-primary" },
-  { key: "inbox.status.pending", value: "pending", color: "text-amber-400" },
-  { key: "inbox.status.closed", value: "closed", color: "text-muted-foreground" },
+const STATUS_OPTIONS: { label: string; value: ConversationStatus; color: string }[] = [
+  { label: "Open", value: "open", color: "text-primary" },
+  { label: "Pending", value: "pending", color: "text-amber-400" },
+  { label: "Closed", value: "closed", color: "text-muted-foreground" },
 ];
 
 /**
@@ -168,7 +170,10 @@ export function MessageThread({
   contactPanelOpen,
   onToggleContactPanel,
 }: MessageThreadProps) {
-  const t = useT();
+  const tExtract = useT();
+  const t = useTranslations("Inbox.messageThread");
+  const tTimer = useTranslations("Inbox.sessionTimer");
+  const tQuote = useTranslations("Inbox.replyQuote");
   const { user, accountRole } = useAuth();
   const canExtractMemory = accountRole ? canEditSettings(accountRole) : false;
   const { getPresence, getRow, now } = usePresence();
@@ -212,22 +217,22 @@ export function MessageThread({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(data.error ?? t("inbox.ai.extractFailed"));
+        toast.error(data.error ?? tExtract("inbox.ai.extractFailed"));
         return;
       }
       if (data.inserted > 0) {
         toast.success(
-          t("inbox.ai.extractSuccess", { count: data.inserted as number }),
+          tExtract("inbox.ai.extractSuccess", { count: data.inserted as number }),
         );
       } else {
-        toast.info(t("inbox.ai.extractEmpty"));
+        toast.info(tExtract("inbox.ai.extractEmpty"));
       }
     } catch {
-      toast.error(t("inbox.ai.extractFailed"));
+      toast.error(tExtract("inbox.ai.extractFailed"));
     } finally {
       setExtractingMemory(false);
     }
-  }, [conversation, extractingMemory, t]);
+  }, [conversation, extractingMemory, tExtract]);
 
   const [replyTo, setReplyTo] = useState<ReplyDraft | null>(null);
 
@@ -254,11 +259,6 @@ export function MessageThread({
     };
   }, []);
 
-  const statusOptions = useMemo(
-    () => STATUS_KEYS.map((opt) => ({ label: t(opt.key), value: opt.value, color: opt.color })),
-    [t],
-  );
-
   // 24-hour session timer
   const sessionInfo = useMemo(() => {
     if (!messages.length) return { expired: false, remaining: "" };
@@ -268,23 +268,23 @@ export function MessageThread({
       .reverse()
       .find((m) => m.sender_type === "customer");
 
-    if (!lastCustomerMsg) return { expired: true, remaining: t("inbox.thread.session.noCustomerMessages") };
+    if (!lastCustomerMsg) return { expired: true, remaining: "No customer messages" };
 
     const hoursSince = differenceInHours(new Date(), new Date(lastCustomerMsg.created_at));
     const expired = hoursSince >= 24;
 
     if (expired) {
-      return { expired: true, remaining: t("inbox.thread.session.expired") };
+      return { expired: true, remaining: tTimer("expired") };
     }
 
     const hoursLeft = 24 - hoursSince;
     const remaining =
       hoursLeft >= 1
-        ? t("inbox.thread.session.hoursRemaining", { count: Math.floor(hoursLeft) })
-        : t("inbox.thread.session.minutesRemaining", { count: Math.floor(hoursLeft * 60) });
+        ? tTimer("xhRemaining", { hours: Math.floor(hoursLeft) })
+        : tTimer("xmRemaining", { minutes: Math.floor(hoursLeft * 60) });
 
     return { expired, remaining };
-  }, [messages, t]);
+  }, [messages, tTimer]);
 
   // Store latest callback in a ref so fetchMessages doesn't need to
   // depend on `onMessagesLoaded` — otherwise parent re-renders cause
@@ -515,7 +515,7 @@ export function MessageThread({
         if (!res.ok) {
           const reason = payload?.error || `HTTP ${res.status}`;
           console.error("Failed to send message:", reason);
-          toast.error(t("inbox.thread.errors.sendFailed", { reason }));
+          toast.error(`Failed to send: ${reason}`);
           // Mark the optimistic bubble as failed so the user sees what happened
           onUpdateMessage(tempId, { status: "failed" });
           return;
@@ -528,11 +528,11 @@ export function MessageThread({
       } catch (err) {
         console.error("Failed to send message:", err);
         const reason = err instanceof Error ? err.message : "network error";
-        toast.error(t("inbox.thread.errors.sendFailed", { reason }));
+        toast.error(`Failed to send: ${reason}`);
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage, t]
+    [conversation, onNewMessage, onUpdateMessage]
   );
 
   const handleSendMedia = useCallback(
@@ -544,7 +544,7 @@ export function MessageThread({
       // kinds use the caption as-is. Audio carries no caption.
       const contentText =
         payload.kind === "document"
-          ? payload.caption || payload.filename || t("inbox.messages.document")
+          ? payload.caption || payload.filename || "Document"
           : payload.caption;
 
       const tempId = `temp-${Date.now()}`;
@@ -581,7 +581,7 @@ export function MessageThread({
         if (!res.ok) {
           const reason = data?.error || `HTTP ${res.status}`;
           console.error("Failed to send media:", reason);
-          toast.error(t("inbox.thread.errors.sendFailed", { reason }));
+          toast.error(`Failed to send: ${reason}`);
           onUpdateMessage(tempId, { status: "failed" });
           // The upload never reached the recipient — GC the orphaned
           // object rather than leaving it in the public bucket forever.
@@ -593,12 +593,65 @@ export function MessageThread({
       } catch (err) {
         console.error("Failed to send media:", err);
         const reason = err instanceof Error ? err.message : "network error";
-        toast.error(t("inbox.thread.errors.sendFailed", { reason }));
+        toast.error(`Failed to send: ${reason}`);
         onUpdateMessage(tempId, { status: "failed" });
         void deleteAccountMedia(CHAT_MEDIA_BUCKET, payload.path).catch(() => {});
       }
     },
-    [conversation, onNewMessage, onUpdateMessage, t],
+    [conversation, onNewMessage, onUpdateMessage],
+  );
+
+  const handleSendInteractive = useCallback(
+    async (payload: InteractiveMessagePayload, replyToId?: string) => {
+      if (!conversation) return;
+
+      const tempId = `temp-${Date.now()}`;
+      // Optimistic bubble — renders the buttons/list immediately via the
+      // interactive_payload, same as the persisted row will.
+      const optimisticMsg: Message = {
+        id: tempId,
+        conversation_id: conversation.id,
+        sender_type: "agent",
+        content_type: "interactive",
+        content_text: payload.body,
+        interactive_payload: payload,
+        status: "sending",
+        created_at: new Date().toISOString(),
+        reply_to_message_id: replyToId,
+      };
+      onNewMessage(optimisticMsg);
+
+      try {
+        const res = await fetch("/api/whatsapp/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            conversation_id: conversation.id,
+            message_type: "interactive",
+            interactive_payload: payload,
+            reply_to_message_id: replyToId,
+          }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          const reason = data?.error || `HTTP ${res.status}`;
+          console.error("Failed to send interactive message:", reason);
+          toast.error(`Failed to send: ${reason}`);
+          onUpdateMessage(tempId, { status: "failed" });
+          return;
+        }
+
+        onUpdateMessage(tempId, { status: "sent" });
+      } catch (err) {
+        console.error("Failed to send interactive message:", err);
+        const reason = err instanceof Error ? err.message : "network error";
+        toast.error(`Failed to send: ${reason}`);
+        onUpdateMessage(tempId, { status: "failed" });
+      }
+    },
+    [conversation, onNewMessage, onUpdateMessage],
   );
 
   const handleStatusChange = useCallback(
@@ -674,7 +727,7 @@ export function MessageThread({
         if (!res.ok) {
           const reason = payload?.error || `HTTP ${res.status}`;
           console.error("Failed to send template:", reason);
-          toast.error(t("inbox.thread.errors.sendTemplateFailed", { reason }));
+          toast.error(`Failed to send template: ${reason}`);
           onUpdateMessage(tempId, { status: "failed" });
           return;
         }
@@ -683,11 +736,11 @@ export function MessageThread({
       } catch (err) {
         console.error("Failed to send template:", err);
         const reason = err instanceof Error ? err.message : "network error";
-        toast.error(t("inbox.thread.errors.sendTemplateFailed", { reason }));
+        toast.error(`Failed to send template: ${reason}`);
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage, t],
+    [conversation, onNewMessage, onUpdateMessage],
   );
 
   // Build a quick id → Message map so reply quotes can be rendered without
@@ -709,7 +762,7 @@ export function MessageThread({
     return map;
   }, [reactions]);
 
-  const contactDisplayName = contact?.name || contact?.phone || t("inbox.thread.customer");
+  const contactDisplayName = contact?.name || contact?.phone || "Customer";
 
   // Author label for a quoted message: "You" when we sent the parent,
   // contact name when the customer sent it.
@@ -717,9 +770,9 @@ export function MessageThread({
     (m: Message): string => {
       const isAgentMsg =
         m.sender_type === "agent" || m.sender_type === "bot";
-      return isAgentMsg ? t("inbox.messages.you") : contactDisplayName;
+      return isAgentMsg ? "You" : contactDisplayName;
     },
-    [contactDisplayName, t],
+    [contactDisplayName],
   );
 
   const handleStartReply = useCallback(
@@ -727,10 +780,10 @@ export function MessageThread({
       setReplyTo({
         id: msg.id,
         authorLabel: authorLabelFor(msg),
-        preview: buildReplyPreview(msg, t),
+        preview: buildReplyPreview(msg, tQuote),
       });
     },
-    [authorLabelFor, t],
+    [authorLabelFor, tQuote],
   );
 
   // Single reaction-set primitive. emoji === "" removes; otherwise adds/swaps.
@@ -744,7 +797,7 @@ export function MessageThread({
         return;
       }
       if (messageId.startsWith("temp-")) {
-        toast.error(t("inbox.thread.errors.waitForSend"));
+        toast.error("Wait for the message to finish sending");
         return;
       }
 
@@ -790,11 +843,11 @@ export function MessageThread({
         }
       } catch (err) {
         const reason = err instanceof Error ? err.message : "network error";
-        toast.error(t("inbox.thread.errors.reactionFailed", { reason }));
+        toast.error(`Reaction failed: ${reason}`);
         setReactions(snapshot);
       }
     },
-    [conversation, user?.id, t],
+    [conversation, user?.id],
   );
 
   const handleAssignChange = useCallback(
@@ -809,13 +862,13 @@ export function MessageThread({
 
       if (error) {
         console.error("Failed to update assignment:", error);
-        toast.error(t("inbox.thread.errors.assignmentFailed"));
+        toast.error("Failed to update assignment");
         return;
       }
 
       onAssignChange(conversation.id, agentId);
     },
-    [conversation, onAssignChange, t],
+    [conversation, onAssignChange],
   );
 
   // Empty state — same WhatsApp-style doodle background as the active
@@ -828,10 +881,10 @@ export function MessageThread({
           <MessageSquare className="h-8 w-8 text-muted-foreground" />
         </div>
         <h3 className="mt-4 text-sm font-medium text-muted-foreground">
-          {t("inbox.thread.empty.title")}
+          {t("selectConversation")}
         </h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          {t("inbox.thread.empty.hint")}
+          {t("selectConversationHint")}
         </p>
       </div>
     );
@@ -839,14 +892,14 @@ export function MessageThread({
 
   const displayName = contact.name || contact.phone;
   const messageGroups = groupMessagesByDate(messages);
-  const currentStatus = statusOptions.find(
+  const currentStatus = STATUS_OPTIONS.find(
     (s) => s.value === conversation.status
   );
   const assignedAgentId = conversation.assigned_agent_id ?? null;
   const currentAssignee = profiles.find((p) => p.user_id === assignedAgentId);
   const assignLabel = assignedAgentId
-    ? (currentAssignee?.full_name ?? t("inbox.thread.assigned"))
-    : t("inbox.thread.assign");
+    ? (currentAssignee?.full_name ?? t("assigned"))
+    : t("assign");
 
   return (
     // `min-w-0` is load-bearing: the page already puts min-w-0 on the
@@ -868,7 +921,7 @@ export function MessageThread({
             <button
               type="button"
               onClick={onBack}
-              aria-label={t("inbox.thread.backToConversations")}
+              aria-label={t("backToConversations")}
               className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -906,10 +959,10 @@ export function MessageThread({
               type="button"
               onClick={onToggleContactPanel}
               aria-label={
-                contactPanelOpen ? t("inbox.contactPanel.hide") : t("inbox.contactPanel.show")
+                contactPanelOpen ? t("hideContactPanel") : t("showContactPanel")
               }
+              title={contactPanelOpen ? t("hideContact") : t("showContact")}
               aria-pressed={contactPanelOpen}
-              title={contactPanelOpen ? t("inbox.thread.hideContact") : t("inbox.thread.showContact")}
               className={cn(
                 "hidden h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-muted hover:text-foreground lg:inline-flex",
                 contactPanelOpen ? "text-primary" : "text-muted-foreground",
@@ -928,8 +981,8 @@ export function MessageThread({
               type="button"
               onClick={() => void handleExtractMemory()}
               disabled={extractingMemory}
-              aria-label={t("inbox.ai.extractMemory")}
-              title={t("inbox.ai.extractMemory")}
+              aria-label={tExtract("inbox.ai.extractMemory")}
+              title={tExtract("inbox.ai.extractMemory")}
               className={cn(
                 "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60",
               )}
@@ -950,8 +1003,8 @@ export function MessageThread({
               type="button"
               onClick={handleRefreshClick}
               disabled={isRefreshing}
-              aria-label={t("inbox.thread.refreshConversation")}
-              title={t("inbox.thread.refresh")}
+              aria-label={t("refreshConversation")}
+              title={t("refresh")}
               className={cn(
                 "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60",
               )}
@@ -968,20 +1021,20 @@ export function MessageThread({
                   "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-muted",
                   currentStatus?.color ?? "text-muted-foreground"
                 )}>
-                {currentStatus?.label ?? t("inbox.thread.status")}
+                {currentStatus ? t(`status${currentStatus.label}`) : t("status")}
                 <ChevronDown className="h-3 w-3" />
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
               className="border-border bg-popover"
             >
-              {statusOptions.map((opt) => (
+              {STATUS_OPTIONS.map((opt) => (
                 <DropdownMenuItem
                   key={opt.value}
                   onClick={() => handleStatusChange(opt.value)}
                   className={cn("text-sm", opt.color)}
                 >
-                  {opt.label}
+                  {t(`status${opt.label}`)}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -1005,7 +1058,7 @@ export function MessageThread({
             >
               {profiles.length === 0 ? (
                 <DropdownMenuItem disabled className="text-sm text-muted-foreground">
-                  {t("inbox.thread.noTeammates")}
+                  {t("noTeammates")}
                 </DropdownMenuItem>
               ) : (
                 profiles.map((p) => {
@@ -1031,7 +1084,7 @@ export function MessageThread({
                       />
                       <span className="flex-1">
                         {p.full_name}
-                        {p.user_id === user?.id ? ` ${t("inbox.thread.me")}` : ""}
+                        {p.user_id === user?.id ? t("me") : ""}
                       </span>
                       {isSelected && <Check className="ml-2 h-3 w-3" />}
                     </DropdownMenuItem>
@@ -1045,7 +1098,7 @@ export function MessageThread({
                     onClick={() => handleAssignChange(null)}
                     className="text-sm text-muted-foreground"
                   >
-                    {t("inbox.thread.unassign")}
+                    {t("unassign")}
                   </DropdownMenuItem>
                 </>
               )}
@@ -1062,9 +1115,9 @@ export function MessageThread({
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <p className="text-sm text-muted-foreground">{t("inbox.thread.noMessages")}</p>
+            <p className="text-sm text-muted-foreground">{t("noMessagesYet")}</p>
             <p className="text-xs text-muted-foreground">
-              {t("inbox.thread.sendTemplateHint")}
+              {t("sendTemplateHint")}
             </p>
           </div>
         ) : (
@@ -1085,8 +1138,11 @@ export function MessageThread({
                       : null;
                     const reply = parent
                       ? {
-                          authorLabel: authorLabelFor(parent),
-                          preview: buildReplyPreview(parent, t),
+                          authorLabel:
+                            parent.sender_type === "agent" || parent.sender_type === "bot"
+                              ? t("me")
+                              : contact?.name || contact?.phone || "Unknown",
+                          preview: buildReplyPreview(parent, tQuote),
                         }
                       : null;
                     const msgReactions = reactionsByMessageId.get(msg.id);
@@ -1127,12 +1183,29 @@ export function MessageThread({
         )}
       </div>
 
+      {/* AI auto-reply banner — take over an active bot, or resume it
+          after a handoff. Renders nothing unless the account has
+          auto-reply configured. */}
+      <AiThreadBanner
+        conversationId={conversation.id}
+        disabled={conversation.ai_autoreply_disabled ?? false}
+        handoffSummary={conversation.ai_handoff_summary}
+        assignedAgentId={assignedAgentId}
+        currentUserId={user?.id}
+        onChange={(patch) => {
+          if ("assigned_agent_id" in patch) {
+            onAssignChange(conversation.id, patch.assigned_agent_id ?? null);
+          }
+        }}
+      />
+
       {/* Composer */}
       <MessageComposer
         conversationId={conversation.id}
         sessionExpired={sessionInfo.expired}
         onSend={handleSend}
         onSendMedia={handleSendMedia}
+        onSendInteractive={handleSendInteractive}
         onOpenTemplates={handleOpenTemplates}
         replyTo={replyTo}
         onClearReply={() => setReplyTo(null)}

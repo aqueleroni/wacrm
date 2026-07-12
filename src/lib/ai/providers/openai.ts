@@ -2,6 +2,7 @@ import { AiError, type ProviderResult } from '../types'
 import { MAX_OUTPUT_TOKENS } from '../defaults'
 import {
   mergeConsecutive,
+  normalizeUsage,
   providerHttpError,
   toNetworkError,
   type ProviderArgs,
@@ -11,13 +12,17 @@ const OPENAI_URL = 'https://api.openai.com/v1/chat/completions'
 
 interface OpenAiResponse {
   choices?: { message?: { content?: string } }[]
-  usage?: { prompt_tokens?: number; completion_tokens?: number }
+  usage?: {
+    prompt_tokens?: number
+    completion_tokens?: number
+    total_tokens?: number
+  }
 }
 
 /**
  * Call OpenAI's Chat Completions endpoint with the caller's own key.
- * Returns the raw assistant text + reported token usage (handoff
- * parsing happens in `generateReply`).
+ * Returns the raw assistant text + token usage (handoff parsing happens
+ * in `generateReply`).
  */
 export async function generateOpenAi(args: ProviderArgs): Promise<ProviderResult> {
   const { apiKey, model, systemPrompt, messages, timeoutMs } = args
@@ -55,13 +60,10 @@ export async function generateOpenAi(args: ProviderArgs): Promise<ProviderResult
       code: 'empty_response',
     })
   }
-  return {
-    text,
-    usage: data?.usage
-      ? {
-          inputTokens: data.usage.prompt_tokens ?? null,
-          outputTokens: data.usage.completion_tokens ?? null,
-        }
-      : null,
-  }
+  const usage = normalizeUsage({
+    prompt: data?.usage?.prompt_tokens,
+    completion: data?.usage?.completion_tokens,
+    total: data?.usage?.total_tokens,
+  })
+  return { text, usage }
 }

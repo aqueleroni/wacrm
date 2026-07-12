@@ -10,6 +10,7 @@ import { generateReply } from '@/lib/ai/generate'
 import { buildSystemPrompt, resolvePromptLocale } from '@/lib/ai/defaults'
 import { retrievalQuery } from '@/lib/ai/query'
 import { logGeneration } from '@/lib/ai/generation-log'
+import { logAiUsage } from '@/lib/ai/usage'
 import { AiError } from '@/lib/ai/types'
 
 /**
@@ -145,6 +146,21 @@ export async function POST(request: Request) {
       latencyMs: Date.now() - startedAt,
       outcome: 'draft',
     })
+
+    // Record spend on the account's BYO key without delaying the draft.
+    try {
+      void logAiUsage(supabaseAdmin(), {
+        accountId,
+        conversationId,
+        mode: 'draft',
+        provider: config.provider,
+        model: config.model,
+        usage,
+      })
+    } catch (logErr) {
+      console.error('[ai/draft] usage log skipped:', logErr)
+    }
+
     return NextResponse.json({ draft: text })
   } catch (err) {
     if (err instanceof AiError) {

@@ -1,5 +1,5 @@
 import { supabaseAdmin } from './admin-client'
-import type { TokenUsage } from './types'
+import { toTokenUsage, type AiUsage } from './types'
 
 export type GenerationMode = 'draft' | 'auto_reply' | 'playground'
 export type GenerationOutcome = 'sent' | 'draft' | 'handoff' | 'error'
@@ -10,7 +10,7 @@ export interface GenerationLogInput {
   mode: GenerationMode
   provider: string
   model: string
-  usage?: TokenUsage | null
+  usage?: AiUsage | null
   latencyMs: number
   outcome: GenerationOutcome
   errorCode?: string | null
@@ -26,6 +26,7 @@ export interface GenerationLogInput {
  */
 export async function logGeneration(input: GenerationLogInput): Promise<void> {
   try {
+    const tokens = toTokenUsage(input.usage)
     await supabaseAdmin()
       .from('ai_generation_logs')
       .insert({
@@ -34,8 +35,8 @@ export async function logGeneration(input: GenerationLogInput): Promise<void> {
         mode: input.mode,
         provider: input.provider,
         model: input.model,
-        input_tokens: input.usage?.inputTokens ?? null,
-        output_tokens: input.usage?.outputTokens ?? null,
+        input_tokens: tokens?.inputTokens ?? null,
+        output_tokens: tokens?.outputTokens ?? null,
         latency_ms: input.latencyMs,
         outcome: input.outcome,
         error_code: input.errorCode ?? null,

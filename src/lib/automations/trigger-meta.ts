@@ -19,6 +19,7 @@ const PILL_CLASSES: Record<AutomationTriggerType, string> = {
   conversation_assigned: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300',
   tag_added: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
   time_based: 'border-slate-500/30 bg-slate-500/10 text-muted-foreground',
+  interactive_reply: 'border-pink-500/30 bg-pink-500/10 text-pink-300',
 };
 
 const TRIGGER_LABEL_KEYS: Record<AutomationTriggerType, string> = {
@@ -29,6 +30,7 @@ const TRIGGER_LABEL_KEYS: Record<AutomationTriggerType, string> = {
   conversation_assigned: 'automations.triggers.conversationAssigned',
   tag_added: 'automations.triggers.tagAdded',
   time_based: 'automations.triggers.timeBased',
+  interactive_reply: 'automations.triggers.interactiveReply',
 };
 
 export function getTriggerMeta(

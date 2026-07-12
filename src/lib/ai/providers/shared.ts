@@ -1,4 +1,4 @@
-import { AiError, type ChatMessage } from '../types'
+import { AiError, type AiUsage, type ChatMessage } from '../types'
 
 // ============================================================
 // Bits shared by the OpenAI + Anthropic adapters.
@@ -12,16 +12,37 @@ export interface ProviderArgs {
   timeoutMs: number
 }
 
-export type { ProviderResult, TokenUsage } from '../types'
+/**
+ * Coerce a provider's usage block into our normalized `AiUsage`, tolerant
+ * of missing/partial fields (providers differ and older API versions may
+ * omit counts). Returns null when there's nothing usable, so logging can
+ * distinguish "no usage reported" from "zero tokens". `total` falls back
+ * to prompt + completion when the provider doesn't send it (Anthropic).
+ */
+export function normalizeUsage(raw: {
+  prompt?: unknown
+  completion?: unknown
+  total?: unknown
+}): AiUsage | null {
+  const num = (v: unknown): number =>
+    typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0
+  const promptTokens = num(raw.prompt)
+  const completionTokens = num(raw.completion)
+  const total = num(raw.total)
+  const totalTokens = total > 0 ? total : promptTokens + completionTokens
+  if (promptTokens === 0 && completionTokens === 0 && totalTokens === 0) {
+    return null
+  }
+  return { promptTokens, completionTokens, totalTokens }
+}
 
 /** Map a fetch rejection (timeout / DNS / offline) to a typed AiError. */
 export function toNetworkError(err: unknown): AiError {
   if (err instanceof DOMException && err.name === 'TimeoutError') {
-    // Not retryable: the attempt already consumed the full time budget,
-    // so a retry would double the customer's wait for a likely repeat.
     return new AiError('The AI provider took too long to respond.', {
       code: 'timeout',
       status: 504,
+      retryable: true,
     })
   }
   const msg = err instanceof Error ? err.message : String(err)
@@ -85,9 +106,7 @@ export async function providerHttpError(
  * failures (AiError.retryable: 429 / 5xx / network blip — never
  * invalid_key or malformed requests). Exponential backoff, honoring the
  * provider's `Retry-After` when it asks for longer, capped so a
- * serverless invocation never sleeps excessively. Mirrors what the
- * official SDKs do by default; without it one transient 429/529 kills
- * the draft or auto-reply outright.
+ * serverless invocation never sleeps excessively.
  */
 export async function withRetries<T>(
   fn: () => Promise<T>,

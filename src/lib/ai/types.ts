@@ -21,6 +21,10 @@ export interface AiConfig {
   isActive: boolean
   autoReplyEnabled: boolean
   autoReplyMaxPerConversation: number
+  /** Where auto-reply hands a conversation off when the model bails: an
+   *  agent's `auth.users.id`, or null to leave it unassigned (drop into
+   *  the shared queue). */
+  handoffAgentId: string | null
   /** Optional OpenAI-compatible key for embeddings. When set, the
    *  knowledge base is embedded and semantic retrieval turns on; when
    *  null, retrieval falls back to lexical full-text search. */
@@ -38,16 +42,36 @@ export interface ChatMessage {
   content: string
 }
 
-/** Token counts a provider reports for one call (null when absent). */
-export interface TokenUsage {
+/**
+ * Token counts for one provider call, normalized across OpenAI
+ * (`prompt`/`completion`) and Anthropic (`input`/`output`). Null when
+ * the provider didn't return usage. Logged to `ai_usage_log` and
+ * mapped into `ai_generation_logs`.
+ */
+export interface AiUsage {
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+}
+
+/** @deprecated Prefer AiUsage — kept as an alias for generation-log callers. */
+export type TokenUsage = {
   inputTokens: number | null
   outputTokens: number | null
 }
 
-/** What a provider adapter returns: raw text plus reported usage. */
+export function toTokenUsage(usage: AiUsage | null | undefined): TokenUsage | null {
+  if (!usage) return null
+  return {
+    inputTokens: usage.promptTokens,
+    outputTokens: usage.completionTokens,
+  }
+}
+
+/** Raw text + usage a provider adapter returns before handoff parsing. */
 export interface ProviderResult {
   text: string
-  usage: TokenUsage | null
+  usage: AiUsage | null
 }
 
 /** Outcome of a generation call. */
@@ -56,9 +80,8 @@ export interface GenerateResult {
   text: string
   /** True when the model asked to hand off to a human (auto-reply mode). */
   handoff: boolean
-  /** Provider-reported token usage, when available — for cost/latency
-   *  observability (ai_generation_logs). */
-  usage?: TokenUsage | null
+  /** Provider token usage for this call, or null when unavailable. */
+  usage: AiUsage | null
 }
 
 /**

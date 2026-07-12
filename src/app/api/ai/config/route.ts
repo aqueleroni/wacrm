@@ -14,10 +14,10 @@ import { AiError, type AiProvider } from '@/lib/ai/types'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const CONFIG_SELECT_FULL =
-  'provider, model, system_prompt, conversation_examples, is_active, auto_reply_enabled, auto_reply_max_per_conversation, memory_auto_extract, api_key, embeddings_api_key'
+  'provider, model, system_prompt, conversation_examples, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, memory_auto_extract, api_key, embeddings_api_key'
 
 const CONFIG_SELECT_BASE =
-  'provider, model, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, api_key, embeddings_api_key'
+  'provider, model, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, api_key, embeddings_api_key'
 
 type ConfigRow = Record<string, unknown> & {
   api_key?: string | null
@@ -151,6 +151,13 @@ export async function POST(request: Request) {
     if (!Number.isFinite(maxPer)) maxPer = 3
     maxPer = Math.min(20, Math.max(1, Math.floor(maxPer)))
 
+    const handoffAgentId =
+      typeof body.handoff_agent_id === 'string' && body.handoff_agent_id.trim()
+        ? body.handoff_agent_id.trim()
+        : body.handoff_agent_id === null
+          ? null
+          : undefined
+
     const rawKey = typeof body.api_key === 'string' ? body.api_key.trim() : ''
 
     // Embeddings key (optional, for semantic KB search): a non-empty
@@ -204,6 +211,7 @@ export async function POST(request: Request) {
           isActive,
           autoReplyEnabled,
           autoReplyMaxPerConversation: maxPer,
+          handoffAgentId: null,
           embeddingsApiKey: null,
           conversationExamples: null,
           promptLocale: null,
@@ -248,6 +256,9 @@ export async function POST(request: Request) {
       auto_reply_max_per_conversation: maxPer,
       memory_auto_extract: memoryAutoExtract,
       prompt_locale: promptLocale,
+    }
+    if (handoffAgentId !== undefined) {
+      shared.handoff_agent_id = handoffAgentId
     }
     if (rawEmbeddingsKey) {
       shared.embeddings_api_key = encrypt(rawEmbeddingsKey)

@@ -2,6 +2,7 @@ import { AiError, type ChatMessage, type ProviderResult } from '../types'
 import { MAX_OUTPUT_TOKENS } from '../defaults'
 import {
   mergeConsecutive,
+  normalizeUsage,
   providerHttpError,
   toNetworkError,
   type ProviderArgs,
@@ -35,8 +36,8 @@ function normalizeForAnthropic(messages: ChatMessage[]): ChatMessage[] {
 
 /**
  * Call Anthropic's Messages endpoint with the caller's own key.
- * Returns the raw assistant text + reported token usage (handoff
- * parsing happens in `generateReply`).
+ * Returns the raw assistant text + token usage (handoff parsing happens
+ * in `generateReply`).
  */
 export async function generateAnthropic(args: ProviderArgs): Promise<ProviderResult> {
   const { apiKey, model, systemPrompt, messages, timeoutMs } = args
@@ -77,13 +78,10 @@ export async function generateAnthropic(args: ProviderArgs): Promise<ProviderRes
       code: 'empty_response',
     })
   }
-  return {
-    text,
-    usage: data?.usage
-      ? {
-          inputTokens: data.usage.input_tokens ?? null,
-          outputTokens: data.usage.output_tokens ?? null,
-        }
-      : null,
-  }
+  // Anthropic reports input/output but no total — normalizeUsage sums.
+  const usage = normalizeUsage({
+    prompt: data?.usage?.input_tokens,
+    completion: data?.usage?.output_tokens,
+  })
+  return { text, usage }
 }
