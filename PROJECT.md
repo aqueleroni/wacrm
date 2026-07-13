@@ -112,6 +112,7 @@ git push origin main
 | 2026-07-12 | WhatsApp config: token/verify mascarados sem apagar no save; olho explica que não revela secret |
 | 2026-07-12 | Settings rail: `max-h` + scroll no aside (cliques abaixo de Modelos não “furavam” mais o menu) |
 | 2026-07-12 | Settings: remove sticky (causa real do clique furado); menu em fluxo normal com 1 scroll |
+| 2026-07-12 | **Root cause cliques Settings:** Next 16.2.x ignora `router.replace` same-path `?tab=` após algumas navegações (cache do router). Fix: estado local + `history.replaceState` em `settings/page.tsx` |
 
 ## Onde customizar branding / UI (referência)
 
