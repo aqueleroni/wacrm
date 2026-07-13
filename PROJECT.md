@@ -73,6 +73,7 @@ git push origin main
 | i18n interativos/inbox | `interactive-builder.tsx`, `interactive-preview.tsx`, `locales/pt-BR/inbox.ts` | Builder e prévia interativos via `useT()`; novas seções da inbox traduzidas |
 | i18n erros interativos | `interactive.ts` + `locales/*/interactive.ts` | Validação com `code`/`params`; UI traduz erros via `translateInteractiveError` |
 | AI usage | `agents/ai-usage.tsx`, tab Usage | Dashboard de tokens (admin) |
+| What's new | `whats-new.ts`, `whats-new-dialog.tsx`, `locales/*/whats-new.ts` | Popup pós-login por versão (`WHATS_NEW_VERSION`); bump + bullets i18n a cada release |
 
 **Commits publicados:**
 - `54006c0` — toggle senha login/signup
@@ -115,6 +116,7 @@ git push origin main
 | 2026-07-12 | **Root cause cliques Settings:** Next 16.2.x ignora `router.replace` same-path `?tab=` após algumas navegações (cache do router). Fix: estado local + `history.replaceState` em `settings/page.tsx` |
 | 2026-07-13 | WhatsApp: “Verificar com a Meta” agora marca `registered_at` quando Meta OK (número de teste sem PIN); save também marca após `subscribed_apps` |
 | 2026-07-13 | Fix upload avatar 400: migration `042` restaura SELECT próprio no bucket `avatars` (037 tinha removido); upload sem upsert |
+| 2026-07-13 | Feature: popup “O que há de novo” (`WhatsNewDialog`) — versão em `src/lib/whats-new.ts` + i18n EN/PT |
 
 ## Onde customizar branding / UI (referência)
 
@@ -131,6 +133,7 @@ git push origin main
 | Cores / temas (dispositivo) | `globals.css` + `themes.ts` + Aparência (modo claro/escuro + presets) |
 | Textos da UI (i18n) | `src/i18n/locales/{en,pt-BR}/*.ts` |
 | Locale padrão | `DEFAULT_LOCALE = 'pt-BR'` em `src/i18n/config.ts` |
+| Popup “O que há de novo” | Bump `WHATS_NEW_VERSION` + bullets em `locales/*/whats-new.ts` (`src/lib/whats-new.ts`) |
 
 **Limitação v1 white-label:** login/cadastro ainda usam marca padrão (Wp CRM). Personalização aparece após login. White-label na tela de login exigiria subdomínio/URL por tenant (futuro).
 
