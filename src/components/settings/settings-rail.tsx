@@ -54,8 +54,6 @@ export function SettingsRail({
       className={cn(
         'flex gap-1 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         'border-b border-border',
-        // Sticky/scrollport lives on the parent <aside> in settings/page.tsx
-        // so every nav item stays inside a real hit-testing box.
         'lg:flex-col lg:overflow-visible lg:border-b-0 lg:pb-0',
       )}
     >
@@ -85,7 +83,7 @@ export function SettingsRail({
                   onClick={() => onSelect(s)}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'relative z-10 flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
+                    'flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
                     'lg:w-full',
                     isActive
                       ? 'bg-primary-soft text-primary'
