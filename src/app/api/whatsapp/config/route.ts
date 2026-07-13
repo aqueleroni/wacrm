@@ -334,11 +334,9 @@ export async function POST(request: Request) {
         // pre-registered by Meta and expose no two-step verification
         // PIN to set, so requiring one made them impossible to connect
         // (issue #242). The /register + PIN step only matters for
-        // production numbers under a shared WABA (issue #136), so treat
-        // it as best-effort: skip it, save the (already Meta-verified)
-        // credentials as connected, and leave registered_at null. The
-        // UI surfaces a separate "Not registered" banner with a path to
-        // add a PIN later for users who do need inbound webhook routing.
+        // production numbers under a shared WABA (issue #136). We skip
+        // /register here; if WABA subscribe succeeds below we still
+        // mark registered_at so the UI doesn't stay amber forever.
         registrationSkipped = true
       } else {
         try {
@@ -379,6 +377,21 @@ export async function POST(request: Request) {
         // permissions; we don't block save on them — the diagnostic
         // endpoint surfaces this state too.
       }
+    }
+
+    // Test / Developer numbers have no 2FA PIN, so /register is skipped.
+    // Once the WABA is subscribed to this app, mark registration locally
+    // so the UI doesn't stay on "Not registered" forever (webhook delivery
+    // still also needs the Meta Developer Console callback URL + verify
+    // token — that part is validated by clicking "Verify with Meta").
+    if (
+      !registrationError &&
+      registrationSkipped &&
+      registeredAt == null &&
+      subscribedAppsAt != null
+    ) {
+      registeredAt = subscribedAppsAt
+      registrationSkipped = false
     }
 
     // Persist everything in one shot. If /register failed we still

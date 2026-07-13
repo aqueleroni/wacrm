@@ -113,6 +113,8 @@ git push origin main
 | 2026-07-12 | Settings rail: `max-h` + scroll no aside (cliques abaixo de Modelos não “furavam” mais o menu) |
 | 2026-07-12 | Settings: remove sticky (causa real do clique furado); menu em fluxo normal com 1 scroll |
 | 2026-07-12 | **Root cause cliques Settings:** Next 16.2.x ignora `router.replace` same-path `?tab=` após algumas navegações (cache do router). Fix: estado local + `history.replaceState` em `settings/page.tsx` |
+| 2026-07-13 | WhatsApp: “Verificar com a Meta” agora marca `registered_at` quando Meta OK (número de teste sem PIN); save também marca após `subscribed_apps` |
+| 2026-07-13 | Fix upload avatar 400: migration `042` restaura SELECT próprio no bucket `avatars` (037 tinha removido); upload sem upsert |
 
 ## Onde customizar branding / UI (referência)
 

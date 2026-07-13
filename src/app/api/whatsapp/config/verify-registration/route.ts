@@ -9,20 +9,15 @@ import {
 /**
  * GET /api/whatsapp/config/verify-registration
  *
- * Diagnostic endpoint — confirms the user's saved phone number is
- * actually reachable on Meta's side. Solves the failure mode that
- * surfaced the multi-number bug originally: "UI says Connected but
- * Meta isn't delivering events."
+ * Confirms the saved phone number is reachable on Meta, and — when the
+ * Meta-side checks pass — marks `registered_at` locally if it was still
+ * null (common for Developer/test numbers that have no 2FA PIN and thus
+ * skip POST /register on save).
  *
- * Three checks run independently so the UI can show which step
- * passes and which fails:
- *
+ * Checks:
  *   1. phone_info  — GET /{phone_number_id} succeeds
- *   2. waba_subscription — our app appears in
- *                    GET /{waba_id}/subscribed_apps
- *   3. registered_at — local timestamp set by POST /config when
- *                    /register last succeeded; NULL means the
- *                    number was saved but never actually subscribed
+ *   2. waba_subscription — our app appears in GET /{waba_id}/subscribed_apps
+ *   3. registered_at — local flag; auto-promoted when (1)+(2) pass
  *
  * Returns 200 in every case so the UI can render diagnostic detail
  * rather than a generic error toast. The combined `live` flag is
@@ -140,17 +135,47 @@ export async function GET() {
     )
   }
 
-  const live =
-    checks.phone_metadata_ok &&
-    (checks.waba_subscribed_to_app ?? false) &&
-    checks.locally_marked_registered
+  // Meta-side readiness is what matters for inbound delivery. The local
+  // registered_at flag used to be both a prerequisite for `live` AND
+  // never written by this endpoint — so test numbers (no PIN → save
+  // leaves registered_at null) were stuck on "Not registered" forever
+  // even after the WABA was subscribed and the webhook was live in Meta.
+  const metaReady =
+    checks.phone_metadata_ok && (checks.waba_subscribed_to_app ?? false)
+
+  let registeredAt: string | null = config.registered_at ?? null
+  let promoted = false
+  if (metaReady && registeredAt == null) {
+    registeredAt = new Date().toISOString()
+    const { error: promoteError } = await supabase
+      .from('whatsapp_config')
+      .update({
+        registered_at: registeredAt,
+        last_registration_error: null,
+        updated_at: registeredAt,
+      })
+      .eq('account_id', accountId)
+    if (promoteError) {
+      errors.push(
+        `Could not mark registration locally: ${promoteError.message}`,
+      )
+    } else {
+      promoted = true
+      checks.locally_marked_registered = true
+    }
+  }
+
+  const live = metaReady && checks.locally_marked_registered
 
   return NextResponse.json({
     live,
+    promoted,
     checks,
     errors,
-    last_registration_error: config.last_registration_error ?? null,
-    registered_at: config.registered_at ?? null,
+    last_registration_error: promoted
+      ? null
+      : (config.last_registration_error ?? null),
+    registered_at: registeredAt,
     subscribed_apps_at: config.subscribed_apps_at ?? null,
   })
 }

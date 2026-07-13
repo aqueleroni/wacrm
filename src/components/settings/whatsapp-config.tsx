@@ -81,6 +81,7 @@ export function WhatsAppConfig() {
   const [verifyingRegistration, setVerifyingRegistration] = useState(false);
   type RegistrationProbe = {
     live: boolean;
+    promoted?: boolean;
     checks: Record<string, boolean | null>;
     errors?: string[];
     last_registration_error?: string | null;
@@ -334,11 +335,19 @@ export function WhatsAppConfig() {
       const data = (await res.json()) as RegistrationProbe;
       setRegistrationProbe(data);
       if (data.live) {
-        toast.success(t('settings.whatsapp.toast.verifySuccess'));
+        toast.success(
+          data.promoted
+            ? t('settings.whatsapp.toast.verifyPromoted')
+            : t('settings.whatsapp.toast.verifySuccess'),
+        );
       } else {
-        toast.error(t('settings.whatsapp.toast.verifyFailed'), {
-          duration: 8000,
-        });
+        const detail = data.errors?.[0];
+        toast.error(
+          detail
+            ? t('settings.whatsapp.toast.verifyFailedDetail', { error: detail })
+            : t('settings.whatsapp.toast.verifyFailed'),
+          { duration: 10000 },
+        );
       }
       if (accountId) await fetchConfig(accountId);
     } catch (err) {

@@ -149,6 +149,7 @@ export const settings = {
       invalidEmail: 'Enter a valid email address',
       displayNameRequired: 'Display name is required',
       saveFailed: 'Save failed',
+      uploadFailed: 'Avatar upload failed: {message}',
       emailChangeFailed: 'Email change failed: {message}',
     },
     success: {
@@ -427,8 +428,11 @@ export const settings = {
       testFailed: 'API connection failed',
       testNetworkFailed: 'Connection test failed. Check network and try again.',
       verifySuccess: 'Number is fully wired — Meta is delivering events.',
+      verifyPromoted:
+        'Checks passed. Registration flagged — the “not registered” banner can clear now.',
       verifyFailed:
         'Number is not fully registered. See the checks below for which step failed.',
+      verifyFailedDetail: 'Verification failed: {error}',
       verifyEndpointFailed: 'Could not reach the verification endpoint.',
       resetConfirm:
         'This will delete the current WhatsApp config so you can re-enter it. Continue?',
