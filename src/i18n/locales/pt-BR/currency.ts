@@ -14,5 +14,6 @@ export const currency = {
     NGN: 'Naira nigeriana',
     SGD: 'Dólar de Singapura',
     MXN: 'Peso mexicano',
+    COP: 'Peso colombiano',
   },
 } as const;

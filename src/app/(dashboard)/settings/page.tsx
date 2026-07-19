@@ -37,6 +37,10 @@ import {
  * keyed without the query string) — UI focus moves, URL/panel stay put.
  * Local state drives the panel; the address bar is updated via
  * `history.replaceState` so deep links keep working without that bug.
+ *
+ * `useSearchParams` also requires a Suspense boundary or the production
+ * build hits the CSR bailout and the rail clicks never wire up
+ * (upstream #399) — thin wrapper below supplies it.
  */
 function SettingsPageInner() {
   const t = useT();

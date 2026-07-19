@@ -69,6 +69,7 @@ git push origin main
 | IA — Etapa 0 | `scripts/seed-wepost-knowledge.ts`, `docs/ai-agent-playground-checklist.md` | KB 5/5 seed + checklist + env doc |
 | IA — Etapa 6 | `docs/ai-agent-etapa-6-cron.md`, cron `/api/ai/cron/consolidate` | Aprendizado supervisionado: extract → pending → aprovação humana |
 | Sync upstream | merge `upstream/main` (2026-07-12) | Mantido `useT` (shim `use-translations`); **não** adotar next-intl |
+| Sync upstream | merge `upstream/main` (2026-07-19) | Login `window.location`, Suspense inbox/automations, cron timing-safe, tag_added, COP, allowedDevOrigins; settings com `history.replaceState` do fork |
 | Quick replies | `quick-replies-manager.tsx`, `?tab=quick-replies` | Respostas rápidas + mensagens interativas no composer |
 | i18n interativos/inbox | `interactive-builder.tsx`, `interactive-preview.tsx`, `locales/pt-BR/inbox.ts` | Builder e prévia interativos via `useT()`; novas seções da inbox traduzidas |
 | i18n erros interativos | `interactive.ts` + `locales/*/interactive.ts` | Validação com `code`/`params`; UI traduz erros via `translateInteractiveError` |
@@ -117,6 +118,7 @@ git push origin main
 | 2026-07-13 | WhatsApp: “Verificar com a Meta” agora marca `registered_at` quando Meta OK (número de teste sem PIN); save também marca após `subscribed_apps` |
 | 2026-07-13 | Fix upload avatar 400: migration `042` restaura SELECT próprio no bucket `avatars` (037 tinha removido); upload sem upsert |
 | 2026-07-13 | Feature: popup “O que há de novo” (`WhatsNewDialog`) — versão em `src/lib/whats-new.ts` + i18n EN/PT |
+| 2026-07-19 | **Sync upstream/main:** login full-page nav (#365), Suspense em inbox/automations/settings, cron timing-safe, automação tag_added, moeda COP, `allowedDevOrigins`; mantidos `useT`, branding, settings `history.replaceState` |
 
 ## Onde customizar branding / UI (referência)
 
