@@ -97,6 +97,7 @@ export const common = {
     daysAgo: 'há {count}d',
     hoursAgo: 'há {count}h',
     minutesAgo: 'há {count}min',
+    secondsAgo: 'há {count}s',
   },
   misc: {
     user: 'Usuário',

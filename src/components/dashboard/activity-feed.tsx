@@ -160,7 +160,9 @@ function relativeTime(
   const then = new Date(iso).getTime()
   if (Number.isNaN(then)) return ''
   const diffSec = Math.round((Date.now() - then) / 1000)
-  if (diffSec < 60) return `${Math.max(1, diffSec)}s ago`
+  if (diffSec < 60) {
+    return t('common.time.secondsAgo', { count: Math.max(1, diffSec) })
+  }
   if (diffSec < 3600) return t('common.time.minutesAgo', { count: Math.floor(diffSec / 60) })
   if (diffSec < 86400) return t('common.time.hoursAgo', { count: Math.floor(diffSec / 3600) })
   if (diffSec < 2_592_000) return t('common.time.daysAgo', { count: Math.floor(diffSec / 86400) })

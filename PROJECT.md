@@ -13,6 +13,7 @@
 |------|-------|
 | **Produto base** | [wacrm](https://github.com/ArnasDon/wacrm) — CRM self-hosted para WhatsApp |
 | **Marca do fork** | **Wp CRM** (nome padrão; white-label por conta em Configurações) |
+| **Produto irmão (planejado)** | **WeBoard** — kanban de materiais da agência em `/Volumes/SITES e APPS/Trello` (mesmo stack/estilo) |
 | **Fork** | `https://github.com/aqueleroni/wacrm.git` (`origin`) |
 | **Upstream (criador)** | `https://github.com/ArnasDon/wacrm.git` (`upstream`) |
 | **Stack** | Next.js 16 (App Router), React 19, TypeScript, Tailwind v4, Supabase |
@@ -127,6 +128,7 @@ git push origin main
 | 2026-07-19 | i18n: modal Novo modelo de mensagem (Configurações → Modelos) + toasts/status via `useT()` |
 | 2026-07-19 | i18n: descrições dos escopos no modal Nova chave de API |
 | 2026-07-19 | fix(inbox): badge de não lida — proteger conversa ativa no refetch + confirmar UPDATE e sincronizar estado local |
+| 2026-07-19 | i18n: atividade recente do painel + spinner “Carregando…” no dashboard shell; nome WeBoard anotado como produto irmão |
 
 ## Onde customizar branding / UI (referência)
 

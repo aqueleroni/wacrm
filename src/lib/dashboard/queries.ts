@@ -1,4 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { t } from '@/i18n'
+import { localizeStageName } from '@/lib/pipelines/stage-label'
 import {
   daysAgoStart,
   DOW_SHORT_MON_FIRST,
@@ -314,11 +316,11 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
   }>) {
     const conv = Array.isArray(m.conversations) ? m.conversations[0] : m.conversations
     const contact = Array.isArray(conv?.contacts) ? conv?.contacts[0] : conv?.contacts
-    const who = contact?.name || contact?.phone || 'Unknown'
+    const who = contact?.name || contact?.phone || t('common.misc.unknown')
     items.push({
       id: `msg-${m.id}`,
       kind: 'message',
-      text: `New message from ${who}`,
+      text: t('dashboard.activity.items.newMessage', { who }),
       at: m.created_at,
       href: `/inbox?c=${m.conversation_id}`,
     })
@@ -328,7 +330,9 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
     items.push({
       id: `contact-${c.id}`,
       kind: 'contact',
-      text: `New contact: ${c.name || c.phone}`,
+      text: t('dashboard.activity.items.newContact', {
+        name: c.name || c.phone,
+      }),
       at: c.created_at,
       href: '/contacts',
     })
@@ -341,12 +345,18 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
     stage: { name: string }[] | { name: string } | null
   }>) {
     const stage = Array.isArray(d.stage) ? d.stage[0] : d.stage
+    const stageLabel = stage?.name
+      ? localizeStageName(stage.name, t)
+      : null
     items.push({
       id: `deal-${d.id}`,
       kind: 'deal',
-      text: stage?.name
-        ? `Deal "${d.title}" in ${stage.name}`
-        : `Deal "${d.title}" updated`,
+      text: stageLabel
+        ? t('dashboard.activity.items.dealInStage', {
+            title: d.title,
+            stage: stageLabel,
+          })
+        : t('dashboard.activity.items.dealUpdated', { title: d.title }),
       at: d.updated_at,
       href: '/pipelines',
     })
@@ -359,14 +369,25 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
     total_recipients: number
     created_at: string
   }>) {
-    const label =
+    const statusKey = `dashboard.activity.broadcastStatus.${b.status}`
+    const statusLabel = t(statusKey)
+    const status =
+      statusLabel === statusKey ? b.status : statusLabel
+    const text =
       b.status === 'sent'
-        ? `sent to ${b.total_recipients} contacts`
-        : `${b.status} (${b.total_recipients} recipients)`
+        ? t('dashboard.activity.items.broadcastSent', {
+            name: b.name,
+            count: b.total_recipients,
+          })
+        : t('dashboard.activity.items.broadcastStatus', {
+            name: b.name,
+            status,
+            count: b.total_recipients,
+          })
     items.push({
       id: `broadcast-${b.id}`,
       kind: 'broadcast',
-      text: `Broadcast "${b.name}" ${label}`,
+      text,
       at: b.created_at,
       href: '/broadcasts',
     })
@@ -382,12 +403,25 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
   }>) {
     const automation = Array.isArray(l.automation) ? l.automation[0] : l.automation
     const contact = Array.isArray(l.contact) ? l.contact[0] : l.contact
-    const who = contact?.name || contact?.phone || 'a contact'
-    const autoName = automation?.name || 'Automation'
+    const who =
+      contact?.name ||
+      contact?.phone ||
+      t('dashboard.activity.items.aContact')
+    const autoName =
+      automation?.name || t('dashboard.activity.items.automationFallback')
     items.push({
       id: `auto-${l.id}`,
       kind: 'automation',
-      text: `Automation "${autoName}" ${l.status === 'failed' ? 'failed for' : 'triggered for'} ${who}`,
+      text:
+        l.status === 'failed'
+          ? t('dashboard.activity.items.automationFailed', {
+              name: autoName,
+              who,
+            })
+          : t('dashboard.activity.items.automationTriggered', {
+              name: autoName,
+              who,
+            }),
       at: l.created_at,
     })
   }
