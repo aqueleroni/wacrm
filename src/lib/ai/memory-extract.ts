@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { loadAiConfig } from './config'
+import { supabaseAdmin } from './admin-client'
 import { buildConversationContext } from './context'
 import { generateReply } from './generate'
 import type { MemoryKind } from './memory'
@@ -83,7 +84,12 @@ export async function extractMemoryFromConversation(
 ): Promise<ExtractResult> {
   const result: ExtractResult = { proposed: 0, inserted: 0, skipped: 0 }
 
-  const config = await loadAiConfig(db, accountId, { requireActive: false })
+  // api_key / embeddings_api_key are service-role-only after migration 038
+  // (B5). Scope the admin read to the session-resolved accountId from the
+  // route — same pattern as draft/playground.
+  const config = await loadAiConfig(supabaseAdmin(), accountId, {
+    requireActive: false,
+  })
   if (!config) return result
 
   const messages = await buildConversationContext(db, conversationId, 40)

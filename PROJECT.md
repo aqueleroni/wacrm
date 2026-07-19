@@ -122,6 +122,7 @@ git push origin main
 | 2026-07-19 | i18n: timestamps relativos da inbox/notificações/flows usam locale `pt-BR` do date-fns (`getDateFnsLocale`) |
 | 2026-07-19 | i18n: painel do contato na inbox — etapa do negócio (`localizeStageName`), valor (`formatCurrency`) e datas das notas; detalhe do contato idem + status ganho/perdido |
 | 2026-07-19 | i18n: toasts de envio WhatsApp (inbox/contato) + erros Meta comuns (#131030 lista permitida, janela 24h, etc.) via `translateWhatsAppSendError` |
+| 2026-07-19 | fix: `/api/ai/memory/extract` 500 — `loadAiConfig` via `supabaseAdmin()` (colunas `api_key` só service_role após migration 038) |
 
 ## Onde customizar branding / UI (referência)
 
