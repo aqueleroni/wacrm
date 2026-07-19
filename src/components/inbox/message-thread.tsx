@@ -53,6 +53,7 @@ import { TemplatePicker } from "./template-picker";
 import { AiThreadBanner } from "./ai-thread-banner";
 import { buildReplyPreview } from "./reply-quote";
 import { toast } from "sonner";
+import { translateWhatsAppSendError } from "@/lib/whatsapp/send-error-label";
 
 interface ReplyDraft {
   id: string;
@@ -515,7 +516,11 @@ export function MessageThread({
         if (!res.ok) {
           const reason = payload?.error || `HTTP ${res.status}`;
           console.error("Failed to send message:", reason);
-          toast.error(`Failed to send: ${reason}`);
+          toast.error(
+            tExtract("inbox.thread.errors.sendFailed", {
+              reason: translateWhatsAppSendError(reason, tExtract),
+            }),
+          );
           // Mark the optimistic bubble as failed so the user sees what happened
           onUpdateMessage(tempId, { status: "failed" });
           return;
@@ -528,11 +533,15 @@ export function MessageThread({
       } catch (err) {
         console.error("Failed to send message:", err);
         const reason = err instanceof Error ? err.message : "network error";
-        toast.error(`Failed to send: ${reason}`);
+        toast.error(
+          tExtract("inbox.thread.errors.sendFailed", {
+            reason: translateWhatsAppSendError(reason, tExtract),
+          }),
+        );
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage]
+    [conversation, onNewMessage, onUpdateMessage, tExtract]
   );
 
   const handleSendMedia = useCallback(
@@ -581,7 +590,11 @@ export function MessageThread({
         if (!res.ok) {
           const reason = data?.error || `HTTP ${res.status}`;
           console.error("Failed to send media:", reason);
-          toast.error(`Failed to send: ${reason}`);
+          toast.error(
+            tExtract("inbox.thread.errors.sendFailed", {
+              reason: translateWhatsAppSendError(reason, tExtract),
+            }),
+          );
           onUpdateMessage(tempId, { status: "failed" });
           // The upload never reached the recipient — GC the orphaned
           // object rather than leaving it in the public bucket forever.
@@ -593,12 +606,16 @@ export function MessageThread({
       } catch (err) {
         console.error("Failed to send media:", err);
         const reason = err instanceof Error ? err.message : "network error";
-        toast.error(`Failed to send: ${reason}`);
+        toast.error(
+          tExtract("inbox.thread.errors.sendFailed", {
+            reason: translateWhatsAppSendError(reason, tExtract),
+          }),
+        );
         onUpdateMessage(tempId, { status: "failed" });
         void deleteAccountMedia(CHAT_MEDIA_BUCKET, payload.path).catch(() => {});
       }
     },
-    [conversation, onNewMessage, onUpdateMessage],
+    [conversation, onNewMessage, onUpdateMessage, tExtract],
   );
 
   const handleSendInteractive = useCallback(
@@ -638,7 +655,11 @@ export function MessageThread({
         if (!res.ok) {
           const reason = data?.error || `HTTP ${res.status}`;
           console.error("Failed to send interactive message:", reason);
-          toast.error(`Failed to send: ${reason}`);
+          toast.error(
+            tExtract("inbox.thread.errors.sendFailed", {
+              reason: translateWhatsAppSendError(reason, tExtract),
+            }),
+          );
           onUpdateMessage(tempId, { status: "failed" });
           return;
         }
@@ -647,11 +668,15 @@ export function MessageThread({
       } catch (err) {
         console.error("Failed to send interactive message:", err);
         const reason = err instanceof Error ? err.message : "network error";
-        toast.error(`Failed to send: ${reason}`);
+        toast.error(
+          tExtract("inbox.thread.errors.sendFailed", {
+            reason: translateWhatsAppSendError(reason, tExtract),
+          }),
+        );
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage],
+    [conversation, onNewMessage, onUpdateMessage, tExtract],
   );
 
   const handleStatusChange = useCallback(
@@ -727,7 +752,11 @@ export function MessageThread({
         if (!res.ok) {
           const reason = payload?.error || `HTTP ${res.status}`;
           console.error("Failed to send template:", reason);
-          toast.error(`Failed to send template: ${reason}`);
+          toast.error(
+            tExtract("inbox.thread.errors.sendTemplateFailed", {
+              reason: translateWhatsAppSendError(reason, tExtract),
+            }),
+          );
           onUpdateMessage(tempId, { status: "failed" });
           return;
         }
@@ -736,11 +765,15 @@ export function MessageThread({
       } catch (err) {
         console.error("Failed to send template:", err);
         const reason = err instanceof Error ? err.message : "network error";
-        toast.error(`Failed to send template: ${reason}`);
+        toast.error(
+          tExtract("inbox.thread.errors.sendTemplateFailed", {
+            reason: translateWhatsAppSendError(reason, tExtract),
+          }),
+        );
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage],
+    [conversation, onNewMessage, onUpdateMessage, tExtract],
   );
 
   // Build a quick id → Message map so reply quotes can be rendered without
@@ -797,7 +830,7 @@ export function MessageThread({
         return;
       }
       if (messageId.startsWith("temp-")) {
-        toast.error("Wait for the message to finish sending");
+        toast.error(tExtract("inbox.thread.errors.waitForSend"));
         return;
       }
 
@@ -843,11 +876,15 @@ export function MessageThread({
         }
       } catch (err) {
         const reason = err instanceof Error ? err.message : "network error";
-        toast.error(`Reaction failed: ${reason}`);
+        toast.error(
+          tExtract("inbox.thread.errors.reactionFailed", {
+            reason: translateWhatsAppSendError(reason, tExtract),
+          }),
+        );
         setReactions(snapshot);
       }
     },
-    [conversation, user?.id],
+    [conversation, user?.id, tExtract],
   );
 
   const handleAssignChange = useCallback(
@@ -862,13 +899,13 @@ export function MessageThread({
 
       if (error) {
         console.error("Failed to update assignment:", error);
-        toast.error("Failed to update assignment");
+        toast.error(tExtract("inbox.thread.errors.assignmentFailed"));
         return;
       }
 
       onAssignChange(conversation.id, agentId);
     },
-    [conversation, onAssignChange],
+    [conversation, onAssignChange, tExtract],
   );
 
   // Empty state — same WhatsApp-style doodle background as the active

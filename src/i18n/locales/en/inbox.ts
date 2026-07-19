@@ -59,6 +59,17 @@ export const inbox = {
       reactionFailed: 'Reaction failed: {reason}',
       assignmentFailed: 'Failed to update assignment',
       waitForSend: 'Wait for the message to finish sending',
+      network: 'Network error',
+      meta: {
+        generic: 'Meta API error: {detail}',
+        recipientNotAllowed:
+          'Recipient phone number is not on the Meta allowed list (development mode). Add it under WhatsApp → API Setup → To.',
+        code131026: 'Message undeliverable to this number',
+        code131047:
+          'Outside the 24-hour window — send an approved template to re-engage',
+        code131051: 'Unsupported message type for this recipient',
+        code130429: 'Rate limit reached — try again shortly',
+      },
     },
   },
   contactPanel: {

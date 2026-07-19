@@ -20,6 +20,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
+import { formatCurrency } from "@/lib/currency";
+import { getDateFnsLocale } from "@/lib/date-fns-locale";
+import { localizeStageName } from "@/lib/pipelines/stage-label";
 
 interface ContactSidebarProps {
   contact: Contact | null;
@@ -228,8 +231,7 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                     </p>
                     <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
                       <span>
-                        {deal.currency ?? "$"}
-                        {deal.value.toLocaleString()}
+                        {formatCurrency(deal.value ?? 0, deal.currency)}
                       </span>
                       {deal.stage && (
                         <span
@@ -239,7 +241,7 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                             color: deal.stage.color,
                           }}
                         >
-                          {deal.stage.name}
+                          {localizeStageName(deal.stage.name, t)}
                         </span>
                       )}
                     </div>
@@ -287,7 +289,9 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                       {note.note_text}
                     </p>
                     <p className="mt-1 text-[10px] text-muted-foreground">
-                      {format(new Date(note.created_at), "MMM d, yyyy HH:mm")}
+                      {format(new Date(note.created_at), "MMM d, yyyy HH:mm", {
+                        locale: getDateFnsLocale(),
+                      })}
                     </p>
                   </div>
                 ))}

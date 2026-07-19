@@ -59,6 +59,17 @@ export const inbox = {
       reactionFailed: 'Falha na reação: {reason}',
       assignmentFailed: 'Falha ao atualizar atribuição',
       waitForSend: 'Aguarde o envio da mensagem terminar',
+      network: 'Erro de rede',
+      meta: {
+        generic: 'Erro da API Meta: {detail}',
+        recipientNotAllowed:
+          'Número do destinatário não está na lista permitida da Meta (modo desenvolvimento). Adicione-o em WhatsApp → API Setup → To.',
+        code131026: 'Mensagem não entregável para este número',
+        code131047:
+          'Fora da janela de 24 horas — envie um modelo aprovado para retomar o contato',
+        code131051: 'Tipo de mensagem não suportado para este destinatário',
+        code130429: 'Limite de envio atingido — tente de novo em instantes',
+      },
     },
   },
   contactPanel: {
