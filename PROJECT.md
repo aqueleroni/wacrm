@@ -119,6 +119,7 @@ git push origin main
 | 2026-07-13 | Fix upload avatar 400: migration `042` restaura SELECT próprio no bucket `avatars` (037 tinha removido); upload sem upsert |
 | 2026-07-13 | Feature: popup “O que há de novo” (`WhatsNewDialog`) — versão em `src/lib/whats-new.ts` + i18n EN/PT |
 | 2026-07-19 | **Sync upstream/main:** login full-page nav (#365), Suspense em inbox/automations/settings, cron timing-safe, automação tag_added, moeda COP, `allowedDevOrigins`; mantidos `useT`, branding, settings `history.replaceState` |
+| 2026-07-19 | i18n: timestamps relativos da inbox/notificações/flows usam locale `pt-BR` do date-fns (`getDateFnsLocale`) |
 
 ## Onde customizar branding / UI (referência)
 

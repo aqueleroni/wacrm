@@ -19,6 +19,7 @@ import { format, formatDistanceToNow } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
 import { useT } from "@/hooks/use-i18n";
+import { getDateFnsLocale } from "@/lib/date-fns-locale";
 import { cn } from "@/lib/utils";
 
 interface RunRow {
@@ -208,6 +209,7 @@ function RunCard({
   const duration = run.ended_at
     ? formatDistanceToNow(new Date(run.ended_at), {
         addSuffix: false,
+        locale: getDateFnsLocale(),
       })
     : null;
   return (
@@ -243,7 +245,9 @@ function RunCard({
           <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
             <span>
               {t("flows.runs.startedAt", {
-                date: format(new Date(run.started_at), "PP p"),
+                date: format(new Date(run.started_at), "PP p", {
+                  locale: getDateFnsLocale(),
+                }),
               })}
             </span>
             {run.reprompt_count > 0 && (
