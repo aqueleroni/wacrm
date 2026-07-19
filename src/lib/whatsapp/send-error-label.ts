@@ -39,3 +39,41 @@ export function translateWhatsAppSendError(
 
   return trimmed
 }
+
+/**
+ * Localize Meta credential / connection health messages shown in
+ * Settings → WhatsApp (expired token, decrypt failure, rejected creds).
+ */
+export function translateWhatsAppConnectionError(
+  message: string,
+  t: TranslateFn,
+): string {
+  const trimmed = message.trim()
+  if (!trimmed) return trimmed
+
+  if (
+    /session has expired|error validating access token/i.test(trimmed)
+  ) {
+    return t('settings.whatsapp.connection.tokenExpired')
+  }
+
+  if (/cannot be decrypted|ENCRYPTION_KEY/i.test(trimmed)) {
+    return t('settings.whatsapp.connection.tokenCorrupted')
+  }
+
+  if (/^Meta API rejected the credentials:\s*/i.test(trimmed)) {
+    const detail = trimmed
+      .replace(/^Meta API rejected the credentials:\s*/i, '')
+      .trim()
+    if (
+      /session has expired|error validating access token/i.test(detail)
+    ) {
+      return t('settings.whatsapp.connection.tokenExpired')
+    }
+    return t('settings.whatsapp.connection.credentialsRejected', {
+      detail: translateWhatsAppSendError(detail, t),
+    })
+  }
+
+  return translateWhatsAppSendError(trimmed, t)
+}

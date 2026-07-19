@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { translateWhatsAppSendError } from './send-error-label'
+import { translateWhatsAppSendError, translateWhatsAppConnectionError } from './send-error-label'
 import { messagesPtBR } from '@/i18n/locales/pt-BR'
 
 function t(key: string, params?: Record<string, string | number>): string {
@@ -36,5 +36,15 @@ describe('translateWhatsAppSendError', () => {
 
   it('passes through unrecognized messages', () => {
     expect(translateWhatsAppSendError('HTTP 503', t)).toBe('HTTP 503')
+  })
+})
+
+describe('translateWhatsAppConnectionError', () => {
+  it('localizes expired Meta access token', () => {
+    const raw =
+      'Meta API rejected the credentials: Error validating access token: Session has expired on Sunday, 19-Jul-26 08:00:00 PDT.'
+    expect(translateWhatsAppConnectionError(raw, t)).toBe(
+      messagesPtBR['settings.whatsapp.connection.tokenExpired'],
+    )
   })
 })

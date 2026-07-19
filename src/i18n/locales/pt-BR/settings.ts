@@ -312,6 +312,11 @@ export const settings = {
         'Seu token de acesso autentica com a Meta. Veja o status de registro abaixo para saber se os webhooks estão configurados.',
       notConnectedHint:
         'Configure suas credenciais da API Meta abaixo para conectar sua conta WhatsApp Business.',
+      tokenExpired:
+        'O token de acesso da Meta expirou. Gere um novo token no Meta for Developers e salve novamente nas credenciais.',
+      tokenCorrupted:
+        'O token armazenado não pode ser descriptografado com a ENCRYPTION_KEY atual. Redefina a configuração e salve de novo.',
+      credentialsRejected: 'A Meta rejeitou as credenciais: {detail}',
     },
     registration: {
       registered: 'Registrado — a Meta entregará eventos ao wacrm',
@@ -480,6 +485,89 @@ export const settings = {
     delete: 'Excluir',
     submit: 'Enviar para aprovação',
     submitting: 'Enviando…',
+    saveResubmit: 'Salvar e reenviar',
+    saving: 'Salvando…',
+    form: {
+      newTitle: 'Novo modelo de mensagem',
+      editTitle: 'Editar modelo de mensagem',
+      newDescription:
+        'Monte um modelo e envie para aprovação da Meta. Depois de aprovado, use em disparos e na caixa de entrada.',
+      editDescription:
+        'Salve as alterações para reenviar à Meta. O status volta para PENDENTE durante a análise.',
+      authWarning:
+        'Modelos AUTHENTICATION têm corpo fixo + botão OTP e pedem outro construtor. Crie-os no WhatsApp Manager da Meta por enquanto e use Sincronizar da Meta para importar.',
+      name: 'Nome do modelo',
+      namePlaceholder: 'ex.: confirmacao_pedido',
+      nameHint: 'Apenas letras minúsculas, dígitos e underscores.',
+      nameFixed:
+        'O nome fica fixo depois que o modelo existe na Meta — crie um novo modelo para alterá-lo.',
+      category: 'Categoria',
+      language: 'Idioma',
+      languageFixed: 'O idioma fica fixo depois que o modelo existe na Meta.',
+      languageHint:
+        'Deve bater com o código exato na Meta — en_US e en são distintos.',
+      categories: {
+        Marketing: 'Marketing',
+        Utility: 'Utilidade',
+        Authentication: 'Autenticação',
+      },
+      header: 'Cabeçalho',
+      headerNone: 'Nenhum',
+      headerText: 'Texto',
+      headerImage: 'Imagem',
+      headerVideo: 'Vídeo',
+      headerDocument: 'Documento',
+      headerTextPlaceholder: 'Texto do cabeçalho (máx. 60 caracteres, {{1}} opcional)',
+      headerTextAria: 'Texto do cabeçalho',
+      headerSamplePlaceholder:
+        'Valor de exemplo para {{1}} (obrigatório para análise da Meta)',
+      headerSampleAria: 'Valor de exemplo da variável do cabeçalho',
+      uploadImage: 'Enviar imagem',
+      uploadImageHint: 'JPEG ou PNG, ≤5 MB',
+      headerMediaPlaceholder: 'https://… (ou cole um link público de {format})',
+      headerSampleAlt: 'Amostra do cabeçalho',
+      headerImageHint:
+        'Envie um JPEG/PNG (≤5 MB, ≥800×418 px recomendado) ou cole um link HTTPS público — nós enviamos à Meta para análise automaticamente.',
+      headerMediaHint:
+        'Precisa ser um link HTTPS público. A Meta busca uma vez na análise, então o link deve ficar no ar por ~24 h.',
+      headerVideoHint: ' Recomendado: MP4 / 3GPP, ≤16 MB, ≤60 segundos.',
+      headerDocumentHint: ' Recomendado: PDF, ≤100 MB.',
+      body: 'Texto do corpo',
+      bodyPlaceholder: 'Olá {{1}}, seu pedido {{2}} foi confirmado.',
+      bodyHint:
+        'Use {{1}}, {{2}} para variáveis (devem ser contíguas a partir de {{1}}).',
+      bodySamples: 'Valores de exemplo (a Meta usa para analisar o modelo)',
+      bodySamplePlaceholder: 'Exemplo para {token}',
+      bodySampleAria: 'Valor de exemplo da variável do corpo {token}',
+      footer: 'Rodapé (opcional)',
+      footerPlaceholder: 'Texto do rodapé (máx. 60 caracteres)',
+      buttons: 'Botões (opcional)',
+      addButton: 'Adicionar botão',
+      buttonsHint:
+        'Até {max} botões. Respostas rápidas devem vir antes de URL / telefone / copiar código.',
+      buttonTypes: {
+        QUICK_REPLY: 'Resposta rápida',
+        URL: 'URL',
+        PHONE_NUMBER: 'Telefone',
+        COPY_CODE: 'Copiar código',
+      },
+      buttonLabel: 'Rótulo do botão',
+      buttonUrlPlaceholder: 'https://exemplo.com/caminho ou com sufixo {{1}}',
+      buttonUrlExample:
+        'Valor de exemplo para {{1}} (obrigatório quando a URL tem variável)',
+      buttonPhonePlaceholder: '+5511999999999',
+      buttonCopyPlaceholder: 'Código de exemplo (ex.: VERAO20)',
+    },
+    list: {
+      editTitle: 'Editar dispara nova análise da Meta — status volta para PENDENTE.',
+      editAria: 'Editar modelo',
+      resubmitTitle: 'Edite o modelo e reenvie à Meta para análise.',
+      resubmitAria: 'Editar e reenviar modelo',
+      deleteMetaTitle: 'Excluir modelo da Meta e localmente',
+      deleteLocalTitle: 'Excluir modelo localmente',
+      deleteMetaAria: 'Excluir da Meta e localmente',
+      deleteLocalAria: 'Excluir localmente',
+    },
     deleteDialog: {
       title: 'Excluir modelo?',
       meta:
@@ -498,6 +586,17 @@ export const settings = {
       headerImageSize: 'A imagem do cabeçalho deve ter menos de {maxMb} MB.',
       imageUploaded: 'Imagem enviada.',
       uploadFailed: 'Falha no upload.',
+      submitSuccess:
+        'Enviado à Meta — análise costuma levar até 24 horas. O status atualiza automaticamente.',
+      editSuccess:
+        'Edição enviada — a Meta costuma analisar em até 24 horas.',
+      dryRunCreated: 'Modelo salvo (simulação — sem chamada à Meta)',
+      dryRunUpdated: 'Modelo atualizado (simulação — sem chamada à Meta)',
+      syncTruncated:
+        'Sincronizados só os primeiros 2000 modelos — sua conta tem mais. Sincronize de novo para continuar, ou fale com o suporte se persistir.',
+      imageTooLarge: 'A imagem tem {sizeMb} MB — o limite da Meta é 5 MB.',
+      syncSuccess: 'Sincronizados {total} modelo(s) da Meta',
+      syncSuccessDetail: ' ({inserted} novos, {updated} atualizados)',
     },
   },
   fields: {
@@ -575,6 +674,15 @@ export const settings = {
       name: 'Nome',
       namePlaceholder: 'ex.: Automação Zapier',
       scopes: 'Escopos',
+      scopeDescriptions: {
+        'messages:send': 'Enviar mensagens WhatsApp',
+        'messages:read': 'Ler mensagens e status de entrega',
+        'contacts:read': 'Listar e ler contatos',
+        'contacts:write': 'Criar e atualizar contatos',
+        'conversations:read': 'Listar e ler conversas',
+        'broadcasts:send': 'Disparar campanhas de broadcast',
+        'webhooks:manage': 'Registrar e gerenciar webhooks de eventos',
+      },
       noScopesHint:
         'Uma chave sem escopos ainda pode chamar GET /api/v1/me para verificar se funciona.',
       create: 'Criar chave',

@@ -312,6 +312,11 @@ export const settings = {
         'Your access token authenticates with Meta. See Registration status below for whether webhooks are actually wired.',
       notConnectedHint:
         'Configure your Meta API credentials below to connect your WhatsApp Business account.',
+      tokenExpired:
+        'Your Meta access token expired. Generate a new token in Meta for Developers and save it again under credentials.',
+      tokenCorrupted:
+        'The stored access token cannot be decrypted with the current ENCRYPTION_KEY. Reset the configuration and save again.',
+      credentialsRejected: 'Meta rejected the credentials: {detail}',
     },
     registration: {
       registered: 'Registered — Meta will deliver events to wacrm',
@@ -478,6 +483,89 @@ export const settings = {
     delete: 'Delete',
     submit: 'Submit for Approval',
     submitting: 'Submitting…',
+    saveResubmit: 'Save & Resubmit',
+    saving: 'Saving…',
+    form: {
+      newTitle: 'New message template',
+      editTitle: 'Edit message template',
+      newDescription:
+        'Build a template and submit it to Meta for approval. Once approved, you can use it in broadcasts and the inbox.',
+      editDescription:
+        'Save your changes to re-submit to Meta. Status will flip back to PENDING during review.',
+      authWarning:
+        'AUTHENTICATION templates have a fixed body + OTP button shape that needs a different builder. Create them in Meta WhatsApp Manager for now and use Sync from Meta to bring them in.',
+      name: 'Template name',
+      namePlaceholder: 'e.g. order_confirmation',
+      nameHint: 'Lowercase letters, digits, and underscores only.',
+      nameFixed:
+        'Name is fixed once a template exists on Meta — create a new template to change it.',
+      category: 'Category',
+      language: 'Language',
+      languageFixed: 'Language is fixed once a template exists on Meta.',
+      languageHint:
+        'Must match the exact code on Meta — en_US and en are distinct.',
+      categories: {
+        Marketing: 'Marketing',
+        Utility: 'Utility',
+        Authentication: 'Authentication',
+      },
+      header: 'Header',
+      headerNone: 'None',
+      headerText: 'Text',
+      headerImage: 'Image',
+      headerVideo: 'Video',
+      headerDocument: 'Document',
+      headerTextPlaceholder: 'Header text (max 60 chars, optional {{1}})',
+      headerTextAria: 'Header text',
+      headerSamplePlaceholder:
+        'Sample value for {{1}} (required for Meta review)',
+      headerSampleAria: 'Sample value for header variable',
+      uploadImage: 'Upload image',
+      uploadImageHint: 'JPEG or PNG, ≤5 MB',
+      headerMediaPlaceholder: 'https://… (or paste a public {format} link)',
+      headerSampleAlt: 'Header sample',
+      headerImageHint:
+        'Upload a JPEG/PNG (≤5 MB, ≥800×418 px recommended) or paste a public HTTPS link — we upload it to Meta for review automatically.',
+      headerMediaHint:
+        'Must be a publicly accessible HTTPS link. Meta fetches it once during review, so it needs to stay live for ~24 hrs.',
+      headerVideoHint: ' Recommended: MP4 / 3GPP, ≤16 MB, ≤60 seconds.',
+      headerDocumentHint: ' Recommended: PDF, ≤100 MB.',
+      body: 'Body text',
+      bodyPlaceholder: 'Hello {{1}}, your order {{2}} is confirmed.',
+      bodyHint:
+        'Use {{1}}, {{2}} for variables (must be contiguous starting at {{1}}).',
+      bodySamples: 'Sample values (Meta uses these to review your template)',
+      bodySamplePlaceholder: 'Sample for {token}',
+      bodySampleAria: 'Sample value for body variable {token}',
+      footer: 'Footer (optional)',
+      footerPlaceholder: 'Optional footer text (max 60 chars)',
+      buttons: 'Buttons (optional)',
+      addButton: 'Add button',
+      buttonsHint:
+        'Up to {max} buttons. Quick reply buttons must come before URL / phone / copy-code buttons.',
+      buttonTypes: {
+        QUICK_REPLY: 'Quick reply',
+        URL: 'URL',
+        PHONE_NUMBER: 'Phone',
+        COPY_CODE: 'Copy code',
+      },
+      buttonLabel: 'Button label',
+      buttonUrlPlaceholder: 'https://example.com/path or with {{1}} suffix',
+      buttonUrlExample:
+        'Example value for {{1}} (required when URL has a variable)',
+      buttonPhonePlaceholder: '+15551234567',
+      buttonCopyPlaceholder: 'Example code (e.g. SUMMER20)',
+    },
+    list: {
+      editTitle: 'Editing triggers Meta re-review — status flips to PENDING.',
+      editAria: 'Edit template',
+      resubmitTitle: 'Edit the template and resubmit to Meta for review.',
+      resubmitAria: 'Edit and resubmit template',
+      deleteMetaTitle: 'Delete template from Meta and locally',
+      deleteLocalTitle: 'Delete template locally',
+      deleteMetaAria: 'Delete from Meta and locally',
+      deleteLocalAria: 'Delete locally',
+    },
     deleteDialog: {
       title: 'Delete template?',
       meta:
@@ -496,6 +584,17 @@ export const settings = {
       headerImageSize: 'Header image must be under {maxMb} MB.',
       imageUploaded: 'Image uploaded.',
       uploadFailed: 'Upload failed.',
+      submitSuccess:
+        'Submitted to Meta — typical review time is 24 hours. Status updates automatically.',
+      editSuccess:
+        'Edit submitted — Meta typically reviews within 24 hours.',
+      dryRunCreated: 'Template saved (dry-run — no Meta call)',
+      dryRunUpdated: 'Template updated (dry-run — no Meta call)',
+      syncTruncated:
+        'Synced the first 2000 templates only — your account has more. Sync again to continue, or contact support if this persists.',
+      imageTooLarge: "Image is {sizeMb} MB — Meta's limit is 5 MB.",
+      syncSuccess: 'Synced {total} template(s) from Meta',
+      syncSuccessDetail: ' ({inserted} new, {updated} updated)',
     },
   },
   fields: {
@@ -573,6 +672,15 @@ export const settings = {
       name: 'Name',
       namePlaceholder: 'e.g. Zapier automation',
       scopes: 'Scopes',
+      scopeDescriptions: {
+        'messages:send': 'Send WhatsApp messages',
+        'messages:read': 'Read messages and their delivery status',
+        'contacts:read': 'List and read contacts',
+        'contacts:write': 'Create and update contacts',
+        'conversations:read': 'List and read conversations',
+        'broadcasts:send': 'Launch broadcast campaigns',
+        'webhooks:manage': 'Register and manage outbound event webhooks',
+      },
       noScopesHint:
         'A key with no scopes can still call GET /api/v1/me to verify it works.',
       create: 'Create key',

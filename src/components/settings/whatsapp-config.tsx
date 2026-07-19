@@ -30,6 +30,7 @@ import {
   AccordionContent,
 } from '@/components/ui/accordion';
 import type { WhatsAppConfig as WhatsAppConfigType } from '@/types';
+import { translateWhatsAppConnectionError } from '@/lib/whatsapp/send-error-label';
 
 const MASKED_TOKEN = '••••••••••••••••';
 
@@ -432,7 +433,7 @@ export function WhatsAppConfig() {
                   {t('settings.whatsapp.resetBanner.title')}
                 </AlertTitle>
                 <AlertDescription className="text-amber-100/80 text-sm">
-                  {statusMessage}
+                  {translateWhatsAppConnectionError(statusMessage, t)}
                 </AlertDescription>
                 <Button
                   onClick={handleReset}
@@ -474,8 +475,9 @@ export function WhatsAppConfig() {
           <AlertDescription className="text-muted-foreground">
             {connectionStatus === 'connected'
               ? t('settings.whatsapp.connection.validHint')
-              : statusMessage ||
-                t('settings.whatsapp.connection.notConnectedHint')}
+              : statusMessage
+                ? translateWhatsAppConnectionError(statusMessage, t)
+                : t('settings.whatsapp.connection.notConnectedHint')}
           </AlertDescription>
         </Alert>
 

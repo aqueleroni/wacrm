@@ -123,6 +123,10 @@ git push origin main
 | 2026-07-19 | i18n: painel do contato na inbox — etapa do negócio (`localizeStageName`), valor (`formatCurrency`) e datas das notas; detalhe do contato idem + status ganho/perdido |
 | 2026-07-19 | i18n: toasts de envio WhatsApp (inbox/contato) + erros Meta comuns (#131030 lista permitida, janela 24h, etc.) via `translateWhatsAppSendError` |
 | 2026-07-19 | fix: `/api/ai/memory/extract` 500 — `loadAiConfig` via `supabaseAdmin()` (colunas `api_key` só service_role após migration 038) |
+| 2026-07-19 | i18n: status WhatsApp “token expirado / credenciais rejeitadas” via `translateWhatsAppConnectionError` |
+| 2026-07-19 | i18n: modal Novo modelo de mensagem (Configurações → Modelos) + toasts/status via `useT()` |
+| 2026-07-19 | i18n: descrições dos escopos no modal Nova chave de API |
+| 2026-07-19 | fix(inbox): badge de não lida — proteger conversa ativa no refetch + confirmar UPDATE e sincronizar estado local |
 
 ## Onde customizar branding / UI (referência)
 
