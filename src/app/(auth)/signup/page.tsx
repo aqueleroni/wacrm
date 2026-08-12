@@ -98,9 +98,9 @@ function SignupPageInner() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <Card className="w-full max-w-md border-border bg-card">
-          <CardHeader className="items-center text-center">
-            <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-              <CheckCircle className="h-6 w-6 text-primary" />
+          <CardHeader className="justify-items-center text-center">
+            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-xl bg-primary/10">
+              <CheckCircle className="size-6 text-primary" />
             </div>
             <CardTitle className="text-xl text-foreground">
               {t("auth.signup.checkEmailTitle")}
@@ -133,12 +133,12 @@ function SignupPageInner() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md border-border bg-card">
-        <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-primary p-2">
+        <CardHeader className="justify-items-center text-center">
+          <div className="mx-auto mb-2 flex size-12 items-center justify-center overflow-hidden rounded-xl bg-primary p-2">
             {inviteToken ? (
-              <UsersRound className="h-6 w-6 text-primary-foreground" />
+              <UsersRound className="size-6 text-primary-foreground" />
             ) : (
-              <AppLogo size={32} className="h-full w-full" />
+              <AppLogo size={32} className="object-contain object-center" />
             )}
           </div>
           <CardTitle className="text-xl text-foreground">
