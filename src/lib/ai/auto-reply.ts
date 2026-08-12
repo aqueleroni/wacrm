@@ -1,14 +1,20 @@
 import { supabaseAdmin } from './admin-client'
 import { loadAiConfig } from './config'
 import { buildConversationContext } from './context'
-import { retrieveKnowledge } from './knowledge'
+import { buildAgentContext } from './agent-context'
+import { buildCrmContext, formatCrmContextBlock } from './crm-context'
 import { generateReply } from './generate'
-import { buildSystemPrompt } from './defaults'
+import { buildSystemPrompt, resolvePromptLocale } from './defaults'
 import { buildHandoffSummary } from './handoff'
+import { retrievalQuery } from './query'
+import { logGeneration } from './generation-log'
 import { logAiUsage } from './usage'
-import { latestUserMessage } from './query'
+import { notifyHandoff } from './handoff-notify'
+import { AiError } from './types'
 import { engineSendText } from '@/lib/flows/meta-send'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
+import { keywordConfigMatches } from '@/lib/automations/keyword-match'
+import type { KeywordMatchTriggerConfig } from '@/types'
 
 interface DispatchArgs {
   /** Tenancy key — drives config, contact, and whatsapp_config lookups. */
@@ -18,6 +24,9 @@ interface DispatchArgs {
   /** The account's WhatsApp config owner, used for the outbound send's
    *  audit columns (mirrors how the flow runner passes it through). */
   configOwnerUserId: string
+  /** The inbound message text, used to predict whether a keyword
+   *  automation will answer it (if so, the AI stands down). */
+  inboundText: string
 }
 
 /**
@@ -42,41 +51,56 @@ interface DispatchArgs {
 export async function dispatchInboundToAiReply(
   args: DispatchArgs,
 ): Promise<void> {
-  const { accountId, conversationId, contactId, configOwnerUserId } = args
+  const { accountId, conversationId, contactId, configOwnerUserId, inboundText } = args
 
   try {
     const db = supabaseAdmin()
 
-    const config = await loadAiConfig(db, accountId)
+    // The four eligibility reads are independent — fetch them together
+    // so the customer isn't waiting on serial roundtrips before the LLM
+    // call even starts. Gates still apply in the same order below.
+    const [config, { data: autoResponders }, { data: conv, error: convErr }, messages] =
+      await Promise.all([
+        loadAiConfig(db, accountId),
+        db
+          .from('automations')
+          .select('trigger_type, trigger_config')
+          .eq('account_id', accountId)
+          .eq('is_active', true)
+          .in('trigger_type', ['new_message_received', 'keyword_match']),
+        db
+          .from('conversations')
+          .select('assigned_agent_id, ai_autoreply_disabled, ai_reply_count')
+          .eq('id', conversationId)
+          .maybeSingle(),
+        buildConversationContext(db, conversationId),
+      ])
+
     if (!config || !config.autoReplyEnabled) return
 
     // Deterministic, user-configured responders win over the LLM — the
     // caller already excludes messages a Flow consumed. Message-level
     // automations (`new_message_received` / `keyword_match`) are
     // dispatched independently for this same inbound and may send their
-    // own reply, so if the account has any active one we stand down to
-    // avoid double-texting the customer. (Relationship triggers like
+    // own reply, so we stand down when one will actually answer THIS
+    // message: `new_message_received` answers everything; a keyword
+    // automation only wins when its keywords match the inbound text —
+    // otherwise the AI still replies. (Relationship triggers like
     // `first_inbound_message` don't count — they're not per-message
     // auto-responders.)
-    const { data: autoResponders } = await db
-      .from('automations')
-      .select('id')
-      .eq('account_id', accountId)
-      .eq('is_active', true)
-      .in('trigger_type', ['new_message_received', 'keyword_match'])
-      .limit(1)
-    if (autoResponders && autoResponders.length > 0) return
+    const willAutoRespond = (autoResponders ?? []).some(
+      (a) =>
+        a.trigger_type === 'new_message_received' ||
+        keywordConfigMatches(
+          a.trigger_config as KeywordMatchTriggerConfig | null,
+          inboundText,
+        ),
+    )
+    if (willAutoRespond) return
 
-    const { data: conv, error: convErr } = await db
-      .from('conversations')
-      .select('assigned_agent_id, ai_autoreply_disabled, ai_reply_count')
-      .eq('id', conversationId)
-      .maybeSingle()
     if (convErr || !conv) return
     if (conv.assigned_agent_id) return // a human owns this thread
     if (conv.ai_autoreply_disabled) return // handed off / turned off here
-
-    const messages = await buildConversationContext(db, conversationId)
 
     // Reply cap reached → hand off to a human instead of silently ignoring.
     if (conv.ai_reply_count >= config.autoReplyMaxPerConversation) {
@@ -114,25 +138,53 @@ export async function dispatchInboundToAiReply(
       return
     }
 
-    // Ground the reply in the account's knowledge base (best-effort).
-    const knowledge = await retrieveKnowledge(
-      db,
-      accountId,
-      config,
-      latestUserMessage(messages),
-    )
+    // Ground the reply in KB, memory, skills, and CRM context (best-effort).
+    const query = retrievalQuery(messages)
+    const [ctx, crmParts] = await Promise.all([
+      buildAgentContext({
+        db,
+        accountId,
+        config,
+        queryText: query,
+        contactId,
+      }),
+      buildCrmContext(db, accountId, contactId),
+    ])
 
     const systemPrompt = buildSystemPrompt({
       userPrompt: config.systemPrompt,
+      conversationExamples: config.conversationExamples,
       mode: 'auto_reply',
-      knowledge,
+      locale: resolvePromptLocale(config.promptLocale),
+      knowledge: ctx.knowledge,
+      memory: ctx.memory,
+      skills: ctx.skills,
+      crmContext: formatCrmContextBlock(crmParts),
     })
 
-    const { text, handoff, usage } = await generateReply({
-      config,
-      systemPrompt,
-      messages,
-    })
+    const startedAt = Date.now()
+    let text: string
+    let handoff: boolean
+    let usage
+    try {
+      ;({ text, handoff, usage } = await generateReply({
+        config,
+        systemPrompt,
+        messages,
+      }))
+    } catch (err) {
+      await logGeneration({
+        accountId,
+        conversationId,
+        mode: 'auto_reply',
+        provider: config.provider,
+        model: config.model,
+        latencyMs: Date.now() - startedAt,
+        outcome: 'error',
+        errorCode: err instanceof AiError ? err.code : 'unknown',
+      })
+      throw err
+    }
 
     // Record token spend on the account's BYO key. Fire-and-forget so it
     // never adds latency to the customer-facing send: `logAiUsage`
@@ -170,6 +222,17 @@ export async function dispatchInboundToAiReply(
         update.assigned_agent_id = config.handoffAgentId
       }
       await db.from('conversations').update(update).eq('id', conversationId)
+      await logGeneration({
+        accountId,
+        conversationId,
+        mode: 'auto_reply',
+        provider: config.provider,
+        model: config.model,
+        usage,
+        latencyMs: Date.now() - startedAt,
+        outcome: 'handoff',
+      })
+      await notifyHandoff(db, accountId, conversationId, contactId)
       return
     }
 
@@ -202,6 +265,17 @@ export async function dispatchInboundToAiReply(
       contactId,
       text,
       aiGenerated: true,
+    })
+
+    await logGeneration({
+      accountId,
+      conversationId,
+      mode: 'auto_reply',
+      provider: config.provider,
+      model: config.model,
+      usage,
+      latencyMs: Date.now() - startedAt,
+      outcome: 'sent',
     })
   } catch (err) {
     console.error('[ai auto-reply] dispatch failed:', err)

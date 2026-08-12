@@ -1,11 +1,22 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Bot, RotateCcw, Send, Loader2, UserCircle2, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useAuth } from '@/hooks/use-auth';
 import { useT } from '@/hooks/use-i18n';
+import { createClient } from '@/lib/supabase/client';
 
 interface Turn {
   role: 'user' | 'assistant';
@@ -14,12 +25,52 @@ interface Turn {
   handoff?: boolean;
 }
 
+interface ContactOption {
+  id: string;
+  label: string;
+}
+
 export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
   const t = useT();
+  const { accountId } = useAuth();
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [simulateContact, setSimulateContact] = useState(false);
+  const [contactId, setContactId] = useState<string | null>(null);
+  const [contacts, setContacts] = useState<ContactOption[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const loadContacts = useCallback(async () => {
+    if (!accountId) return;
+    setLoadingContacts(true);
+    try {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('contacts')
+        .select('id, name, phone')
+        .eq('account_id', accountId)
+        .order('updated_at', { ascending: false })
+        .limit(50);
+      setContacts(
+        (data ?? []).map((c) => ({
+          id: c.id,
+          label: c.name?.trim()
+            ? `${c.name.trim()} (${c.phone})`
+            : c.phone,
+        })),
+      );
+    } finally {
+      setLoadingContacts(false);
+    }
+  }, [accountId]);
+
+  useEffect(() => {
+    if (simulateContact && contacts.length === 0) {
+      void loadContacts();
+    }
+  }, [simulateContact, contacts.length, loadContacts]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -28,6 +79,10 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
   const send = async () => {
     const text = input.trim();
     if (!text || sending) return;
+    if (simulateContact && !contactId) {
+      toast.error(t('agents.playground.simulateContact.pickRequired'));
+      return;
+    }
 
     const next: Turn[] = [...turns, { role: 'user', content: text }];
     setTurns(next);
@@ -37,9 +92,9 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
       const res = await fetch('/api/ai/playground', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // Send only role+content — the server ignores anything else.
         body: JSON.stringify({
-          messages: next.map((t) => ({ role: t.role, content: t.content })),
+          messages: next.map((turn) => ({ role: turn.role, content: turn.content })),
+          ...(simulateContact && contactId ? { contact_id: contactId } : {}),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -49,7 +104,6 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
         } else {
           toast.error(data.error ?? t('agents.playground.toast.noReply'));
         }
-        // Roll the unsent user turn back so the transcript stays clean.
         setTurns(turns);
         setInput(text);
         return;
@@ -84,23 +138,74 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
   return (
     <div className="flex h-[60vh] min-h-[420px] flex-col rounded-xl border border-border bg-card">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Bot className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium text-foreground">{t('agents.playground.title')}</span>
-          <span className="text-xs text-muted-foreground">
-            — {t('agents.playground.subtitle')}
-          </span>
+      <div className="flex flex-col gap-3 border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Bot className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-foreground">{t('agents.playground.title')}</span>
+            <span className="text-xs text-muted-foreground">
+              — {t('agents.playground.subtitle')}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setTurns([])}
+            disabled={turns.length === 0 || sending}
+            className="text-muted-foreground"
+          >
+            <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> {t('agents.playground.reset')}
+          </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setTurns([])}
-          disabled={turns.length === 0 || sending}
-          className="text-muted-foreground"
-        >
-          <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> {t('agents.playground.reset')}
-        </Button>
+
+        <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="pg-simulate" className="text-sm font-medium">
+              {t('agents.playground.simulateContact.title')}
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              {t('agents.playground.simulateContact.hint')}
+            </p>
+          </div>
+          <Switch
+            id="pg-simulate"
+            checked={simulateContact}
+            onCheckedChange={(on) => {
+              setSimulateContact(on);
+              if (!on) setContactId(null);
+            }}
+          />
+        </div>
+
+        {simulateContact && (
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t('agents.playground.simulateContact.contactLabel')}</Label>
+            <Select
+              value={contactId ?? ''}
+              onValueChange={(v) => {
+                if (v) setContactId(v);
+              }}
+              disabled={loadingContacts}
+            >
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={
+                    loadingContacts
+                      ? t('agents.playground.simulateContact.loading')
+                      : t('agents.playground.simulateContact.placeholder')
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {contacts.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {/* Transcript */}
@@ -183,7 +288,7 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
         />
         <Button
           size="sm"
-          onClick={send}
+          onClick={() => void send()}
           disabled={!input.trim() || sending}
           className="h-9 w-9 shrink-0 p-0"
         >

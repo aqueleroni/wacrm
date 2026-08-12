@@ -29,6 +29,11 @@ export interface AiConfig {
    *  knowledge base is embedded and semantic retrieval turns on; when
    *  null, retrieval falls back to lexical full-text search. */
   embeddingsApiKey: string | null
+  /** Optional few-shot examples (tone/format) appended after persona. */
+  conversationExamples: string | null
+  /** Per-account prompt-scaffold language; null falls back to the
+   *  deploy default (AI_PROMPT_LOCALE). */
+  promptLocale: 'pt-BR' | 'en' | null
 }
 
 /** A single conversation turn in the shape both providers accept. */
@@ -40,12 +45,27 @@ export interface ChatMessage {
 /**
  * Token counts for one provider call, normalized across OpenAI
  * (`prompt`/`completion`) and Anthropic (`input`/`output`). Null when
- * the provider didn't return usage. Logged to `ai_usage_log`.
+ * the provider didn't return usage. Logged to `ai_usage_log` and
+ * mapped into `ai_generation_logs`.
  */
 export interface AiUsage {
   promptTokens: number
   completionTokens: number
   totalTokens: number
+}
+
+/** @deprecated Prefer AiUsage — kept as an alias for generation-log callers. */
+export type TokenUsage = {
+  inputTokens: number | null
+  outputTokens: number | null
+}
+
+export function toTokenUsage(usage: AiUsage | null | undefined): TokenUsage | null {
+  if (!usage) return null
+  return {
+    inputTokens: usage.promptTokens,
+    outputTokens: usage.completionTokens,
+  }
 }
 
 /** Raw text + usage a provider adapter returns before handoff parsing. */
@@ -72,10 +92,26 @@ export interface GenerateResult {
 export class AiError extends Error {
   readonly code: string
   readonly status: number
-  constructor(message: string, opts: { code?: string; status?: number } = {}) {
+  /** True when the failure is transient (429 / provider 5xx / network
+   *  blip) and the same request is worth retrying. Never true for
+   *  invalid_key or malformed-request failures. */
+  readonly retryable: boolean
+  /** Provider-suggested wait before retrying (from `Retry-After`). */
+  readonly retryAfterMs?: number
+  constructor(
+    message: string,
+    opts: {
+      code?: string
+      status?: number
+      retryable?: boolean
+      retryAfterMs?: number
+    } = {},
+  ) {
     super(message)
     this.name = 'AiError'
     this.code = opts.code ?? 'ai_error'
     this.status = opts.status ?? 502
+    this.retryable = opts.retryable ?? false
+    this.retryAfterMs = opts.retryAfterMs
   }
 }

@@ -42,12 +42,14 @@ export function toNetworkError(err: unknown): AiError {
     return new AiError('The AI provider took too long to respond.', {
       code: 'timeout',
       status: 504,
+      retryable: true,
     })
   }
   const msg = err instanceof Error ? err.message : String(err)
   return new AiError(`Could not reach the AI provider: ${msg}`, {
     code: 'network_error',
     status: 502,
+    retryable: true,
   })
 }
 
@@ -82,12 +84,49 @@ export async function providerHttpError(
         ? `${provider} rate limit reached`
         : `${provider} API error (${status})`
 
+  // 429 and 5xx (incl. Anthropic's 529 "overloaded") are transient;
+  // other 4xx (bad request, model not found) will fail identically on
+  // retry, so don't.
+  const retryAfterHeader = Number(res.headers?.get?.('retry-after'))
   return new AiError(detail ? `${base}: ${detail}` : base, {
     code,
     // Surface an auth failure as 401 so the settings "Test key" button
     // can show "invalid key"; everything else is an upstream 502.
     status: code === 'invalid_key' ? 401 : 502,
+    retryable: status === 429 || status >= 500,
+    retryAfterMs:
+      Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
+        ? retryAfterHeader * 1000
+        : undefined,
   })
+}
+
+/**
+ * Run a provider call with up to `retries` extra attempts on transient
+ * failures (AiError.retryable: 429 / 5xx / network blip — never
+ * invalid_key or malformed requests). Exponential backoff, honoring the
+ * provider's `Retry-After` when it asks for longer, capped so a
+ * serverless invocation never sleeps excessively.
+ */
+export async function withRetries<T>(
+  fn: () => Promise<T>,
+  retries = 2,
+): Promise<T> {
+  const MAX_DELAY_MS = 5_000
+  let attempt = 0
+  for (;;) {
+    try {
+      return await fn()
+    } catch (err) {
+      if (!(err instanceof AiError) || !err.retryable || attempt >= retries) {
+        throw err
+      }
+      const backoff = 500 * 2 ** attempt
+      const delay = Math.min(Math.max(backoff, err.retryAfterMs ?? 0), MAX_DELAY_MS)
+      await new Promise((resolve) => setTimeout(resolve, delay))
+      attempt++
+    }
+  }
 }
 
 /**

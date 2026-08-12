@@ -8,6 +8,7 @@ vi.mock('./embeddings', () => ({
 }))
 
 import { retrieveKnowledge, ingestDocument } from './knowledge'
+import { clearPresenceCache } from './presence-cache'
 
 interface FakeState {
   semantic: { id: string; content: string }[]
@@ -57,6 +58,8 @@ function makeDb() {
 }
 
 beforeEach(() => {
+  // The per-account "has KB?" boolean is cached at module level.
+  clearPresenceCache()
   h.embedTexts.mockReset()
   h.embedTexts.mockImplementation(async (_key: string, inputs: string[]) =>
     inputs.map((_, i) => [i, i]),

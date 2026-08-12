@@ -2,6 +2,11 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AiConfig } from './types'
 import { chunkText } from './chunk'
 import { embedTexts, toVectorLiteral } from './embeddings'
+import {
+  getCachedPresence,
+  invalidatePresence,
+  setCachedPresence,
+} from './presence-cache'
 
 // ============================================================
 // Knowledge base: ingest (chunk + optionally embed) and hybrid
@@ -69,6 +74,9 @@ export async function ingestDocument(
   const { error: insErr } = await db.from('ai_knowledge_chunks').insert(rows)
   if (insErr) throw insErr
 
+  // The account's KB content changed — the hot path must re-check.
+  invalidatePresence('kb', accountId)
+
   if (embedError) throw embedError
 }
 
@@ -94,15 +102,22 @@ export async function retrieveKnowledge(
   // Skip everything when the account has no knowledge base — otherwise
   // every draft / auto-reply would pay for a query embedding + two RPCs
   // just to get []. One cheap indexed COUNT (head, no rows) instead of a
-  // paid embeddings call on the hot path.
-  try {
-    const { count, error } = await db
-      .from('ai_knowledge_chunks')
-      .select('id', { count: 'exact', head: true })
-      .eq('account_id', accountId)
-    if (error || !count) return []
-  } catch {
-    return []
+  // paid embeddings call on the hot path — and the boolean is cached
+  // for 60s per account so active conversations skip even that.
+  const cached = getCachedPresence('kb', accountId)
+  if (cached === false) return []
+  if (cached === null) {
+    try {
+      const { count, error } = await db
+        .from('ai_knowledge_chunks')
+        .select('id', { count: 'exact', head: true })
+        .eq('account_id', accountId)
+      if (error) return []
+      setCachedPresence('kb', accountId, !!count)
+      if (!count) return []
+    } catch {
+      return []
+    }
   }
 
   const picked = new Map<string, string>() // id → content, preserves order

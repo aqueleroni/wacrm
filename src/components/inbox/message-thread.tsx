@@ -107,6 +107,12 @@ interface MessageThreadProps {
    */
   contactPanelOpen?: boolean;
   onToggleContactPanel?: () => void;
+  /**
+   * Called after the server-side unread reset succeeds (or when the
+   * viewer is looking at a thread that should show as read). Parent
+   * clears both the list badge and activeConversation.unread_count.
+   */
+  onUnreadCleared?: (conversationId: string) => void;
 }
 
 function formatDateSeparator(
@@ -169,6 +175,7 @@ export function MessageThread({
   onRefresh,
   contactPanelOpen,
   onToggleContactPanel,
+  onUnreadCleared,
 }: MessageThreadProps) {
   const { locale } = useI18n();
   const tGlobal = useT();
@@ -454,15 +461,33 @@ export function MessageThread({
   // is 0 the condition is false, so no further UPDATE is issued.
   useEffect(() => {
     if (!conversationId || !hasUnread) return;
+    let cancelled = false;
     const supabase = createClient();
-    supabase
-      .from("conversations")
-      .update({ unread_count: 0 })
-      .eq("id", conversationId)
-      .then(({ error }) => {
-        if (error) console.error("Failed to reset unread_count:", error);
-      });
-  }, [conversationId, hasUnread]);
+    void (async () => {
+      const { data, error } = await supabase
+        .from("conversations")
+        .update({ unread_count: 0 })
+        .eq("id", conversationId)
+        .gt("unread_count", 0)
+        .select("id");
+      if (cancelled) return;
+      if (error) {
+        console.error("Failed to reset unread_count:", error);
+        return;
+      }
+      if (!data?.length) {
+        console.warn(
+          "Failed to reset unread_count: no row updated (check role/RLS)",
+          conversationId,
+        );
+        return;
+      }
+      onUnreadCleared?.(conversationId);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [conversationId, hasUnread, onUnreadCleared]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {

@@ -297,6 +297,11 @@ export const settings = {
         'Seu token de acesso autentica com a Meta. Veja o status de registro abaixo para saber se os webhooks estão configurados.',
       notConnectedHint:
         'Configure suas credenciais da API Meta abaixo para conectar sua conta WhatsApp Business.',
+      tokenExpired:
+        'O token de acesso da Meta expirou — gere um novo token permanente no Meta Business Suite e salve aqui.',
+      tokenCorrupted:
+        'O token armazenado não pôde ser descriptografado — redefina a configuração e informe as credenciais novamente.',
+      credentialsRejected: 'A Meta rejeitou as credenciais: {detail}',
     },
     registration: {
       registered: 'Registrado — a Meta entregará eventos ao wacrm',

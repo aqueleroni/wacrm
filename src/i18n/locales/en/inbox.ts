@@ -59,6 +59,17 @@ export const inbox = {
       reactionFailed: 'Reaction failed: {reason}',
       assignmentFailed: 'Failed to update assignment',
       waitForSend: 'Wait for the message to finish sending',
+      network: 'Network error',
+      meta: {
+        generic: 'Meta API error: {detail}',
+        recipientNotAllowed:
+          'Recipient phone number is not on the Meta allowed list (development mode). Add it under WhatsApp → API Setup → To.',
+        code131026: 'Message undeliverable to this number',
+        code131047:
+          'Outside the 24-hour window — send an approved template to re-engage',
+        code131051: 'Unsupported message type for this recipient',
+        code130429: 'Rate limit reached — try again shortly',
+      },
     },
   },
   contactPanel: {
@@ -128,6 +139,10 @@ export const inbox = {
     draftFailed: "Couldn't draft a reply.",
     noReply: "The assistant didn't return a reply.",
     unreachable: "Couldn't reach the AI assistant.",
+    extractMemory: 'Extract learnings from this conversation',
+    extractSuccess: '{count} suggestion(s) sent for review in Agents → Intelligence.',
+    extractEmpty: 'No new facts to propose — short thread or already analyzed.',
+    extractFailed: 'Failed to extract learnings.',
   },
   media: {
     uploadFailed: 'Upload failed.',

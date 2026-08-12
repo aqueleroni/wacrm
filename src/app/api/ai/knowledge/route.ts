@@ -6,6 +6,7 @@ import {
 } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import { loadEmbeddingsKey } from '@/lib/ai/config'
+import { supabaseAdmin } from '@/lib/ai/admin-client'
 import { ingestDocument } from '@/lib/ai/knowledge'
 import { AiError } from '@/lib/ai/types'
 
@@ -70,8 +71,9 @@ export async function POST(request: Request) {
       )
     }
 
+    // Embeddings key column is service-role-only after migration 038 (B5).
     const { key: embeddingsApiKey, corrupt } = await loadEmbeddingsKey(
-      supabase,
+      supabaseAdmin(),
       accountId,
     )
     try {

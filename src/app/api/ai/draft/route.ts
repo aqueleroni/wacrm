@@ -2,13 +2,15 @@ import { NextResponse } from 'next/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import { loadAiConfig } from '@/lib/ai/config'
-import { buildConversationContext } from '@/lib/ai/context'
-import { retrieveKnowledge } from '@/lib/ai/knowledge'
-import { generateReply } from '@/lib/ai/generate'
-import { buildSystemPrompt } from '@/lib/ai/defaults'
-import { latestUserMessage } from '@/lib/ai/query'
-import { logAiUsage } from '@/lib/ai/usage'
 import { supabaseAdmin } from '@/lib/ai/admin-client'
+import { buildConversationContext } from '@/lib/ai/context'
+import { buildAgentContext } from '@/lib/ai/agent-context'
+import { buildCrmContext, formatCrmContextBlock } from '@/lib/ai/crm-context'
+import { generateReply } from '@/lib/ai/generate'
+import { buildSystemPrompt, resolvePromptLocale } from '@/lib/ai/defaults'
+import { retrievalQuery } from '@/lib/ai/query'
+import { logGeneration } from '@/lib/ai/generation-log'
+import { logAiUsage } from '@/lib/ai/usage'
 import { AiError } from '@/lib/ai/types'
 
 /**
@@ -47,7 +49,7 @@ export async function POST(request: Request) {
     // row means "not yours / not found" either way.
     const { data: conversation, error: convErr } = await supabase
       .from('conversations')
-      .select('id')
+      .select('id, contact_id')
       .eq('id', conversationId)
       .maybeSingle()
     if (convErr) {
@@ -58,7 +60,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
     }
 
-    const config = await loadAiConfig(supabase, accountId).catch((err) => {
+    // The provider key column is no longer SELECT-able by the
+    // authenticated role (migration 038 — B5), so read the config with
+    // the service-role client, scoped to the session's own accountId.
+    const config = await loadAiConfig(supabaseAdmin(), accountId).catch((err) => {
       // Decrypt failure — surface distinctly from "not configured".
       console.error('[ai/draft] loadAiConfig error:', err)
       throw new AiError('Stored API key could not be decrypted.', {
@@ -89,30 +94,60 @@ export async function POST(request: Request) {
       )
     }
 
-    // Ground the draft in the account's knowledge base (best-effort —
-    // returns [] when there's no KB or retrieval fails).
-    const knowledge = await retrieveKnowledge(
-      supabase,
-      accountId,
-      config,
-      latestUserMessage(messages),
-    )
+    const query = retrievalQuery(messages)
+    const [ctx, crmParts] = await Promise.all([
+      buildAgentContext({
+        db: supabase,
+        accountId,
+        config,
+        queryText: query,
+        contactId: conversation.contact_id,
+      }),
+      buildCrmContext(supabase, accountId, conversation.contact_id),
+    ])
 
     const systemPrompt = buildSystemPrompt({
       userPrompt: config.systemPrompt,
+      conversationExamples: config.conversationExamples,
       mode: 'draft',
-      knowledge,
+      locale: resolvePromptLocale(config.promptLocale),
+      knowledge: ctx.knowledge,
+      memory: ctx.memory,
+      skills: ctx.skills,
+      crmContext: formatCrmContextBlock(crmParts),
     })
 
-    const { text, usage } = await generateReply({ config, systemPrompt, messages })
+    const startedAt = Date.now()
+    let text: string
+    let usage
+    try {
+      ;({ text, usage } = await generateReply({ config, systemPrompt, messages }))
+    } catch (genErr) {
+      await logGeneration({
+        accountId,
+        conversationId,
+        mode: 'draft',
+        provider: config.provider,
+        model: config.model,
+        latencyMs: Date.now() - startedAt,
+        outcome: 'error',
+        errorCode: genErr instanceof AiError ? genErr.code : 'unknown',
+      })
+      throw genErr
+    }
 
-    // Record spend on the account's BYO key. Best-effort + via the
-    // service role (the log has no `authenticated` INSERT policy). This
-    // must not fail or delay the draft the agent is waiting on, so:
-    //  - the whole thing is wrapped (constructing the admin client throws
-    //    if the service-role key is unset — that must not 500 the draft);
-    //  - it's fire-and-forget (`void`), not awaited, so the response
-    //    isn't held for a DB round-trip.
+    await logGeneration({
+      accountId,
+      conversationId,
+      mode: 'draft',
+      provider: config.provider,
+      model: config.model,
+      usage,
+      latencyMs: Date.now() - startedAt,
+      outcome: 'draft',
+    })
+
+    // Record spend on the account's BYO key without delaying the draft.
     try {
       void logAiUsage(supabaseAdmin(), {
         accountId,

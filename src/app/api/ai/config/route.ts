@@ -8,7 +8,56 @@ import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit
 import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
 import { validateAiCredentials } from '@/lib/ai/validate'
 import { embedTexts } from '@/lib/ai/embeddings'
+import { supabaseAdmin } from '@/lib/ai/admin-client'
 import { AiError, type AiProvider } from '@/lib/ai/types'
+
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+const CONFIG_SELECT_FULL =
+  'provider, model, system_prompt, conversation_examples, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, memory_auto_extract, api_key, embeddings_api_key'
+
+const CONFIG_SELECT_BASE =
+  'provider, model, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, api_key, embeddings_api_key'
+
+type ConfigRow = Record<string, unknown> & {
+  api_key?: string | null
+  embeddings_api_key?: string | null
+}
+
+/** Load ai_configs row; falls back when PostgREST schema cache lags new columns. */
+async function loadConfigRow(
+  supabase: SupabaseClient,
+  accountId: string,
+): Promise<{ data: ConfigRow | null; error: unknown }> {
+  const full = await supabase
+    .from('ai_configs')
+    .select(CONFIG_SELECT_FULL)
+    .eq('account_id', accountId)
+    .maybeSingle()
+
+  if (!full.error) return full
+
+  const code = (full.error as { code?: string }).code
+  if (code !== '42703' && code !== 'PGRST204') return full
+
+  console.warn('[ai/config] schema cache lag — retrying without new columns:', full.error)
+  const base = await supabase
+    .from('ai_configs')
+    .select(CONFIG_SELECT_BASE)
+    .eq('account_id', accountId)
+    .maybeSingle()
+
+  if (base.error || !base.data) return base
+
+  return {
+    data: {
+      ...base.data,
+      conversation_examples: null,
+      memory_auto_extract: false,
+    },
+    error: null,
+  }
+}
 
 function bad(message: string) {
   return NextResponse.json({ error: message }, { status: 400 })
@@ -23,17 +72,12 @@ function bad(message: string) {
  */
 export async function GET() {
   try {
-    const { supabase, accountId } = await getCurrentAccount()
+    const { accountId } = await getCurrentAccount()
 
-    const { data, error } = await supabase
-      .from('ai_configs')
-      // `api_key` is selected only to derive `has_key` — it is stripped
-      // out below and never returned to the client.
-      .select(
-        'provider, model, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, api_key, embeddings_api_key',
-      )
-      .eq('account_id', accountId)
-      .maybeSingle()
+    // Reads the encrypted key columns to derive has_* flags — those are
+    // service-role-only after migration 038 (B5), and the ciphertext is
+    // never returned to the client anyway. accountId is session-resolved.
+    const { data, error } = await loadConfigRow(supabaseAdmin(), accountId)
 
     if (error) {
       console.error('[ai/config GET] fetch error:', error)
@@ -88,31 +132,31 @@ export async function POST(request: Request) {
       typeof body.system_prompt === 'string' && body.system_prompt.trim()
         ? body.system_prompt.trim()
         : null
+    const conversationExamples =
+      typeof body.conversation_examples === 'string' &&
+      body.conversation_examples.trim()
+        ? body.conversation_examples.trim()
+        : null
     const isActive = body.is_active === true
     const autoReplyEnabled = body.auto_reply_enabled === true
+    const memoryAutoExtract = body.memory_auto_extract === true
+
+    // Optional per-account scaffold locale; null/absent = deploy default.
+    const promptLocale =
+      body.prompt_locale === 'pt-BR' || body.prompt_locale === 'en'
+        ? body.prompt_locale
+        : null
 
     let maxPer = Number(body.auto_reply_max_per_conversation)
     if (!Number.isFinite(maxPer)) maxPer = 3
     maxPer = Math.min(20, Math.max(1, Math.floor(maxPer)))
 
-    // Handoff routing target for auto-reply. A non-empty string must be a
-    // member of this account (else the conversation would be assigned to a
-    // stranger); an empty string / null means "leave unassigned" (the
-    // shared queue). Absent → left unchanged on update below.
-    const rawHandoff =
-      typeof body.handoff_agent_id === 'string' ? body.handoff_agent_id.trim() : ''
-    const handoffProvided = 'handoff_agent_id' in body
-    let handoffAgentId: string | null = null
-    if (rawHandoff) {
-      const { data: member } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('account_id', accountId)
-        .eq('user_id', rawHandoff)
-        .maybeSingle()
-      if (!member) return bad('handoff_agent_id must be a member of this account')
-      handoffAgentId = rawHandoff
-    }
+    const handoffAgentId =
+      typeof body.handoff_agent_id === 'string' && body.handoff_agent_id.trim()
+        ? body.handoff_agent_id.trim()
+        : body.handoff_agent_id === null
+          ? null
+          : undefined
 
     const rawKey = typeof body.api_key === 'string' ? body.api_key.trim() : ''
 
@@ -125,8 +169,10 @@ export async function POST(request: Request) {
         : ''
     const clearEmbeddingsKey = body.embeddings_api_key === null
 
-    // Reuse the stored key when the form didn't send a fresh one.
-    const { data: existing } = await supabase
+    // Reuse the stored key when the form didn't send a fresh one. Reads
+    // api_key (service-role-only after migration 038 — B5); accountId is
+    // session-resolved so the admin read stays account-scoped.
+    const { data: existing } = await supabaseAdmin()
       .from('ai_configs')
       .select('id, provider, model, api_key')
       .eq('account_id', accountId)
@@ -167,6 +213,8 @@ export async function POST(request: Request) {
           autoReplyMaxPerConversation: maxPer,
           handoffAgentId: null,
           embeddingsApiKey: null,
+          conversationExamples: null,
+          promptLocale: null,
         })
       } catch (err) {
         if (err instanceof AiError) {
@@ -202,13 +250,16 @@ export async function POST(request: Request) {
       provider,
       model,
       system_prompt: systemPrompt,
+      conversation_examples: conversationExamples,
       is_active: isActive,
       auto_reply_enabled: autoReplyEnabled,
       auto_reply_max_per_conversation: maxPer,
+      memory_auto_extract: memoryAutoExtract,
+      prompt_locale: promptLocale,
     }
-    // Only touch the handoff target when the form actually sent the field,
-    // so a partial save (e.g. flipping a toggle) doesn't wipe it.
-    if (handoffProvided) shared.handoff_agent_id = handoffAgentId
+    if (handoffAgentId !== undefined) {
+      shared.handoff_agent_id = handoffAgentId
+    }
     if (rawEmbeddingsKey) {
       shared.embeddings_api_key = encrypt(rawEmbeddingsKey)
     } else if (clearEmbeddingsKey) {
@@ -241,6 +292,56 @@ export async function POST(request: Request) {
           { status: 500 },
         )
       }
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    return toErrorResponse(err)
+  }
+}
+
+/**
+ * PATCH /api/ai/config  (admin+)
+ *
+ * Partial update — currently supports `memory_auto_extract` toggle only.
+ */
+export async function PATCH(request: Request) {
+  try {
+    const { supabase, accountId, userId } = await requireRole('admin')
+    const limit = checkRateLimit(`ai-config:${userId}`, RATE_LIMITS.adminAction)
+    if (!limit.success) return rateLimitResponse(limit)
+
+    const body = await request.json().catch(() => null)
+    if (!body || typeof body !== 'object') return bad('Invalid request body')
+
+    if (typeof body.memory_auto_extract !== 'boolean') {
+      return bad('memory_auto_extract must be a boolean')
+    }
+
+    const { data: existing } = await supabase
+      .from('ai_configs')
+      .select('id')
+      .eq('account_id', accountId)
+      .maybeSingle()
+
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'Configure the AI agent first.' },
+        { status: 400 },
+      )
+    }
+
+    const { error } = await supabase
+      .from('ai_configs')
+      .update({ memory_auto_extract: body.memory_auto_extract })
+      .eq('account_id', accountId)
+
+    if (error) {
+      console.error('[ai/config PATCH] error:', error)
+      return NextResponse.json(
+        { error: 'Failed to update AI configuration' },
+        { status: 500 },
+      )
     }
 
     return NextResponse.json({ success: true })

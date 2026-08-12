@@ -121,15 +121,21 @@ export function ProfileForm() {
         const ext =
           pendingAvatar.name.split('.').pop()?.toLowerCase() || 'png';
         const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+        // Unique timestamped path — no upsert. (Upsert needs a SELECT
+        // policy; 037 removed the bucket-wide public SELECT on purpose.)
         const { error: uploadError } = await supabase.storage
           .from('avatars')
           .upload(path, pendingAvatar, {
             cacheControl: '3600',
-            upsert: true,
-            contentType: pendingAvatar.type,
+            upsert: false,
+            contentType: pendingAvatar.type || 'image/png',
           });
         if (uploadError) {
-          throw new Error(`Upload failed: ${uploadError.message}`);
+          throw new Error(
+            t('settings.profile.errors.uploadFailed', {
+              message: uploadError.message,
+            }),
+          );
         }
         const {
           data: { publicUrl },

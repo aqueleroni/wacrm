@@ -16,6 +16,8 @@ import { notifications } from './en/notifications';
 import { join } from './en/join';
 import { theme } from './en/theme';
 import { currency } from './en/currency';
+import { interactive } from './en/interactive';
+import { whatsNew } from './en/whats-new';
 
 const nested = {
   common,
@@ -34,6 +36,8 @@ const nested = {
   join,
   theme,
   currency,
+  interactive,
+  whatsNew,
 };
 
 export const messagesEn = flattenMessages(nested);

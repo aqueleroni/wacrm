@@ -1,6 +1,6 @@
 import { AiError } from './types'
 import { aiRequestTimeoutMs } from './defaults'
-import { providerHttpError, toNetworkError } from './providers/shared'
+import { providerHttpError, toNetworkError, withRetries } from './providers/shared'
 
 // ============================================================
 // Embeddings (OpenAI-compatible).
@@ -49,24 +49,26 @@ export async function embedTexts(
   for (let start = 0; start < inputs.length; start += BATCH_SIZE) {
     const batch = inputs.slice(start, start + BATCH_SIZE)
 
-    let res: Response
-    try {
-      res = await fetch(OPENAI_EMBEDDINGS_URL, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ model: EMBEDDING_MODEL, input: batch }),
-        signal: AbortSignal.timeout(timeoutMs),
-      })
-    } catch (err) {
-      throw toNetworkError(err)
-    }
-
-    if (!res.ok) {
-      throw await providerHttpError('OpenAI embeddings', res)
-    }
+    const res = await withRetries(async () => {
+      let r: Response
+      try {
+        r = await fetch(OPENAI_EMBEDDINGS_URL, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ model: EMBEDDING_MODEL, input: batch }),
+          signal: AbortSignal.timeout(timeoutMs),
+        })
+      } catch (err) {
+        throw toNetworkError(err)
+      }
+      if (!r.ok) {
+        throw await providerHttpError('OpenAI embeddings', r)
+      }
+      return r
+    })
 
     const data = (await res.json().catch(() => null)) as EmbeddingResponse | null
     const rows = data?.data

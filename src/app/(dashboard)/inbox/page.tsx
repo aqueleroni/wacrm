@@ -326,7 +326,9 @@ function InboxPageInner() {
           hydrateConversation(conv.id);
         }
 
-        // Update active conversation if it changed
+        // Update active conversation if it changed. Keep a transient
+        // unread_count from the payload so the MessageThread reset
+        // effect can fire; the list badge stays suppressed above.
         if (activeConversation && conv.id === activeConversation.id) {
           setActiveConversation((prev) =>
             prev ? { ...prev, ...conv } : prev
@@ -402,7 +404,17 @@ function InboxPageInner() {
 
   const handleConversationsLoaded = useCallback(
     (loaded: Conversation[]) => {
-      setConversations(loaded);
+      // Keep the open thread's badge cleared across refetches (reconnect /
+      // tab focus). Without this, a stale unread_count from the DB would
+      // overwrite the optimistic zero from handleSelectConversation.
+      const activeId = activeConversation?.id;
+      setConversations(
+        activeId
+          ? loaded.map((c) =>
+              c.id === activeId ? { ...c, unread_count: 0 } : c,
+            )
+          : loaded,
+      );
       // Resolve a pending deep-link here rather than in an effect — this
       // is an event handler, so the setState calls below are allowed by
       // react-hooks/set-state-in-effect. Runs once per ?c=<id> URL value
@@ -445,6 +457,17 @@ function InboxPageInner() {
     },
     [deepLinkConvId, activeConversation?.id]
   );
+
+  const handleUnreadCleared = useCallback((conversationId: string) => {
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === conversationId ? { ...c, unread_count: 0 } : c,
+      ),
+    );
+    setActiveConversation((prev) =>
+      prev?.id === conversationId ? { ...prev, unread_count: 0 } : prev,
+    );
+  }, []);
 
   const handleSelectConversation = useCallback(
     (conv: Conversation) => {
@@ -623,6 +646,7 @@ function InboxPageInner() {
             onRefresh={handleManualRefresh}
             contactPanelOpen={contactPanelOpen}
             onToggleContactPanel={handleToggleContactPanel}
+            onUnreadCleared={handleUnreadCleared}
           />
         </div>
 

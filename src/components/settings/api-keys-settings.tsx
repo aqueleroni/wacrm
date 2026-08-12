@@ -37,7 +37,6 @@ import { RequireRole } from '@/components/auth/require-role';
 import { useAuth } from '@/hooks/use-auth';
 import {
   API_SCOPES,
-  SCOPE_DESCRIPTIONS,
   type ApiScope,
 } from '@/lib/api-keys/scopes';
 import { SettingsPanelHead } from './settings-panel-head';
@@ -443,7 +442,9 @@ function CreateKeyDialog({
                           {scope}
                         </span>
                         <span className="text-muted-foreground block text-xs">
-                          {SCOPE_DESCRIPTIONS[scope]}
+                          {t(
+                            `settings.api.create.scopeDescriptions.${scope}`,
+                          )}
                         </span>
                       </span>
                     </label>

@@ -8,23 +8,24 @@ import {
 import { HANDOFF_SENTINEL, aiRequestTimeoutMs } from './defaults'
 import { generateOpenAi } from './providers/openai'
 import { generateAnthropic } from './providers/anthropic'
+import { withRetries } from './providers/shared'
 
 export interface GenerateArgs {
   config: AiConfig
-  /** Fully-built system prompt (see `buildSystemPrompt`). */
   systemPrompt: string
-  /** Recent conversation turns, oldest first. */
   messages: ChatMessage[]
+  /** Override the default request timeout (ms). */
+  timeoutMs?: number
 }
 
 /**
- * Generate the next reply from the account's configured provider.
- * Dispatches to the right adapter, then parses the handoff sentinel out
- * of the raw text. Throws `AiError` on any provider/network failure.
+ * Provider-agnostic entry point. Retries transient failures, then
+ * parses the handoff sentinel out of the raw text.
  */
 export async function generateReply(args: GenerateArgs): Promise<GenerateResult> {
   const { config, systemPrompt, messages } = args
-  const timeoutMs = aiRequestTimeoutMs()
+  const timeoutMs = args.timeoutMs ?? aiRequestTimeoutMs()
+
   const providerArgs = {
     apiKey: config.apiKey,
     model: config.model,
@@ -36,10 +37,10 @@ export async function generateReply(args: GenerateArgs): Promise<GenerateResult>
   let result: { text: string; usage: AiUsage | null }
   switch (config.provider) {
     case 'openai':
-      result = await generateOpenAi(providerArgs)
+      result = await withRetries(() => generateOpenAi(providerArgs))
       break
     case 'anthropic':
-      result = await generateAnthropic(providerArgs)
+      result = await withRetries(() => generateAnthropic(providerArgs))
       break
     default:
       throw new AiError(`Unsupported AI provider: ${config.provider}`, {
