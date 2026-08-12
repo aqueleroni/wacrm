@@ -110,6 +110,7 @@ git push origin main
 | 2026-08-12 | **Landing `/`:** página de apresentação Wp CRM (sem plano grátis — Pro + Business); logado redireciona ao dashboard; i18n `landing.*` |
 | 2026-08-12 | **Embedded Signup (B):** botão Conectar WhatsApp + `/api/whatsapp/embedded-signup`; env `NEXT_PUBLIC_META_APP_ID` + `NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID` (+ `META_APP_ID`/`META_APP_SECRET`) |
 | 2026-08-12 | **Fix ES stuck “Conectando…”:** `extras.version: v4` + sync code/session; Cancelar + timeout 90s (`b81db2c`) |
+| 2026-08-12 | **ES pop-up bloqueado (Edge):** `window.open` do SDK devolve `null` → alerta persistente com instruções por navegador + link "abrir em nova aba" (Chrome funciona normal) |
 | 2026-08-12 | **ES conforme doc v4:** `extras = { setup, featureType, sessionInfoVersion: '3' }`; trata evento `ERROR` + `error_message` no CANCEL (causa do spinner infinito); `waba_ids` multi-WABA; painel **Diagnóstico da conexão** com trace copiável |
 
 ## Smoke test manual (pós-merge upstream)

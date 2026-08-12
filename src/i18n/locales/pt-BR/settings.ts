@@ -363,8 +363,12 @@ export const settings = {
         'A conexão demorou demais. Feche o popup da Meta, se estiver aberto, e tente de novo.',
       cancel: 'Cancelar',
       metaError: 'A Meta interrompeu o cadastro: {message}',
-      popupBlocked:
-        'O navegador bloqueou o popup da Meta. Libere popups para este site e tente de novo.',
+      popupBlockedTitle: 'O navegador bloqueou a janela da Meta',
+      popupBlockedHelp:
+        'O cadastro acontece numa janela pop-up. Clique no ícone de bloqueio na barra de endereço e escolha “Sempre permitir pop-ups deste site”, ou desative extensões de bloqueio de anúncios nesta aba.',
+      popupBlockedEdge:
+        'No Edge: Configurações → Cookies e permissões do site → Pop-ups e redirecionamentos → Permitir. No Chrome: Configurações → Privacidade e segurança → Configurações do site → Pop-ups e redirecionamentos.',
+      popupBlockedOpenTab: 'Abrir o cadastro em uma nova aba',
       diagnostics: 'Diagnóstico da conexão',
       copyDiagnostics: 'Copiar diagnóstico',
       diagnosticsCopied: 'Diagnóstico copiado.',

@@ -360,8 +360,12 @@ export const settings = {
         'The connection took too long. Close the Meta popup if it is still open, then try again.',
       cancel: 'Cancel',
       metaError: 'Meta stopped the signup: {message}',
-      popupBlocked:
-        'The browser blocked the Meta popup. Allow popups for this site and try again.',
+      popupBlockedTitle: 'Your browser blocked the Meta window',
+      popupBlockedHelp:
+        'Signup happens in a popup window. Click the blocked-popup icon in the address bar and choose “Always allow pop-ups from this site”, or disable ad-blocking extensions on this tab.',
+      popupBlockedEdge:
+        'On Edge: Settings → Cookies and site permissions → Pop-ups and redirects → Allow. On Chrome: Settings → Privacy and security → Site settings → Pop-ups and redirects.',
+      popupBlockedOpenTab: 'Open signup in a new tab',
       diagnostics: 'Connection diagnostics',
       copyDiagnostics: 'Copy diagnostics',
       diagnosticsCopied: 'Diagnostics copied.',

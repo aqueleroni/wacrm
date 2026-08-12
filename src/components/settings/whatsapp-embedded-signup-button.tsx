@@ -1,12 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2, Link2, Copy } from 'lucide-react';
+import { Loader2, Link2, Copy, AlertTriangle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useT } from '@/hooks/use-i18n';
+import { cn } from '@/lib/utils';
 
 declare global {
   interface Window {
@@ -127,6 +129,7 @@ export function WhatsAppEmbeddedSignupButton({
   const [pin, setPin] = useState('');
 
   const [trace, setTrace] = useState<string[]>([]);
+  const [blockedUrl, setBlockedUrl] = useState<string | null>(null);
 
   const sessionRef = useRef<EmbeddedSignupSession>({});
   const pendingCodeRef = useRef<string | null>(null);
@@ -361,6 +364,7 @@ export function WhatsAppEmbeddedSignupButton({
     finishingRef.current = false;
     sessionRef.current = {};
     setTrace([]);
+    setBlockedUrl(null);
     setConnectingSafe(true);
     track('launch', { configId, appId, formPhoneNumberId: phoneNumberId ?? null });
 
@@ -438,12 +442,14 @@ export function WhatsAppEmbeddedSignupButton({
     restoreOpen();
     track('popup', {
       opened: Boolean(popup),
-      url: popupUrl.slice(0, 400) || null,
+      url: popupUrl.slice(0, 900) || null,
     });
 
     if (!popup) {
       setConnectingSafe(false);
-      toast.error(t('settings.whatsapp.embeddedSignup.popupBlocked'));
+      // Keep the SDK's own dialog URL: opening it from an anchor is a fresh
+      // user gesture, which most blockers allow even when window.open is not.
+      setBlockedUrl(popupUrl || null);
       return;
     }
 
@@ -482,6 +488,34 @@ export function WhatsAppEmbeddedSignupButton({
           {t('settings.whatsapp.embeddedSignup.description')}
         </p>
       </div>
+      {blockedUrl && (
+        <Alert className="bg-amber-950/40 border-amber-600/40">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="size-5 text-amber-400 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <AlertTitle className="text-amber-200 mb-1">
+                {t('settings.whatsapp.embeddedSignup.popupBlockedTitle')}
+              </AlertTitle>
+              <AlertDescription className="text-amber-100/80 text-sm space-y-2">
+                <p>{t('settings.whatsapp.embeddedSignup.popupBlockedHelp')}</p>
+                <p>{t('settings.whatsapp.embeddedSignup.popupBlockedEdge')}</p>
+              </AlertDescription>
+              <a
+                href={blockedUrl}
+                target="_blank"
+                rel="opener"
+                className={cn(
+                  buttonVariants({ size: 'sm' }),
+                  'mt-3 bg-amber-600 hover:bg-amber-700 text-white',
+                )}
+              >
+                <ExternalLink className="size-3.5" />
+                {t('settings.whatsapp.embeddedSignup.popupBlockedOpenTab')}
+              </a>
+            </div>
+          </div>
+        </Alert>
+      )}
       <div className="space-y-2">
         <Label className="text-muted-foreground text-xs">
           {t('settings.whatsapp.credentials.pin')}{' '}
