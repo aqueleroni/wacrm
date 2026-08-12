@@ -362,6 +362,10 @@ export const settings = {
       timeout:
         'A conexão demorou demais. Feche o popup da Meta, se estiver aberto, e tente de novo.',
       cancel: 'Cancelar',
+      metaError: 'A Meta interrompeu o cadastro: {message}',
+      diagnostics: 'Diagnóstico da conexão',
+      copyDiagnostics: 'Copiar diagnóstico',
+      diagnosticsCopied: 'Diagnóstico copiado.',
     },
     webhook: {
       title: 'Configuração do webhook',

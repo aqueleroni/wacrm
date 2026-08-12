@@ -359,6 +359,10 @@ export const settings = {
       timeout:
         'The connection took too long. Close the Meta popup if it is still open, then try again.',
       cancel: 'Cancel',
+      metaError: 'Meta stopped the signup: {message}',
+      diagnostics: 'Connection diagnostics',
+      copyDiagnostics: 'Copy diagnostics',
+      diagnosticsCopied: 'Diagnostics copied.',
     },
     webhook: {
       title: 'Webhook Configuration',

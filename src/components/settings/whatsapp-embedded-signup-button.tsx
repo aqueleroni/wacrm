@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2, Link2 } from 'lucide-react';
+import { Loader2, Link2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +35,11 @@ interface FbLoginResponse {
 interface EmbeddedSignupSession {
   phone_number_id?: string;
   waba_id?: string;
+  waba_ids?: string[];
   current_step?: string;
+  error_message?: string;
+  error_code?: string | number;
+  session_id?: string;
 }
 
 type Props = {
@@ -57,7 +61,7 @@ function loadFacebookSdk(appId: string): Promise<void> {
       appId,
       autoLogAppEvents: true,
       cookie: true,
-      xfbml: false,
+      xfbml: true,
       version: GRAPH_VERSION,
     });
   };
@@ -122,11 +126,28 @@ export function WhatsAppEmbeddedSignupButton({
   const [connecting, setConnecting] = useState(false);
   const [pin, setPin] = useState('');
 
+  const [trace, setTrace] = useState<string[]>([]);
+
   const sessionRef = useRef<EmbeddedSignupSession>({});
   const pendingCodeRef = useRef<string | null>(null);
   const finishingRef = useRef(false);
   const connectingRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * Embedded Signup fails silently in a dozen ways (popup blocked, config
+   * mismatch, Meta-side ERROR event, expired code). Keep an on-screen trace
+   * so a stuck flow can be diagnosed without asking for devtools access.
+   */
+  const track = useCallback((step: string, detail?: unknown) => {
+    const stamp = new Date().toISOString().slice(11, 23);
+    const suffix =
+      detail === undefined
+        ? ''
+        : ` ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`;
+    console.info('[wa-embedded-signup]', step, detail ?? '');
+    setTrace((prev) => [...prev.slice(-49), `${stamp} ${step}${suffix}`]);
+  }, []);
 
   const clearConnectTimer = useCallback(() => {
     if (timeoutRef.current) {
@@ -143,6 +164,10 @@ export function WhatsAppEmbeddedSignupButton({
       if (value) {
         timeoutRef.current = setTimeout(() => {
           if (!connectingRef.current) return;
+          track('timeout', {
+            hadCode: Boolean(pendingCodeRef.current),
+            session: sessionRef.current,
+          });
           finishingRef.current = false;
           pendingCodeRef.current = null;
           connectingRef.current = false;
@@ -151,13 +176,18 @@ export function WhatsAppEmbeddedSignupButton({
         }, CONNECT_TIMEOUT_MS);
       }
     },
-    [clearConnectTimer, t],
+    [clearConnectTimer, t, track],
   );
 
   const resolveAssets = useCallback((): { phone_number_id: string; waba_id: string } | null => {
-    const phone =
-      sessionRef.current.phone_number_id?.trim() || phoneNumberId?.trim() || '';
-    const waba = sessionRef.current.waba_id?.trim() || wabaId?.trim() || '';
+    const session = sessionRef.current;
+    const phone = session.phone_number_id?.trim() || phoneNumberId?.trim() || '';
+    // Multi-WABA flows return `waba_ids` instead of a single `waba_id`.
+    const waba =
+      session.waba_id?.trim() ||
+      session.waba_ids?.[0]?.trim() ||
+      wabaId?.trim() ||
+      '';
     if (!phone || !waba) return null;
     return { phone_number_id: phone, waba_id: waba };
   }, [phoneNumberId, wabaId]);
@@ -170,6 +200,11 @@ export function WhatsAppEmbeddedSignupButton({
 
     finishingRef.current = true;
     pendingCodeRef.current = null;
+    track('exchange:start', {
+      phone_number_id: assets.phone_number_id,
+      waba_id: assets.waba_id,
+      fromSession: Boolean(sessionRef.current.phone_number_id),
+    });
 
     try {
       const res = await fetch('/api/whatsapp/embedded-signup', {
@@ -187,6 +222,7 @@ export function WhatsAppEmbeddedSignupButton({
         verify_token?: string;
         registration_error?: string | null;
       };
+      track('exchange:response', { status: res.status, error: data.error });
       if (!res.ok) {
         toast.error(data.error || t('settings.whatsapp.embeddedSignup.failed'));
         return;
@@ -203,13 +239,14 @@ export function WhatsAppEmbeddedSignupButton({
         });
       }
       onConnected();
-    } catch {
+    } catch (err) {
+      track('exchange:network-error', err instanceof Error ? err.message : err);
       toast.error(t('settings.whatsapp.embeddedSignup.failed'));
     } finally {
       finishingRef.current = false;
       setConnectingSafe(false);
     }
-  }, [onConnected, pin, resolveAssets, setConnectingSafe, t]);
+  }, [onConnected, pin, resolveAssets, setConnectingSafe, t, track]);
 
   useEffect(() => {
     return () => clearConnectTimer();
@@ -256,6 +293,24 @@ export function WhatsAppEmbeddedSignupButton({
         if (raw?.type !== 'WA_EMBEDDED_SIGNUP') return;
 
         const eventName = String(raw.event ?? '').toUpperCase();
+        const payload = (raw.data ?? {}) as EmbeddedSignupSession;
+        track(`meta:${eventName || 'UNKNOWN'}`, payload);
+
+        // Meta reports flow failures as `ERROR`, and user-reported errors
+        // ride along a CANCEL carrying `error_message`. Both must unstick
+        // the button — otherwise it spins until the timeout.
+        const metaError = payload.error_message?.trim();
+        if (eventName === 'ERROR' || metaError) {
+          pendingCodeRef.current = null;
+          setConnectingSafe(false);
+          toast.error(
+            t('settings.whatsapp.embeddedSignup.metaError', {
+              message: metaError || eventName,
+            }),
+          );
+          return;
+        }
+
         if (eventName === 'CANCEL' || eventName === 'CANCELLED') {
           if (connectingRef.current) {
             pendingCodeRef.current = null;
@@ -265,30 +320,25 @@ export function WhatsAppEmbeddedSignupButton({
           return;
         }
 
-        const payload = (raw.data ?? {}) as EmbeddedSignupSession;
-        if (payload.phone_number_id || payload.waba_id) {
+        if (payload.phone_number_id || payload.waba_id || payload.waba_ids) {
           sessionRef.current = {
             ...sessionRef.current,
             ...payload,
           };
         }
 
-        // FINISH (or any payload with ids) + code already received → complete.
-        if (
-          eventName === 'FINISH' ||
-          eventName === 'FINISH_ONLY_WABA' ||
-          payload.phone_number_id ||
-          payload.waba_id
-        ) {
+        // Any FINISH_* variant (Cloud API, WABA-only, business-app
+        // onboarding, OBO migration) completes the flow.
+        if (eventName.startsWith('FINISH') || resolveAssets()) {
           void finishIfReady();
         }
       } catch {
-        /* ignore */
+        /* not a WA_EMBEDDED_SIGNUP payload */
       }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [finishIfReady, setConnectingSafe, t]);
+  }, [finishIfReady, resolveAssets, setConnectingSafe, t, track]);
 
   const launch = useCallback(() => {
     if (!window.FB || !configId) {
@@ -299,11 +349,14 @@ export function WhatsAppEmbeddedSignupButton({
     pendingCodeRef.current = null;
     finishingRef.current = false;
     sessionRef.current = {};
+    setTrace([]);
     setConnectingSafe(true);
+    track('launch', { configId, appId, formPhoneNumberId: phoneNumberId ?? null });
 
     window.FB.login(
       (response) => {
         const code = response.authResponse?.code;
+        track('fb:callback', { status: response.status ?? null, hasCode: Boolean(code) });
         if (!code) {
           setConnectingSafe(false);
           if (response.status === 'connected') {
@@ -326,6 +379,7 @@ export function WhatsAppEmbeddedSignupButton({
         window.setTimeout(() => {
           if (pendingCodeRef.current && connectingRef.current) {
             if (!resolveAssets()) {
+              track('assets:missing', sessionRef.current);
               toast.error(t('settings.whatsapp.embeddedSignup.missingAssets'));
               pendingCodeRef.current = null;
               setConnectingSafe(false);
@@ -339,16 +393,26 @@ export function WhatsAppEmbeddedSignupButton({
         config_id: configId,
         response_type: 'code',
         override_default_response_type: true,
-        // Must match Meta dashboard: ES v4 + sessionInfoVersion 3
-        // (see onboard URL extras).
+        // Shape documented for Embedded Signup v4. `sessionInfoVersion: 3`
+        // is what makes the dialog post WA_EMBEDDED_SIGNUP session events
+        // back to this window; without it the popup finishes silently.
         extras: {
           setup: {},
+          featureType: '',
           sessionInfoVersion: '3',
-          version: 'v4',
         },
       },
     );
-  }, [configId, finishIfReady, resolveAssets, setConnectingSafe, t]);
+  }, [
+    appId,
+    configId,
+    finishIfReady,
+    phoneNumberId,
+    resolveAssets,
+    setConnectingSafe,
+    t,
+    track,
+  ]);
 
   if (!ready || !appId || !configId) return null;
 
@@ -409,6 +473,34 @@ export function WhatsAppEmbeddedSignupButton({
           </Button>
         )}
       </div>
+      {trace.length > 0 && (
+        <details className="rounded-lg border border-border bg-muted/40 p-2">
+          <summary className="cursor-pointer text-xs text-muted-foreground">
+            {t('settings.whatsapp.embeddedSignup.diagnostics')}
+          </summary>
+          <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-all text-[11px] leading-relaxed text-muted-foreground">
+            {trace.join('\n')}
+          </pre>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="mt-2 gap-2"
+            onClick={() => {
+              void navigator.clipboard
+                .writeText(trace.join('\n'))
+                .then(() =>
+                  toast.success(
+                    t('settings.whatsapp.embeddedSignup.diagnosticsCopied'),
+                  ),
+                );
+            }}
+          >
+            <Copy className="size-3.5" />
+            {t('settings.whatsapp.embeddedSignup.copyDiagnostics')}
+          </Button>
+        </details>
+      )}
     </div>
   );
 }
