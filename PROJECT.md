@@ -91,9 +91,10 @@ git push origin main
 | 2026-07-12 | **Sync upstream/main:** merge de 51 commits; mantido i18n próprio (`useT`) + branding Wp CRM; incorporados interactive WhatsApp, quick replies, AI usage, MCP server, security fixes; migration slot grant renomeada `031`→`037` (evitar colisão com branding) |
 | 2026-07-12 | Supabase remoto: aplicadas migrations `032`–`037` (knowledge INVOKER, AI polish, profiles RLS, interactive/quick_replies, dedup conversas, slot grant) |
 | 2026-08-12 | **Sync upstream/main** (~127 commits desde jul/2026): ver [ArnasDon/wacrm](https://github.com/ArnasDon/wacrm); 825 testes passando; build OK |
-| 2026-08-12 | Migrations upstream renomeadas **043–045** (`043_webhook_broadcast_reliability`, `044_broadcast_resume`, `045_inbound_media_mirror`) — aplicar no Supabase remoto |
+| 2026-08-12 | Migrations upstream renomeadas **043–045** — **aplicadas** no Supabase remoto (`043_webhook_broadcast_reliability`, `044_broadcast_resume`, `045_inbound_media_mirror`) |
 | 2026-08-12 | Vercel: `NEXT_PUBLIC_LOCALE=pt-BR` em Production + Development (redeploy para valer) |
 | 2026-08-12 | **P0 i18n pós-merge:** chaves `settings.whatsapp.media.*` e `broadcasts.detail.resume.*` em EN + PT-BR; componentes corrigidos (espelhamento inbound + retomar disparo) |
+| 2026-08-12 | Auth: logo centralizado em login, cadastro e esqueci a senha (`justify-items-center`, `object-contain`) |
 
 ## Onde customizar branding / UI (referência)
 
