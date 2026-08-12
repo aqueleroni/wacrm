@@ -65,6 +65,51 @@ export async function verifyPhoneNumber(
   return response.json()
 }
 
+export interface WabaPhoneNumber {
+  id: string
+  display_phone_number?: string
+  verified_name?: string
+  quality_rating?: string
+  /** CLOUD_API | ON_PREMISE | NOT_APPLICABLE — newer Graph versions only. */
+  platform_type?: string
+  /** True when the number also runs on the WhatsApp Business app (coexistence). */
+  is_on_biz_app?: boolean
+}
+
+const PHONE_FIELDS_EXTENDED =
+  'id,display_phone_number,verified_name,quality_rating,platform_type,is_on_biz_app'
+const PHONE_FIELDS_BASIC = 'id,display_phone_number,verified_name,quality_rating'
+
+/**
+ * List the phone numbers under a WABA.
+ *
+ * Needed by the WhatsApp Business app onboarding (coexistence) flow: it
+ * finishes with only a `waba_id`, so the phone number ID has to be looked
+ * up before anything can be saved. `platform_type` / `is_on_biz_app` only
+ * exist on newer Graph versions, hence the retry with the basic field set.
+ */
+export async function listWabaPhoneNumbers(args: {
+  wabaId: string
+  accessToken: string
+}): Promise<WabaPhoneNumber[]> {
+  const { wabaId, accessToken } = args
+  const request = (fields: string) =>
+    fetch(`${META_API_BASE}/${wabaId}/phone_numbers?fields=${fields}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+
+  let response = await request(PHONE_FIELDS_EXTENDED)
+  if (!response.ok) {
+    response = await request(PHONE_FIELDS_BASIC)
+  }
+  if (!response.ok) {
+    await throwMetaError(response, `Meta API error: ${response.status}`)
+  }
+
+  const data = (await response.json()) as { data?: WabaPhoneNumber[] }
+  return data.data ?? []
+}
+
 // ============================================================
 // Cloud API registration (subscription for inbound webhooks)
 // ============================================================

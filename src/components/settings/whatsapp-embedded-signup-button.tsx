@@ -135,6 +135,7 @@ export function WhatsAppEmbeddedSignupButton({
   const pendingCodeRef = useRef<string | null>(null);
   const finishingRef = useRef(false);
   const connectingRef = useRef(false);
+  const coexistenceRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
@@ -182,23 +183,40 @@ export function WhatsAppEmbeddedSignupButton({
     [clearConnectTimer, t, track],
   );
 
-  const resolveAssets = useCallback((): { phone_number_id: string; waba_id: string } | null => {
-    const session = sessionRef.current;
-    const phone = session.phone_number_id?.trim() || phoneNumberId?.trim() || '';
-    // Multi-WABA flows return `waba_ids` instead of a single `waba_id`.
-    const waba =
-      session.waba_id?.trim() ||
-      session.waba_ids?.[0]?.trim() ||
-      wabaId?.trim() ||
-      '';
-    if (!phone || !waba) return null;
-    return { phone_number_id: phone, waba_id: waba };
-  }, [phoneNumberId, wabaId]);
+  /**
+   * The WABA ID is the only asset every flow returns — coexistence finishes
+   * without a phone number, which the server then looks up. Values already
+   * on the form are a last resort only (`allowFormFallback`), since reusing
+   * them too eagerly would save the previously connected number instead of
+   * the one just picked in the dialog.
+   */
+  const resolveAssets = useCallback(
+    (
+      allowFormFallback = false,
+    ): { phone_number_id: string | null; waba_id: string } | null => {
+      const session = sessionRef.current;
+      // Multi-WABA flows return `waba_ids` instead of a single `waba_id`.
+      const waba =
+        session.waba_id?.trim() ||
+        session.waba_ids?.[0]?.trim() ||
+        (allowFormFallback ? wabaId?.trim() || '' : '');
+      if (!waba) return null;
 
-  const finishIfReady = useCallback(async () => {
+      const phone =
+        session.phone_number_id?.trim() ||
+        (allowFormFallback && !coexistenceRef.current
+          ? phoneNumberId?.trim() || ''
+          : '');
+      return { phone_number_id: phone || null, waba_id: waba };
+    },
+    [phoneNumberId, wabaId],
+  );
+
+  const finishIfReady = useCallback(
+    async (allowFormFallback = false) => {
     if (finishingRef.current) return;
     const code = pendingCodeRef.current;
-    const assets = resolveAssets();
+    const assets = resolveAssets(allowFormFallback);
     if (!code || !assets) return;
 
     finishingRef.current = true;
@@ -206,7 +224,7 @@ export function WhatsAppEmbeddedSignupButton({
     track('exchange:start', {
       phone_number_id: assets.phone_number_id,
       waba_id: assets.waba_id,
-      fromSession: Boolean(sessionRef.current.phone_number_id),
+      coexistence: coexistenceRef.current,
     });
 
     try {
@@ -215,8 +233,9 @@ export function WhatsAppEmbeddedSignupButton({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           code,
-          phone_number_id: assets.phone_number_id,
+          phone_number_id: assets.phone_number_id ?? undefined,
           waba_id: assets.waba_id,
+          coexistence: coexistenceRef.current,
           pin: pin.trim() || undefined,
         }),
       });
@@ -249,7 +268,9 @@ export function WhatsAppEmbeddedSignupButton({
       finishingRef.current = false;
       setConnectingSafe(false);
     }
-  }, [onConnected, pin, resolveAssets, setConnectingSafe, t, track]);
+    },
+    [onConnected, pin, resolveAssets, setConnectingSafe, t, track],
+  );
 
   useEffect(() => {
     return () => clearConnectTimer();
@@ -341,6 +362,12 @@ export function WhatsAppEmbeddedSignupButton({
           };
         }
 
+        // The business-app onboarding flow finishes with a WABA and no
+        // phone number, and its number is already registered.
+        if (eventName === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING') {
+          coexistenceRef.current = true;
+        }
+
         // Any FINISH_* variant (Cloud API, WABA-only, business-app
         // onboarding, OBO migration) completes the flow.
         if (eventName.startsWith('FINISH') || resolveAssets()) {
@@ -363,6 +390,7 @@ export function WhatsAppEmbeddedSignupButton({
     pendingCodeRef.current = null;
     finishingRef.current = false;
     sessionRef.current = {};
+    coexistenceRef.current = false;
     setTrace([]);
     setBlockedUrl(null);
     setConnectingSafe(true);
@@ -413,14 +441,14 @@ export function WhatsAppEmbeddedSignupButton({
         }, 400);
         window.setTimeout(() => {
           if (pendingCodeRef.current && connectingRef.current) {
-            if (!resolveAssets()) {
+            if (!resolveAssets(true)) {
               track('assets:missing', sessionRef.current);
               toast.error(t('settings.whatsapp.embeddedSignup.missingAssets'));
               pendingCodeRef.current = null;
               setConnectingSafe(false);
               return;
             }
-            void finishIfReady();
+            void finishIfReady(true);
           }
         }, 5000);
       },
@@ -433,7 +461,10 @@ export function WhatsAppEmbeddedSignupButton({
         // back to this window; without it the popup finishes silently.
         extras: {
           setup: {},
-          featureType: '',
+          // Replaces the WABA picker with a screen that also offers to
+          // connect a number already live on the WhatsApp Business app
+          // (coexistence). Without it those numbers are invisible here.
+          featureType: 'whatsapp_business_app_onboarding',
           sessionInfoVersion: '3',
         },
       },

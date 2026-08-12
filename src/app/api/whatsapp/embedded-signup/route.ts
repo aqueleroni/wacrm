@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireRole, toErrorResponse, UnauthorizedError, ForbiddenError } from '@/lib/auth/account'
 import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
 import {
+  listWabaPhoneNumbers,
   registerPhoneNumber,
   subscribeWabaToApp,
   verifyPhoneNumber,
@@ -53,18 +54,24 @@ export async function POST(request: Request) {
       waba_id?: string
       phone_number_id?: string
       pin?: string
+      /**
+       * Set when Embedded Signup finished through the WhatsApp Business app
+       * onboarding flow. Those numbers arrive already registered, and Meta
+       * only hands back a WABA ID.
+       */
+      coexistence?: boolean
     }
 
     const code = body.code?.trim()
     const wabaId = body.waba_id?.trim()
-    const phoneNumberId = body.phone_number_id?.trim()
     const pin = body.pin?.trim()
+    const coexistence = body.coexistence === true
 
-    if (!code || !wabaId || !phoneNumberId) {
+    if (!code || !wabaId) {
       return NextResponse.json(
         {
           error:
-            'code, waba_id and phone_number_id are required (from the Meta Embedded Signup callback).',
+            'code and waba_id are required (from the Meta Embedded Signup callback).',
         },
         { status: 400 },
       )
@@ -75,6 +82,32 @@ export async function POST(request: Request) {
         { error: 'PIN must be exactly 6 digits.' },
         { status: 400 },
       )
+    }
+
+    // Code TTL is ~30s — exchange before any other round trip.
+    const { accessToken } = await exchangeEmbeddedSignupCode(code)
+
+    let phoneNumberId = body.phone_number_id?.trim()
+    let numberAlreadyRegistered = coexistence
+
+    if (!phoneNumberId) {
+      const numbers = await listWabaPhoneNumbers({ wabaId, accessToken })
+      if (numbers.length === 0) {
+        return NextResponse.json(
+          {
+            error:
+              'Meta returned no phone number for this WhatsApp Business account. Finish adding a number in the signup flow and try again.',
+          },
+          { status: 400 },
+        )
+      }
+      // Coexistence numbers are the ones already live on the business app.
+      const preferred =
+        numbers.find((n) => n.is_on_biz_app) ??
+        numbers.find((n) => n.platform_type === 'CLOUD_API') ??
+        numbers[0]
+      phoneNumberId = preferred.id
+      numberAlreadyRegistered = true
     }
 
     const { data: claimed, error: claimedError } = await supabaseAdmin()
@@ -100,9 +133,6 @@ export async function POST(request: Request) {
         { status: 409 },
       )
     }
-
-    // Code TTL is ~30s — exchange first.
-    const { accessToken } = await exchangeEmbeddedSignupCode(code)
 
     const phoneInfo = await verifyPhoneNumber({
       phoneNumberId,
@@ -140,7 +170,11 @@ export async function POST(request: Request) {
     const sameNumber =
       existing?.phone_number_id === phoneNumberId && existing?.registered_at != null
 
-    if (!sameNumber || pin) {
+    if (numberAlreadyRegistered) {
+      // Coexistence: the number is already registered for Cloud API, and
+      // calling /register on it fails. Meta docs require skipping the step.
+      registeredAt = registeredAt ?? new Date().toISOString()
+    } else if (!sameNumber || pin) {
       if (!pin) {
         registrationSkipped = true
       } else {
