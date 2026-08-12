@@ -359,6 +359,8 @@ export const settings = {
         'Credenciais salvas, mas o registro do número falhou — confira o PIN e use Verificar com a Meta.',
       verifyTokenHint:
         'Guarde este verify token do webhook (ou use o já configurado no app Meta):',
+      timeout:
+        'A conexão demorou demais. Feche o popup da Meta, se estiver aberto, e tente de novo.',
     },
     webhook: {
       title: 'Configuração do webhook',

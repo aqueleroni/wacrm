@@ -356,6 +356,8 @@ export const settings = {
       savedWithRegisterError:
         'Credentials saved, but phone registration failed — check the PIN and use Verify with Meta.',
       verifyTokenHint: 'Save this webhook verify token (or keep the one already on the Meta app):',
+      timeout:
+        'The connection took too long. Close the Meta popup if it is still open, then try again.',
     },
     webhook: {
       title: 'Webhook Configuration',
