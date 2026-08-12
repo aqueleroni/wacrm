@@ -308,6 +308,17 @@ export const settings = {
       description: 'Use this URL as your webhook callback in the Meta App Dashboard.',
       callbackUrl: 'Webhook Callback URL',
     },
+    media: {
+      title: 'Attachment Storage',
+      description:
+        'Meta deletes received media about 30 days after it arrives. Attachments can be copied to your own storage so they stay viewable.',
+      mirrorInbound: 'Keep inbound attachments',
+      mirrorInboundDesc:
+        'Save a copy of every photo, video, voice note and document customers send. Uses your Supabase storage; files over 16 MB are skipped.',
+      mirrorInboundOffWarning:
+        'New attachments will stop being copied and will become unavailable about 30 days after they arrive.',
+      mirrorInboundSaveFailed: 'Could not update the attachment setting.',
+    },
     actions: {
       save: 'Save Configuration',
       saving: 'Saving...',
@@ -319,6 +330,15 @@ export const settings = {
       title: 'Setup Instructions',
       description: 'Follow these steps to connect your WhatsApp Business API.',
       docsLink: 'Meta WhatsApp API Documentation',
+      step3_1: 'Go to WhatsApp > API Setup',
+      step3_2: 'Copy your <strong class="text-foreground">Phone Number ID</strong>',
+      step3_3: 'Copy your <strong class="text-foreground">WhatsApp Business Account ID</strong>',
+      step3_4: 'Generate a <strong class="text-foreground">Permanent Access Token</strong> from Business Settings > System Users',
+      step4_1: 'Go to WhatsApp > Configuration',
+      step4_2: 'Click "Edit" on the Webhook section',
+      step4_3: 'Paste the <strong class="text-foreground">Webhook Callback URL</strong> from above',
+      step4_4: 'Enter the same <strong class="text-foreground">Verify Token</strong> you set here',
+      step4_5: 'Subscribe to "messages" webhook field',
     },
     toast: {
       loadFailed: 'Failed to load WhatsApp configuration',
@@ -379,6 +399,15 @@ export const settings = {
       headerImageSize: 'Header image must be under {maxMb} MB.',
       imageUploaded: 'Image uploaded.',
       uploadFailed: 'Upload failed.',
+    },
+    form: {
+      headerTextPlaceholder: 'Header text (max 60 chars, optional {{1}})',
+      headerSampleAria: 'Sample value for header variable',
+      headerSamplePlaceholder: 'Sample value for {{1}} (required for Meta review)',
+      bodyPlaceholder: 'Hello {{1}}, your order {{2}} is confirmed.',
+      bodyHint: 'Use {{1}}, {{2}} for variables (must be contiguous starting at {{1}}).',
+      urlPlaceholder: 'https://example.com/path or with {{1}} suffix',
+      urlSamplePlaceholder: 'Example value for {{1}} (required when URL has a variable)',
     },
   },
   fields: {

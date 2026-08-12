@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/hooks/use-i18n";
@@ -44,7 +44,6 @@ function LoginPageInner() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -63,22 +62,29 @@ function LoginPageInner() {
       return;
     }
 
-    if (inviteToken) {
-      router.push(`/join/${encodeURIComponent(inviteToken)}`);
-    } else {
-      router.push("/dashboard");
-    }
+    // Full-page navigation (not router.push) so the browser issues a
+    // fresh top-level request that carries the just-written Supabase
+    // auth cookies to the middleware gating /dashboard. A soft
+    // client-side navigation can reach the protected route before the
+    // server observes the new session, so the middleware bounces it
+    // back to /login — which looks like the page "just refreshing"
+    // instead of signing in (issue #365). Mirrors the deliberate full
+    // reload the invite-accept flow already uses in join/[token].
+    const destination = inviteToken
+      ? `/join/${encodeURIComponent(inviteToken)}`
+      : "/dashboard";
+    window.location.href = destination;
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md border-border bg-card">
-        <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-primary p-2">
+        <CardHeader className="justify-items-center text-center">
+          <div className="mx-auto mb-2 flex size-12 items-center justify-center overflow-hidden rounded-xl bg-primary p-2">
             {inviteToken ? (
-              <UsersRound className="h-6 w-6 text-primary-foreground" />
+              <UsersRound className="size-6 text-primary-foreground" />
             ) : (
-              <AppLogo size={32} className="h-full w-full" />
+              <AppLogo size={32} className="object-contain object-center" />
             )}
           </div>
           <CardTitle className="text-xl text-foreground">

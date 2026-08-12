@@ -429,7 +429,7 @@ export function MembersTab() {
                           className="w-32 bg-muted border-border text-foreground"
                           disabled={isBusy}
                         >
-                          <SelectValue />
+                          <SelectValue>{roleMetaByRole[member.role]?.label ?? member.role}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {EDITABLE_ROLES.map((r) => (

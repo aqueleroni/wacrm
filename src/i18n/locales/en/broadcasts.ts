@@ -65,6 +65,19 @@ export const broadcasts = {
     error: 'Error',
     loadFailed: 'Failed to load broadcast',
     broadcastFailed: 'Broadcast failed',
+    resume: {
+      title: 'Some recipients need another attempt',
+      stalledTitle: 'This campaign stopped part-way',
+      hint: '{count} recipients failed. Retrying sends them again from the server.',
+      stalledHint:
+        '{count} recipients were never sent — the browser tab running this campaign was closed before it finished. Resuming completes it from the server.',
+      pending: 'Resume sending ({count})',
+      retryFailed: 'Retry failed ({count})',
+      toastStarted: 'Sending {count} recipients in the background.',
+      toastStartedCapped:
+        'Sending {count} recipients in the background. {remaining} more will need another run.',
+      toastFailed: 'Could not resume: {error}',
+    },
   },
   wizard: {
     newTitle: 'New Broadcast',

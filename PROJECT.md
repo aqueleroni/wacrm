@@ -29,7 +29,7 @@ npm run dev                          # http://localhost:3000
 - **Supabase project ref:** `tvssbeqafnodzvgzfbsp`
 - **MCP Supabase:** configurado em `.cursor/mcp.json`
 - **Agent Skills:** `.agents/skills/supabase` e `supabase-postgres-best-practices`
-- **Migrations:** `supabase/migrations/` (001–**037**) — rodar novas migrations via MCP ou SQL Editor após sync upstream
+- **Migrations:** `supabase/migrations/` (001–**045** + `20260723225720_account_scoped_message_templates`) — rodar novas migrations via MCP ou SQL Editor após sync upstream
 - **Locale padrão:** `NEXT_PUBLIC_LOCALE=pt-BR` em `.env.local`
 - **Sem senha padrão** — conta criada em `/signup`
 
@@ -62,7 +62,8 @@ git push origin main
 | Marca padrão | `public/logo-wepost.webp`, `AppLogo`, `nav.appName` | Logo wepost (branco invert) + nome **Wp CRM** |
 | White-label | `031_account_branding.sql`, `branding-settings.tsx`, `use-branding.tsx` | Nome, logo e cor de destaque **por conta** em Configurações → Aparência |
 | Sidebar | `sidebar.tsx` | Logo + nome dinâmicos via `useBranding()` |
-| Sync upstream | merge `upstream/main` (2026-07-12) | Mantido `useT` (shim `use-translations`); **não** adotar next-intl |
+| Sync upstream | merge `upstream/main` (2026-07-12) | Mantido `useT` (shim `use-translations` + `t.raw()`); **não** adotar next-intl |
+| Sync upstream | merge `upstream/main` (2026-08-12) | Next 16.2.12, viewer/download mídia inbox, espelhamento inbound, broadcast resumível, webhook idempotente, RBAC WhatsApp; settings mantém `history.replaceState` |
 | Quick replies | `quick-replies-manager.tsx`, `?tab=quick-replies` | Respostas rápidas + mensagens interativas no composer |
 | AI usage | `agents/ai-usage.tsx`, tab Usage | Dashboard de tokens (admin) |
 
@@ -89,6 +90,10 @@ git push origin main
 | 2026-07-04 | **White-label v1:** migration `031_account_branding` — `brand_name`, `brand_logo_url`, `brand_primary_color` + bucket `account-branding`; UI em Configurações → Aparência → Marca |
 | 2026-07-12 | **Sync upstream/main:** merge de 51 commits; mantido i18n próprio (`useT`) + branding Wp CRM; incorporados interactive WhatsApp, quick replies, AI usage, MCP server, security fixes; migration slot grant renomeada `031`→`037` (evitar colisão com branding) |
 | 2026-07-12 | Supabase remoto: aplicadas migrations `032`–`037` (knowledge INVOKER, AI polish, profiles RLS, interactive/quick_replies, dedup conversas, slot grant) |
+| 2026-08-12 | **Sync upstream/main** (~127 commits desde jul/2026): ver [ArnasDon/wacrm](https://github.com/ArnasDon/wacrm); 825 testes passando; build OK |
+| 2026-08-12 | Migrations upstream renomeadas **043–045** (`043_webhook_broadcast_reliability`, `044_broadcast_resume`, `045_inbound_media_mirror`) — aplicar no Supabase remoto |
+| 2026-08-12 | Vercel: `NEXT_PUBLIC_LOCALE=pt-BR` em Production + Development (redeploy para valer) |
+| 2026-08-12 | **P0 i18n pós-merge:** chaves `settings.whatsapp.media.*` e `broadcasts.detail.resume.*` em EN + PT-BR; componentes corrigidos (espelhamento inbound + retomar disparo) |
 
 ## Onde customizar branding / UI (referência)
 
@@ -125,11 +130,11 @@ git push origin main
 - Branding: colunas em `accounts` (031); logo em bucket `account-branding/account-{id}/`
 - Deletar usuário: apagar `accounts` (CASCADE) antes de `auth.users`
 
-## Deploy (futuro)
+## Deploy
 
-- Recomendado upstream: Hostinger Managed Node.js
-- Variáveis: `NEXT_PUBLIC_SUPABASE_*`, `SUPABASE_SERVICE_ROLE_KEY`, `ENCRYPTION_KEY`, `META_APP_SECRET`, `NEXT_PUBLIC_LOCALE=pt-BR`
-- Docs upstream: [wacrm.tech/docs](https://wacrm.tech/docs)
+- **Produção atual:** Vercel — `https://wpcrm-ten.vercel.app`
+- Variáveis: `NEXT_PUBLIC_SUPABASE_*`, `SUPABASE_SERVICE_ROLE_KEY`, `ENCRYPTION_KEY`, `META_APP_SECRET`, **`NEXT_PUBLIC_LOCALE=pt-BR`**
+- Upstream recomenda também: Hostinger Managed Node.js — [wacrm.tech/docs](https://wacrm.tech/docs)
 
 ## Checklist rápido para o agente
 

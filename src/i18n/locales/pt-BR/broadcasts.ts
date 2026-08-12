@@ -65,6 +65,19 @@ export const broadcasts = {
     error: 'Erro',
     loadFailed: 'Falha ao carregar disparo',
     broadcastFailed: 'Falha no disparo',
+    resume: {
+      title: 'Alguns destinatários precisam de nova tentativa',
+      stalledTitle: 'Esta campanha parou no meio',
+      hint: '{count} destinatários falharam. Tentar novamente reenvia pelo servidor.',
+      stalledHint:
+        '{count} destinatários nunca foram enviados — a aba do navegador que iniciou a campanha foi fechada antes de terminar. Retomar conclui pelo servidor.',
+      pending: 'Retomar envio ({count})',
+      retryFailed: 'Tentar falhas novamente ({count})',
+      toastStarted: 'Enviando {count} destinatários em segundo plano.',
+      toastStartedCapped:
+        'Enviando {count} destinatários em segundo plano. Mais {remaining} precisarão de outra execução.',
+      toastFailed: 'Não foi possível retomar: {error}',
+    },
   },
   wizard: {
     newTitle: 'Novo disparo',

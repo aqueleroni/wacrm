@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
 import { SettingsPanelHead } from './settings-panel-head';
 import {
   Accordion,
@@ -44,7 +45,13 @@ export function WhatsAppConfig() {
   // context and key every read off it — so a teammate who just
   // joined an account sees the inviter's saved config without
   // having to re-enter anything.
-  const { user, accountId, loading: authLoading, profileLoading } = useAuth();
+  const {
+    user,
+    accountId,
+    loading: authLoading,
+    profileLoading,
+    canEditSettings,
+  } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,6 +76,16 @@ export function WhatsAppConfig() {
   const [verifyToken, setVerifyToken] = useState('');
   const [pin, setPin] = useState('');
   const [tokenEdited, setTokenEdited] = useState(false);
+
+  // Inbound-media mirror (issue #466). Unlike everything else on this
+  // page it is NOT part of handleSave: that path insists on re-entering
+  // the access token so it can re-verify with Meta, which is a silly
+  // toll to pay for flipping a boolean. The switch writes straight to
+  // the row instead — RLS (migration 017) restricts whatsapp_config
+  // UPDATE to admins, hence the canEditSettings gate below; without it
+  // a viewer's toggle would match zero rows and appear to work.
+  const [mirrorMedia, setMirrorMedia] = useState(true);
+  const [savingMirror, setSavingMirror] = useState(false);
 
   // True once /register has succeeded on Meta's side (timestamp set
   // in the row). When false, the saved config is metadata-only and
@@ -121,6 +138,9 @@ export function WhatsAppConfig() {
         setVerifyToken('');
         setPin('');
         setTokenEdited(false);
+        // Undefined on a row read before migration 039 — treat that as
+        // on, matching the webhook's own default.
+        setMirrorMedia(data.mirror_inbound_media !== false);
       } else {
         setConfig(null);
         setPhoneNumberId('');
@@ -129,6 +149,7 @@ export function WhatsAppConfig() {
         setVerifyToken('');
         setPin('');
         setTokenEdited(false);
+        setMirrorMedia(true);
       }
       // Clear any stale probe result when reloading the row.
       setRegistrationProbe(null);
@@ -181,6 +202,29 @@ export function WhatsAppConfig() {
     loadedAccountIdRef.current = accountId;
     fetchConfig(accountId);
   }, [authLoading, profileLoading, user?.id, accountId, fetchConfig]);
+
+  async function handleToggleMirrorMedia(next: boolean) {
+    if (!config || !accountId || savingMirror) return;
+    // Optimistic — the switch should feel instant; a failure rolls it
+    // back rather than leaving the UI ahead of the row.
+    const previous = mirrorMedia;
+    setMirrorMedia(next);
+    setSavingMirror(true);
+    try {
+      const { error } = await supabase
+        .from('whatsapp_config')
+        .update({ mirror_inbound_media: next })
+        .eq('account_id', accountId);
+      if (error) throw new Error(error.message);
+      setConfig({ ...config, mirror_inbound_media: next });
+    } catch (error) {
+      console.error('Failed to update media retention setting:', error);
+      setMirrorMedia(previous);
+      toast.error(t('settings.whatsapp.media.mirrorInboundSaveFailed'));
+    } finally {
+      setSavingMirror(false);
+    }
+  }
 
   async function handleSave() {
     if (!phoneNumberId.trim()) {
@@ -707,6 +751,43 @@ export function WhatsAppConfig() {
           </CardContent>
         </Card>
 
+        {/* Attachment retention. Only meaningful once a number is
+            connected, since it governs what the webhook does with
+            inbound media. */}
+        {config && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-foreground">{t('settings.whatsapp.media.title')}</CardTitle>
+              <CardDescription className="text-muted-foreground">
+                {t('settings.whatsapp.media.description')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between gap-4 rounded-md border border-border p-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {t('settings.whatsapp.media.mirrorInbound')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('settings.whatsapp.media.mirrorInboundDesc')}
+                  </p>
+                  {!mirrorMedia && (
+                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
+                      {t('settings.whatsapp.media.mirrorInboundOffWarning')}
+                    </p>
+                  )}
+                </div>
+                <Switch
+                  checked={mirrorMedia}
+                  onCheckedChange={handleToggleMirrorMedia}
+                  disabled={savingMirror || !canEditSettings}
+                  aria-label={t('settings.whatsapp.media.mirrorInbound')}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-3">
           <Button
@@ -817,10 +898,10 @@ export function WhatsAppConfig() {
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>Go to WhatsApp &gt; API Setup</li>
-                    <li>Copy your <strong className="text-foreground">Phone Number ID</strong></li>
-                    <li>Copy your <strong className="text-foreground">WhatsApp Business Account ID</strong></li>
-                    <li>Generate a <strong className="text-foreground">Permanent Access Token</strong> from Business Settings &gt; System Users</li>
+                    <li>{t('settings.whatsapp.setup.step3_1')}</li>
+                    <li dangerouslySetInnerHTML={{ __html: t.raw('settings.whatsapp.setup.step3_2') }} />
+                    <li dangerouslySetInnerHTML={{ __html: t.raw('settings.whatsapp.setup.step3_3') }} />
+                    <li dangerouslySetInnerHTML={{ __html: t.raw('settings.whatsapp.setup.step3_4') }} />
                   </ol>
                 </AccordionContent>
               </AccordionItem>
@@ -834,11 +915,11 @@ export function WhatsAppConfig() {
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>Go to WhatsApp &gt; Configuration</li>
-                    <li>Click &quot;Edit&quot; on the Webhook section</li>
-                    <li>Paste the <strong className="text-foreground">Webhook Callback URL</strong> from above</li>
-                    <li>Enter the same <strong className="text-foreground">Verify Token</strong> you set here</li>
-                    <li>Subscribe to &quot;messages&quot; webhook field</li>
+                    <li>{t('settings.whatsapp.setup.step4_1')}</li>
+                    <li>{t('settings.whatsapp.setup.step4_2')}</li>
+                    <li dangerouslySetInnerHTML={{ __html: t.raw('settings.whatsapp.setup.step4_3') }} />
+                    <li dangerouslySetInnerHTML={{ __html: t.raw('settings.whatsapp.setup.step4_4') }} />
+                    <li>{t('settings.whatsapp.setup.step4_5')}</li>
                   </ol>
                 </AccordionContent>
               </AccordionItem>

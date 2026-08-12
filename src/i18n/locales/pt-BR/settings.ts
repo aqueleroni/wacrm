@@ -310,6 +310,17 @@ export const settings = {
       description: 'Use esta URL como callback do webhook no painel do app Meta.',
       callbackUrl: 'URL de callback do webhook',
     },
+    media: {
+      title: 'Armazenamento de anexos',
+      description:
+        'A Meta exclui mídias recebidas cerca de 30 dias depois. Os anexos podem ser copiados para o seu próprio storage para continuarem visíveis.',
+      mirrorInbound: 'Manter anexos recebidos',
+      mirrorInboundDesc:
+        'Salva uma cópia de cada foto, vídeo, áudio e documento enviado pelos clientes. Usa o storage do Supabase; arquivos acima de 16 MB são ignorados.',
+      mirrorInboundOffWarning:
+        'Novos anexos deixarão de ser copiados e ficarão indisponíveis cerca de 30 dias após o recebimento.',
+      mirrorInboundSaveFailed: 'Não foi possível atualizar a configuração de anexos.',
+    },
     actions: {
       save: 'Salvar configuração',
       saving: 'Salvando...',
@@ -321,6 +332,15 @@ export const settings = {
       title: 'Instruções de configuração',
       description: 'Siga estes passos para conectar sua API WhatsApp Business.',
       docsLink: 'Documentação da API WhatsApp da Meta',
+      step3_1: 'Vá em WhatsApp > Configuração da API',
+      step3_2: 'Copie o <strong class="text-foreground">ID do número de telefone</strong>',
+      step3_3: 'Copie o <strong class="text-foreground">ID da conta WhatsApp Business</strong>',
+      step3_4: 'Gere um <strong class="text-foreground">Token de acesso permanente</strong> em Configurações comerciais > Usuários do sistema',
+      step4_1: 'Vá em WhatsApp > Configuração',
+      step4_2: 'Clique em "Editar" na seção Webhook',
+      step4_3: 'Cole a <strong class="text-foreground">URL de callback do webhook</strong> acima',
+      step4_4: 'Informe o mesmo <strong class="text-foreground">Token de verificação</strong> definido aqui',
+      step4_5: 'Inscreva-se no campo de webhook "messages"',
     },
     toast: {
       loadFailed: 'Falha ao carregar configuração do WhatsApp',
@@ -381,6 +401,15 @@ export const settings = {
       headerImageSize: 'A imagem do cabeçalho deve ter menos de {maxMb} MB.',
       imageUploaded: 'Imagem enviada.',
       uploadFailed: 'Falha no upload.',
+    },
+    form: {
+      headerTextPlaceholder: 'Texto do cabeçalho (máx. 60 caracteres, {{1}} opcional)',
+      headerSampleAria: 'Valor de exemplo para variável do cabeçalho',
+      headerSamplePlaceholder: 'Valor de exemplo para {{1}} (obrigatório para revisão da Meta)',
+      bodyPlaceholder: 'Olá {{1}}, seu pedido {{2}} foi confirmado.',
+      bodyHint: 'Use {{1}}, {{2}} para variáveis (devem ser contíguas começando em {{1}}).',
+      urlPlaceholder: 'https://exemplo.com/caminho ou com sufixo {{1}}',
+      urlSamplePlaceholder: 'Valor de exemplo para {{1}} (obrigatório quando a URL tem variável)',
     },
   },
   fields: {

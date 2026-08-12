@@ -778,7 +778,7 @@ export function TemplateManager() {
                   <Input
                     id="template-header-text"
                     aria-label="Header text"
-                    placeholder="Header text (max 60 chars, optional {{1}})"
+                    placeholder={t.raw('settings.templates.form.headerTextPlaceholder')}
                     value={form.header_content}
                     onChange={(e) =>
                       setForm({ ...form, header_content: e.target.value })
@@ -789,8 +789,8 @@ export function TemplateManager() {
                   {headerVarCount > 0 && (
                     <Input
                       id="template-header-sample"
-                      aria-label="Sample value for header variable"
-                      placeholder="Sample value for {{1}} (required for Meta review)"
+                      aria-label={t('settings.templates.form.headerSampleAria')}
+                      placeholder={t.raw('settings.templates.form.headerSamplePlaceholder')}
                       value={form.header_sample}
                       onChange={(e) =>
                         setForm({ ...form, header_sample: e.target.value })
@@ -867,7 +867,7 @@ export function TemplateManager() {
             <div className="space-y-2">
               <Label className="text-muted-foreground">Body Text</Label>
               <Textarea
-                placeholder="Hello {{1}}, your order {{2}} is confirmed."
+                placeholder={t.raw('settings.templates.form.bodyPlaceholder')}
                 value={form.body_text}
                 onChange={(e) =>
                   setForm({ ...form, body_text: e.target.value })
@@ -877,8 +877,7 @@ export function TemplateManager() {
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground resize-none"
               />
               <p className="text-[11px] text-muted-foreground">
-                Use {`{{1}}`}, {`{{2}}`} for variables (must be contiguous
-                starting at {`{{1}}`}).
+                {t.raw('settings.templates.form.bodyHint')}
               </p>
 
               {bodyVarCount > 0 && (
@@ -1011,7 +1010,7 @@ export function TemplateManager() {
                       {btn.type === 'URL' && (
                         <div className="space-y-1 pl-1">
                           <Input
-                            placeholder="https://example.com/path or with {{1}} suffix"
+                            placeholder={t.raw('settings.templates.form.urlPlaceholder')}
                             value={btn.url}
                             onChange={(e) =>
                               updateButton(i, { url: e.target.value })
@@ -1020,7 +1019,7 @@ export function TemplateManager() {
                           />
                           {extractVariableIndices(btn.url).length > 0 && (
                             <Input
-                              placeholder="Example value for {{1}} (required when URL has a variable)"
+                              placeholder={t.raw('settings.templates.form.urlSamplePlaceholder')}
                               value={btn.example ?? ''}
                               onChange={(e) =>
                                 updateButton(i, { example: e.target.value })

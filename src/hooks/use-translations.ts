@@ -19,7 +19,9 @@ export function useTranslations(namespace: string) {
     )
     .join('.');
 
-  return function translate(key: string, values?: Params): string {
+  const translate = function (key: string, values?: Params): string {
     return t(`${prefix}.${key}`, values);
   };
+  translate.raw = (key: string): string => t.raw(`${prefix}.${key}`);
+  return translate;
 }
