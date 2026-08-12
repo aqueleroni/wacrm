@@ -63,4 +63,15 @@ describe('buildHandoffSummary', () => {
     })
     expect(summary).toBe('🤖 AI agent handed off without replying.')
   })
+
+  it('mentions the reply limit when reason is max_replies', () => {
+    const summary = buildHandoffSummary({
+      messages: [{ role: 'user', content: 'ainda aí?' }],
+      replyCount: 3,
+      reason: 'max_replies',
+    })
+    expect(summary).toContain('reached the reply limit (3 replies)')
+    expect(summary).toContain('handed off to a human')
+    expect(summary).toContain('“ainda aí?”')
+  })
 })

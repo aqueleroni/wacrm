@@ -29,7 +29,8 @@ npm run dev                          # http://localhost:3000
 - **Supabase project ref:** `tvssbeqafnodzvgzfbsp`
 - **MCP Supabase:** configurado em `.cursor/mcp.json`
 - **Agent Skills:** `.agents/skills/supabase` e `supabase-postgres-best-practices`
-- **Migrations:** `supabase/migrations/` (001–**045** + `20260723225720_account_scoped_message_templates`) — rodar novas migrations via MCP ou SQL Editor após sync upstream
+- **Migrations:** `supabase/migrations/` (001–**045**) — rodar novas migrations via MCP ou SQL Editor após sync upstream
+- **Ignorados no git:** `.codex/`, `supabase/.temp/` (ver `.gitignore`)
 - **Locale padrão:** `NEXT_PUBLIC_LOCALE=pt-BR` em `.env.local`
 - **Sem senha padrão** — conta criada em `/signup`
 
@@ -57,6 +58,9 @@ git push origin main
 | i18n módulos | auth, layout, settings, dashboard, contacts, inbox, pipelines, broadcasts, automations, flows, agents, etc. | UI traduzida via `useT()` |
 | i18n AI settings | `ai-config.tsx`, `ai-knowledge.tsx`, `locales/*/settings.ts` | Seção Assistente de IA completa em PT-BR |
 | i18n flows templates | `flow-template-content.ts`, `templates.ts`, `node-config-form.tsx` | Textos prontos dos modelos de fluxo em PT ao clonar |
+| i18n flows node keys | `flows.nodeKeys`, `nodeKeyDisplayLabel()` | IDs internos (`welcome`, `start`…) exibem rótulo PT na UI (dropdown, canvas, validação) |
+| i18n inbox P1 | `locales/pt-BR/inbox.ts` | composer, actions, replyQuote, templatePicker traduzidos |
+| Toasts i18n | inbox, settings.members, settings.quickReplies, agents.usage | Toasts do composer, thread, membros, respostas rápidas e uso de IA via `t()` |
 | Moedas | `src/lib/currency.ts`, `locales/*/currency.ts` | Labels de moeda traduzidos (deals, settings) |
 | Fonte | `src/app/fonts/SpaceGrotesk-*.ttf`, `layout.tsx` | Space Grotesk como `--font-sans` (substitui Inter) |
 | Marca padrão | `public/logo-wepost.webp`, `AppLogo`, `nav.appName` | Logo wepost (branco invert) + nome **Wp CRM** |
@@ -95,6 +99,27 @@ git push origin main
 | 2026-08-12 | Vercel: `NEXT_PUBLIC_LOCALE=pt-BR` em Production + Development (redeploy para valer) |
 | 2026-08-12 | **P0 i18n pós-merge:** chaves `settings.whatsapp.media.*` e `broadcasts.detail.resume.*` em EN + PT-BR; componentes corrigidos (espelhamento inbound + retomar disparo) |
 | 2026-08-12 | Auth: logo centralizado em login, cadastro e esqueci a senha (`justify-items-center`, `object-contain`) |
+| 2026-08-12 | **Fix flow builder:** menu "+ Adicionar nó" — `DropdownMenuLabel` exige `DropdownMenuGroup` (Base UI); corrigido em `flow-builder.tsx` e `flow-canvas.tsx` (regressão #336) |
+| 2026-08-12 | **Pendências pós-merge:** i18n inbox P1 + toasts; labels PT para node keys; `.gitignore` `.codex/` + `supabase/.temp/`; stash `pre-upstream-merge` reintegrado parcialmente (handoff cap, rotas WhatsApp leves) — evolução completa de IA em `feat/ai-agent-evolution` |
+| 2026-08-12 | i18n: automações builder, dashboard atividade, settings overview/rail, WhatsApp setup passos, broadcast step1 layout |
+
+## Smoke test manual (pós-merge upstream)
+
+Roteiro rápido em produção ou `npm run dev` (conta com WhatsApp conectado):
+
+| # | Área | O que validar |
+|---|------|----------------|
+| 1 | **Inbox — mídia** | Receber foto/vídeo/doc; lightbox abre; download; espelhamento inbound (Settings → WhatsApp → mídia) |
+| 2 | **Inbox — composer** | Placeholders PT; gravar nota de voz; anexar mídia; toasts em PT |
+| 3 | **Inbox — thread** | Atribuir conversa; reagir a mensagem; toasts de erro em PT |
+| 4 | **Broadcast resume** | Disparo interrompido → detalhe do disparo → **Retomar**; toast PT |
+| 5 | **Automações** | Keyword trigger; builder PT; validação |
+| 6 | **Fluxos** | Clonar "Menu de boas-vindas"; node keys mostram rótulos PT (não `existing_handoff` cru) |
+| 7 | **Settings** | Overview tiles PT; membros (convite/revogar toasts PT); templates sync |
+| 8 | **Auth alert** | Conta sem acesso WhatsApp — banner na dashboard |
+| 9 | **Webhook** | Mensagem inbound chega (sem duplicar; idempotência 043) |
+
+**CI local:** `npm test` (830 testes) + `npm run build` antes de deploy.
 
 ## Onde customizar branding / UI (referência)
 

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useT } from "@/hooks/use-i18n";
 import { cn } from "@/lib/utils";
-import { nodeStaticMeta, type BuilderNode } from "../shared";
+import { nodeStaticMeta, type BuilderNode, nodeKeyDisplayLabel } from "../shared";
 
 export function TextRow({
   label,
@@ -112,7 +112,7 @@ export function NodeKeySelect({
                 <Icon
                   className={cn("h-3 w-3", nodeStaticMeta[n.node_type].color)}
                 />
-                {n.node_key}
+                {nodeKeyDisplayLabel(n.node_key, t)}
               </span>
             </SelectItem>
           );

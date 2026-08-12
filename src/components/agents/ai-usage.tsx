@@ -23,6 +23,7 @@ import { Skeleton } from '@/components/dashboard/skeleton';
 import { BarChart } from '@/components/tremor/bar-chart';
 import { formatCompactNumber } from '@/lib/currency';
 import { format, parseISO } from 'date-fns';
+import { useT } from '@/hooks/use-i18n';
 
 interface UsageResponse {
   window_days: number;
@@ -54,6 +55,7 @@ const WINDOWS = [7, 30, 90] as const;
  * `GET /api/ai/usage` route. Renders nothing for non-admins.
  */
 export function AiUsageCard() {
+  const t = useT();
   const { accountId, accountRole, profileLoading } = useAuth();
   const canView = accountRole ? canEditSettings(accountRole) : false;
 
@@ -70,18 +72,18 @@ export function AiUsageCard() {
       });
       const json = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error(json?.error ?? 'Failed to load usage');
+        toast.error(json?.error ?? t('agents.usage.toast.loadFailed'));
         setData(null);
         return;
       }
       setData(json as UsageResponse);
     } catch {
-      toast.error('Failed to load usage');
+      toast.error(t('agents.usage.toast.loadFailed'));
       setData(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!canView || !accountId) return;

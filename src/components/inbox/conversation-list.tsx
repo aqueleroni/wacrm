@@ -20,7 +20,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useT } from "@/hooks/use-i18n";
+import { useI18n, useT } from "@/hooks/use-i18n";
+import { getDateFnsLocale } from "@/lib/i18n/date-fns-locale";
 
 interface ConversationListProps {
   activeConversationId: string | null;
@@ -435,6 +436,7 @@ function ConversationItem({
   isActive,
   onSelect,
 }: ConversationItemProps) {
+  const { locale } = useI18n();
   const t = useT();
   const contact = conversation.contact;
   const displayName = contact?.name || contact?.phone || t("inbox.conversationList.unknown");
@@ -447,6 +449,7 @@ function ConversationItem({
   const timeAgo = conversation.last_message_at
     ? formatDistanceToNow(new Date(conversation.last_message_at), {
         addSuffix: false,
+        locale: getDateFnsLocale(locale),
       })
     : "";
 

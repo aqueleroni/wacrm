@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { useT } from "@/hooks/use-i18n";
+import { useT, useI18n } from "@/hooks/use-i18n";
+import { getDateFnsLocale } from "@/lib/i18n/date-fns-locale";
+import { translateStageName } from "@/lib/pipelines/stage-label";
 import { cn } from "@/lib/utils";
 import type { Contact, Deal, ContactNote, Tag } from "@/types";
 import {
@@ -26,6 +28,7 @@ interface ContactSidebarProps {
 }
 
 export function ContactSidebar({ contact }: ContactSidebarProps) {
+  const { locale } = useI18n();
   const t = useT();
   const { accountId } = useAuth();
   const [copied, setCopied] = useState(false);
@@ -239,7 +242,7 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                             color: deal.stage.color,
                           }}
                         >
-                          {deal.stage.name}
+                          {translateStageName(deal.stage.name, t)}
                         </span>
                       )}
                     </div>
@@ -287,7 +290,9 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                       {note.note_text}
                     </p>
                     <p className="mt-1 text-[10px] text-muted-foreground">
-                      {format(new Date(note.created_at), "MMM d, yyyy HH:mm")}
+                      {format(new Date(note.created_at), "PPp", {
+                        locale: getDateFnsLocale(locale),
+                      })}
                     </p>
                   </div>
                 ))}

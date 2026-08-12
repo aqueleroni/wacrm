@@ -58,8 +58,9 @@ export type ActivityKind =
 export interface ActivityItem {
   id: string
   kind: ActivityKind
-  /** Primary line of text rendered in the feed. Pre-formatted. */
-  text: string
+  /** Key under `dashboard.activity.items.*` */
+  labelKey: string
+  params: Record<string, string | number>
   /** ISO timestamp the item happened at, drives relative-time + sort. */
   at: string
   /** Optional deep-link for the whole row (not all items have a target). */

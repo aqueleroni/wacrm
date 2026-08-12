@@ -30,6 +30,8 @@ import {
 } from "lucide-react";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { useTranslations } from "@/hooks/use-translations";
+import { useI18n, useT } from "@/hooks/use-i18n";
+import { getDateFnsLocale } from "@/lib/i18n/date-fns-locale";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -107,11 +109,15 @@ interface MessageThreadProps {
   onToggleContactPanel?: () => void;
 }
 
-function formatDateSeparator(dateStr: string, t: ReturnType<typeof useTranslations>): string {
+function formatDateSeparator(
+  dateStr: string,
+  t: ReturnType<typeof useTranslations>,
+  locale: ReturnType<typeof useI18n>['locale'],
+): string {
   const date = new Date(dateStr);
   if (isToday(date)) return t("today");
   if (isYesterday(date)) return t("yesterday");
-  return format(date, "MMMM d, yyyy");
+  return format(date, "PPP", { locale: getDateFnsLocale(locale) });
 }
 
 function groupMessagesByDate(messages: Message[]) {
@@ -164,9 +170,12 @@ export function MessageThread({
   contactPanelOpen,
   onToggleContactPanel,
 }: MessageThreadProps) {
+  const { locale } = useI18n();
+  const tGlobal = useT();
   const t = useTranslations("Inbox.messageThread");
   const tTimer = useTranslations("Inbox.sessionTimer");
   const tQuote = useTranslations("Inbox.replyQuote");
+  const tErr = useTranslations("Inbox.thread");
 
   const { user } = useAuth();
   const { getPresence, getRow, now } = usePresence();
@@ -240,7 +249,7 @@ export function MessageThread({
       .reverse()
       .find((m) => m.sender_type === "customer");
 
-    if (!lastCustomerMsg) return { expired: true, remaining: "No customer messages" };
+    if (!lastCustomerMsg) return { expired: true, remaining: tTimer("noCustomerMessages") };
 
     const hoursSince = differenceInHours(new Date(), new Date(lastCustomerMsg.created_at));
     const expired = hoursSince >= 24;
@@ -786,7 +795,7 @@ export function MessageThread({
         return;
       }
       if (messageId.startsWith("temp-")) {
-        toast.error("Wait for the message to finish sending");
+        toast.error(tErr("errors.waitForSend"));
         return;
       }
 
@@ -832,11 +841,11 @@ export function MessageThread({
         }
       } catch (err) {
         const reason = err instanceof Error ? err.message : "network error";
-        toast.error(`Reaction failed: ${reason}`);
+        toast.error(tErr("errors.reactionFailed", { reason }));
         setReactions(snapshot);
       }
     },
-    [conversation, user?.id],
+    [conversation, user?.id, tErr],
   );
 
   const handleAssignChange = useCallback(
@@ -851,13 +860,13 @@ export function MessageThread({
 
       if (error) {
         console.error("Failed to update assignment:", error);
-        toast.error("Failed to update assignment");
+        toast.error(tErr("errors.assignmentFailed"));
         return;
       }
 
       onAssignChange(conversation.id, agentId);
     },
-    [conversation, onAssignChange],
+    [conversation, onAssignChange, tErr],
   );
 
   // Empty state — same WhatsApp-style doodle background as the active
@@ -1050,7 +1059,8 @@ export function MessageThread({
                         label={presenceLabel(
                           presence,
                           getRow(p.user_id)?.last_seen_at ?? null,
-                          now
+                          now,
+                          tGlobal,
                         )}
                         className="mr-2"
                       />
@@ -1099,7 +1109,7 @@ export function MessageThread({
                 {/* Date separator */}
                 <div className="mb-4 flex items-center justify-center">
                   <span className="rounded-full bg-muted px-3 py-1 text-[10px] font-medium text-muted-foreground">
-                    {formatDateSeparator(group.date, t)}
+                    {formatDateSeparator(group.date, t, locale)}
                   </span>
                 </div>
                 {/* Messages */}

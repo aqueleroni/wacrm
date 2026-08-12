@@ -67,6 +67,18 @@ export const dashboard = {
     showLess: 'Show less',
     showing: 'Showing {visible} of {total}{plus}',
     showLabel: 'Show',
+    items: {
+      newMessage: 'New message from {who}',
+      newContact: 'New contact: {who}',
+      dealInStage: 'Deal "{title}" in {stage}',
+      dealUpdated: 'Deal "{title}" updated',
+      broadcastSent: 'Broadcast "{name}" sent to {count} contacts',
+      broadcastStatus: 'Broadcast "{name}" {status} ({count} recipients)',
+      automationTriggered: 'Automation "{name}" triggered for {who}',
+      automationFailed: 'Automation "{name}" failed for {who}',
+      unknownContact: 'Unknown',
+      unknownAutomation: 'Automation',
+    },
   },
   empty: {
     notEnoughData: 'Not enough data yet',

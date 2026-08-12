@@ -1,3 +1,7 @@
+import type { createTranslator } from '@/i18n/translate';
+
+type TFunction = ReturnType<typeof createTranslator>;
+
 // ============================================================
 // Presence helpers — pure, unit-testable, no I/O.
 //
@@ -68,24 +72,25 @@ export function derivePresence(
 export function formatLastSeen(
   lastSeenAt: string | null | undefined,
   now: number,
+  t: TFunction,
 ): string {
-  if (!lastSeenAt) return "a while ago";
+  if (!lastSeenAt) return t('common.presence.aWhileAgo');
   const last = new Date(lastSeenAt).getTime();
-  if (Number.isNaN(last)) return "a while ago";
+  if (Number.isNaN(last)) return t('common.presence.aWhileAgo');
 
   const diff = Math.max(0, now - last);
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins === 1) return "1 minute ago";
-  if (mins < 60) return `${mins} minutes ago`;
+  if (mins < 1) return t('common.presence.justNow');
+  if (mins === 1) return t('common.presence.oneMinuteAgo');
+  if (mins < 60) return t('common.presence.minutesAgo', { count: mins });
 
   const hours = Math.floor(mins / 60);
-  if (hours === 1) return "1 hour ago";
-  if (hours < 24) return `${hours} hours ago`;
+  if (hours === 1) return t('common.presence.oneHourAgo');
+  if (hours < 24) return t('common.presence.hoursAgo', { count: hours });
 
   const days = Math.floor(hours / 24);
-  if (days === 1) return "1 day ago";
-  return `${days} days ago`;
+  if (days === 1) return t('common.presence.oneDayAgo');
+  return t('common.presence.daysAgo', { count: days });
 }
 
 /**
@@ -98,14 +103,17 @@ export function presenceLabel(
   status: PresenceStatus,
   lastSeenAt: string | null | undefined,
   now: number,
+  t: TFunction,
 ): string {
   switch (status) {
     case "online":
-      return "Online — active now";
+      return t('common.presence.onlineActive');
     case "away":
-      return "Away — idle";
+      return t('common.presence.awayIdle');
     case "offline":
-      return `Offline — last seen ${formatLastSeen(lastSeenAt, now)}`;
+      return t('common.presence.offlineLastSeen', {
+        lastSeen: formatLastSeen(lastSeenAt, now, t),
+      });
   }
 }
 

@@ -50,4 +50,9 @@ export const agents = {
     add: 'Add knowledge',
     empty: 'No knowledge entries yet',
   },
+  usage: {
+    toast: {
+      loadFailed: 'Failed to load usage',
+    },
+  },
 } as const;

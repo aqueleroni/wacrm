@@ -41,6 +41,7 @@ import {
   LayoutTemplate,
 } from 'lucide-react';
 import { useT } from '@/hooks/use-i18n';
+import { translateStageName } from '@/lib/pipelines/stage-label';
 
 interface ContactDetailViewProps {
   open: boolean;
@@ -715,7 +716,7 @@ export function ContactDetailView({
                                 color: deal.stage.color,
                               }}
                             >
-                              {deal.stage.name}
+                              {translateStageName(deal.stage.name, t)}
                             </span>
                           )}
                         </div>

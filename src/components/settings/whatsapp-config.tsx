@@ -860,15 +860,15 @@ export function WhatsAppConfig() {
                 <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">1</span>
-                    Create a Meta App
+                    {t('settings.whatsapp.setup.step1Title')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>Go to <span className="text-primary">developers.facebook.com</span></li>
-                    <li>Click &quot;My Apps&quot; and then &quot;Create App&quot;</li>
-                    <li>Select &quot;Business&quot; as the app type</li>
-                    <li>Fill in app details and create</li>
+                    <li>{t('settings.whatsapp.setup.step1_1')}</li>
+                    <li>{t('settings.whatsapp.setup.step1_2')}</li>
+                    <li>{t('settings.whatsapp.setup.step1_3')}</li>
+                    <li>{t('settings.whatsapp.setup.step1_4')}</li>
                   </ol>
                 </AccordionContent>
               </AccordionItem>
@@ -877,14 +877,14 @@ export function WhatsAppConfig() {
                 <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</span>
-                    Add WhatsApp Product
+                    {t('settings.whatsapp.setup.step2Title')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>In your app dashboard, click &quot;Add Product&quot;</li>
-                    <li>Find &quot;WhatsApp&quot; and click &quot;Set Up&quot;</li>
-                    <li>Follow the setup wizard to link your business</li>
+                    <li>{t('settings.whatsapp.setup.step2_1')}</li>
+                    <li>{t('settings.whatsapp.setup.step2_2')}</li>
+                    <li>{t('settings.whatsapp.setup.step2_3')}</li>
                   </ol>
                 </AccordionContent>
               </AccordionItem>
@@ -893,7 +893,7 @@ export function WhatsAppConfig() {
                 <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">3</span>
-                    Get API Credentials
+                    {t('settings.whatsapp.setup.step3Title')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
@@ -910,7 +910,7 @@ export function WhatsAppConfig() {
                 <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">4</span>
-                    Configure Webhooks
+                    {t('settings.whatsapp.setup.step4Title')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">

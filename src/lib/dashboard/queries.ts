@@ -314,11 +314,12 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
   }>) {
     const conv = Array.isArray(m.conversations) ? m.conversations[0] : m.conversations
     const contact = Array.isArray(conv?.contacts) ? conv?.contacts[0] : conv?.contacts
-    const who = contact?.name || contact?.phone || 'Unknown'
+    const who = contact?.name || contact?.phone || 'unknownContact'
     items.push({
       id: `msg-${m.id}`,
       kind: 'message',
-      text: `New message from ${who}`,
+      labelKey: 'newMessage',
+      params: { who },
       at: m.created_at,
       href: `/inbox?c=${m.conversation_id}`,
     })
@@ -328,7 +329,8 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
     items.push({
       id: `contact-${c.id}`,
       kind: 'contact',
-      text: `New contact: ${c.name || c.phone}`,
+      labelKey: 'newContact',
+      params: { who: c.name || c.phone },
       at: c.created_at,
       href: '/contacts',
     })
@@ -344,9 +346,10 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
     items.push({
       id: `deal-${d.id}`,
       kind: 'deal',
-      text: stage?.name
-        ? `Deal "${d.title}" in ${stage.name}`
-        : `Deal "${d.title}" updated`,
+      labelKey: stage?.name ? 'dealInStage' : 'dealUpdated',
+      params: stage?.name
+        ? { title: d.title, stage: stage.name }
+        : { title: d.title },
       at: d.updated_at,
       href: '/pipelines',
     })
@@ -359,14 +362,14 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
     total_recipients: number
     created_at: string
   }>) {
-    const label =
-      b.status === 'sent'
-        ? `sent to ${b.total_recipients} contacts`
-        : `${b.status} (${b.total_recipients} recipients)`
     items.push({
       id: `broadcast-${b.id}`,
       kind: 'broadcast',
-      text: `Broadcast "${b.name}" ${label}`,
+      labelKey: b.status === 'sent' ? 'broadcastSent' : 'broadcastStatus',
+      params:
+        b.status === 'sent'
+          ? { name: b.name, count: b.total_recipients }
+          : { name: b.name, status: b.status, count: b.total_recipients },
       at: b.created_at,
       href: '/broadcasts',
     })
@@ -382,12 +385,13 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
   }>) {
     const automation = Array.isArray(l.automation) ? l.automation[0] : l.automation
     const contact = Array.isArray(l.contact) ? l.contact[0] : l.contact
-    const who = contact?.name || contact?.phone || 'a contact'
-    const autoName = automation?.name || 'Automation'
+    const who = contact?.name || contact?.phone || 'unknownContact'
+    const autoName = automation?.name || 'unknownAutomation'
     items.push({
       id: `auto-${l.id}`,
       kind: 'automation',
-      text: `Automation "${autoName}" ${l.status === 'failed' ? 'failed for' : 'triggered for'} ${who}`,
+      labelKey: l.status === 'failed' ? 'automationFailed' : 'automationTriggered',
+      params: { name: autoName, who },
       at: l.created_at,
     })
   }

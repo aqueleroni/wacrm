@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "@/hooks/use-translations";
+import { useI18n } from "@/hooks/use-i18n";
+import { getDateFnsLocale } from "@/lib/i18n/date-fns-locale";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -59,6 +61,7 @@ export function MediaLightbox({
   contactLabel,
 }: MediaLightboxProps) {
   const t = useTranslations("Inbox.mediaViewer");
+  const { locale } = useI18n();
 
   const index = galleryIndexOf(items, activeId);
   const item = index >= 0 ? items[index] : null;
@@ -116,7 +119,9 @@ export function MediaLightbox({
   if (!item) return null;
 
   const authorLabel = item.fromCustomer ? contactLabel : t("you");
-  const timestamp = format(new Date(item.createdAt), "MMM d, yyyy HH:mm");
+  const timestamp = format(new Date(item.createdAt), "PPp", {
+    locale: getDateFnsLocale(locale),
+  });
 
   return (
     <Dialog

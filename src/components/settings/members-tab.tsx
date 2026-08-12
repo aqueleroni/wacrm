@@ -152,7 +152,7 @@ export function MembersTab() {
 
       if (!mres.ok) {
         const payload = await mres.json().catch(() => ({}));
-        toast.error(payload.error || 'Failed to load members');
+        toast.error(payload.error || t('settings.members.toast.loadMembersFailed'));
         return;
       }
       const mdata = (await mres.json()) as { members: Member[] };
@@ -161,7 +161,7 @@ export function MembersTab() {
       if (ires) {
         if (!ires.ok) {
           const payload = await ires.json().catch(() => ({}));
-          toast.error(payload.error || 'Failed to load invitations');
+          toast.error(payload.error || t('settings.members.toast.loadInvitationsFailed'));
           return;
         }
         const idata = (await ires.json()) as { invitations: Invitation[] };
@@ -171,11 +171,11 @@ export function MembersTab() {
       }
     } catch (err) {
       console.error('[MembersTab] load error:', err);
-      toast.error('Could not reach the server');
+      toast.error(t('settings.members.toast.networkError'));
     } finally {
       setLoading(false);
     }
-  }, [canManageMembers]);
+  }, [canManageMembers, t]);
 
   useEffect(() => {
     void loadEverything();
@@ -211,10 +211,15 @@ export function MembersTab() {
           ),
         );
         const payload = await res.json().catch(() => ({}));
-        toast.error(payload.error || 'Failed to update role');
+        toast.error(payload.error || t('settings.members.toast.updateRoleFailed'));
         return;
       }
-      toast.success(`Updated ${member.full_name || 'member'} to ${nextRole}`);
+      toast.success(
+        t('settings.members.toast.roleUpdated', {
+          name: member.full_name || 'member',
+          role: nextRole,
+        }),
+      );
     } catch (err) {
       // Same revert on network failure.
       setMembers((prev) =>
@@ -223,7 +228,7 @@ export function MembersTab() {
         ),
       );
       console.error('[MembersTab] role change error:', err);
-      toast.error('Could not reach the server');
+      toast.error(t('settings.members.toast.networkError'));
     } finally {
       setPendingMemberAction(null);
     }
@@ -239,17 +244,21 @@ export function MembersTab() {
       );
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        toast.error(payload.error || 'Failed to remove member');
+        toast.error(payload.error || t('settings.members.toast.removeFailed'));
         return;
       }
-      toast.success(`Removed ${removingMember.full_name || 'member'}`);
+      toast.success(
+        t('settings.members.toast.memberRemoved', {
+          name: removingMember.full_name || 'member',
+        }),
+      );
       setMembers((prev) =>
         prev.filter((m) => m.user_id !== removingMember.user_id),
       );
       setRemovingMember(null);
     } catch (err) {
       console.error('[MembersTab] remove error:', err);
-      toast.error('Could not reach the server');
+      toast.error(t('settings.members.toast.networkError'));
     } finally {
       setPendingMemberAction(null);
     }
@@ -262,14 +271,14 @@ export function MembersTab() {
       });
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        toast.error(payload.error || 'Failed to revoke invitation');
+        toast.error(payload.error || t('settings.members.toast.revokeFailed'));
         return;
       }
-      toast.success('Invitation revoked');
+      toast.success(t('settings.members.toast.invitationRevoked'));
       setInvitations((prev) => prev.filter((i) => i.id !== invite.id));
     } catch (err) {
       console.error('[MembersTab] revoke error:', err);
-      toast.error('Could not reach the server');
+      toast.error(t('settings.members.toast.networkError'));
     }
   }
 
@@ -338,6 +347,7 @@ export function MembersTab() {
                 presence,
                 presenceRow?.last_seen_at ?? null,
                 now,
+                t,
               );
 
               return (

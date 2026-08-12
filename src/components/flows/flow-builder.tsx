@@ -39,9 +39,6 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
@@ -50,10 +47,12 @@ import { useT } from '@/hooks/use-i18n';
 import {
   getNodeMeta,
   NodeIconChip,
-  groupNodeTypesByCategory,
+  AddNodeMenuContent,
+  ADD_NODE_MENU_CONTENT_CLASS,
   nodeColors,
   slugify,
   summarizeNode,
+  nodeKeyDisplayLabel,
   type BuilderNode,
   type NodeType,
 } from './shared';
@@ -433,7 +432,7 @@ function NodeCard({
               {meta.label}
             </span>
             <code className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px]">
-              {node.node_key}
+              {nodeKeyDisplayLabel(node.node_key, t)}
             </code>
             {isEntry && (
               <Badge
@@ -572,7 +571,6 @@ function NodeConfigWithAdvanced({
 
 function AddNodeButton({ onAdd }: { onAdd: (type: NodeType) => void }) {
   const t = useT();
-  const nodeMeta = getNodeMeta(t);
   const types: NodeType[] = [
     'start',
     'send_buttons',
@@ -594,24 +592,8 @@ function AddNodeButton({ onAdd }: { onAdd: (type: NodeType) => void }) {
         <Plus className="h-3.5 w-3.5" />
         {t('flows.actions.addNode')}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="border-border bg-popover">
-        {groupNodeTypesByCategory(types, t).map((group, i) => (
-          <div key={group.id}>
-            {i > 0 && <DropdownMenuSeparator />}
-            <DropdownMenuLabel className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
-              {group.label}
-            </DropdownMenuLabel>
-            {group.types.map((type) => {
-              const meta = nodeMeta[type];
-              return (
-                <DropdownMenuItem key={type} onClick={() => onAdd(type)}>
-                  <meta.icon className={cn('h-3.5 w-3.5', meta.color)} />
-                  {meta.label}
-                </DropdownMenuItem>
-              );
-            })}
-          </div>
-        ))}
+      <DropdownMenuContent align="end" className={ADD_NODE_MENU_CONTENT_CLASS}>
+        <AddNodeMenuContent types={types} onSelect={onAdd} t={t} />
       </DropdownMenuContent>
     </DropdownMenu>
   );

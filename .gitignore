@@ -42,3 +42,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local agent / CLI artifacts (never commit)
+.codex/
+supabase/.temp/

@@ -77,10 +77,10 @@ function SettingsPageInner() {
 
   const hints: Partial<Record<SettingsSection, ReactNode>> = useMemo(
     () => ({
-      appearance: mode.charAt(0).toUpperCase() + mode.slice(1),
+      appearance: t(`settings.appearance.mode.${mode}`),
       deals: defaultCurrency,
     }),
-    [mode, defaultCurrency],
+    [mode, defaultCurrency, t],
   );
 
   const panel: Record<SettingsSection, ReactNode> = {
