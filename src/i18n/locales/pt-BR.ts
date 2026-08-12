@@ -18,6 +18,7 @@ import { theme } from './pt-BR/theme';
 import { currency } from './pt-BR/currency';
 import { interactive } from './pt-BR/interactive';
 import { whatsNew } from './pt-BR/whats-new';
+import { landing } from './pt-BR/landing';
 
 const nested = {
   common,
@@ -38,6 +39,7 @@ const nested = {
   currency,
   interactive,
   whatsNew,
+  landing,
 };
 
 export const messagesPtBR = flattenMessages(nested);

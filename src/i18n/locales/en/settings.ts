@@ -341,6 +341,22 @@ export const settings = {
       pinOptional: '(optional)',
       pinPlaceholder: '6-digit PIN from Meta WhatsApp Manager',
     },
+    embeddedSignup: {
+      title: 'Connect with Meta',
+      description:
+        'Opens Meta Embedded Signup. When you finish, the number and token are saved automatically — no pasting credentials by hand.',
+      cta: 'Connect WhatsApp',
+      connecting: 'Connecting…',
+      success: 'WhatsApp connected successfully.',
+      failed: 'Could not complete the connection.',
+      cancelled: 'Connection cancelled.',
+      noCode: 'Meta did not return an authorization code.',
+      missingAssets: 'Missing phone number or WABA ID. Complete the flow to the end.',
+      sdkNotReady: 'Meta SDK is not ready yet. Try again in a moment.',
+      savedWithRegisterError:
+        'Credentials saved, but phone registration failed — check the PIN and use Verify with Meta.',
+      verifyTokenHint: 'Save this webhook verify token (or keep the one already on the Meta app):',
+    },
     webhook: {
       title: 'Webhook Configuration',
       description: 'Use this URL as your webhook callback in the Meta App Dashboard.',

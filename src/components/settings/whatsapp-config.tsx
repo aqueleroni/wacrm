@@ -30,6 +30,7 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from '@/components/ui/accordion';
+import { WhatsAppEmbeddedSignupButton } from './whatsapp-embedded-signup-button';
 import type { WhatsAppConfig as WhatsAppConfigType } from '@/types';
 
 const MASKED_TOKEN = '••••••••••••••••';
@@ -607,6 +608,18 @@ export function WhatsAppConfig() {
               </div>
             )}
           </Alert>
+        )}
+
+        {/* Embedded Signup — connect via Meta popup when env is set */}
+        {canEditSettings && (
+          <WhatsAppEmbeddedSignupButton
+            disabled={saving}
+            onConnected={() => {
+              if (!accountId) return;
+              loadedAccountIdRef.current = null;
+              void fetchConfig(accountId);
+            }}
+          />
         )}
 
         {/* API Credentials */}

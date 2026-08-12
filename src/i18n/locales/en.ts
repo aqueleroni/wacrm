@@ -18,6 +18,7 @@ import { theme } from './en/theme';
 import { currency } from './en/currency';
 import { interactive } from './en/interactive';
 import { whatsNew } from './en/whats-new';
+import { landing } from './en/landing';
 
 const nested = {
   common,
@@ -38,6 +39,7 @@ const nested = {
   currency,
   interactive,
   whatsNew,
+  landing,
 };
 
 export const messagesEn = flattenMessages(nested);

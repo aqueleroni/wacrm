@@ -70,6 +70,7 @@ git push origin main
 | Sync upstream | merge `upstream/main` (2026-08-12) | Next 16.2.12, viewer/download mídia inbox, espelhamento inbound, broadcast resumível, webhook idempotente, RBAC WhatsApp; settings mantém `history.replaceState` |
 | Quick replies | `quick-replies-manager.tsx`, `?tab=quick-replies` | Respostas rápidas + mensagens interativas no composer |
 | AI usage | `agents/ai-usage.tsx`, tab Usage | Dashboard de tokens (admin) |
+| Landing | `src/app/page.tsx`, `components/landing/landing-page.tsx`, `locales/*/landing.ts` | Home pública com planos Pro/Business (sem grátis); CTA signup/login |
 | **IA evoluída** | `src/lib/ai/memory*.ts`, `skills.ts`, `agent-context.ts`, `crm-context.ts`, `handoff-notify.ts`, `generation-log.ts` | Memória (extração + aprovação), skills por gatilho, contexto CRM, aba **Inteligência** em Agentes |
 | IA APIs | `/api/ai/memory/*`, `/api/ai/skills/*`, `/api/ai/cron/consolidate` | CRUD memória/skills + cron consolidação (~30 min idle) |
 
@@ -106,6 +107,8 @@ git push origin main
 | 2026-08-12 | i18n: automações builder, dashboard atividade, settings overview/rail, WhatsApp setup passos, broadcast step1 layout |
 | 2026-08-12 | Housekeeping: migration `20260723230245_account_scoped_message_templates` no repo; i18n datas em notificações, execuções de fluxo e uso de IA |
 | 2026-08-12 | **Merge `feat/ai-agent-evolution` → `main`:** IA completa (memória, skills, agent-context, handoff notify, aba Inteligência); 862 testes + build OK; stash `pre-upstream-merge` pode ser dropado |
+| 2026-08-12 | **Landing `/`:** página de apresentação Wp CRM (sem plano grátis — Pro + Business); logado redireciona ao dashboard; i18n `landing.*` |
+| 2026-08-12 | **Embedded Signup (B):** botão Conectar WhatsApp + `/api/whatsapp/embedded-signup`; env `NEXT_PUBLIC_META_APP_ID` + `NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID` (+ `META_APP_ID`/`META_APP_SECRET`) |
 
 ## Smoke test manual (pós-merge upstream)
 
