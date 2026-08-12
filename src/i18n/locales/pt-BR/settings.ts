@@ -363,6 +363,8 @@ export const settings = {
         'A conexão demorou demais. Feche o popup da Meta, se estiver aberto, e tente de novo.',
       cancel: 'Cancelar',
       metaError: 'A Meta interrompeu o cadastro: {message}',
+      popupBlocked:
+        'O navegador bloqueou o popup da Meta. Libere popups para este site e tente de novo.',
       diagnostics: 'Diagnóstico da conexão',
       copyDiagnostics: 'Copiar diagnóstico',
       diagnosticsCopied: 'Diagnóstico copiado.',

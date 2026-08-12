@@ -360,6 +360,8 @@ export const settings = {
         'The connection took too long. Close the Meta popup if it is still open, then try again.',
       cancel: 'Cancel',
       metaError: 'Meta stopped the signup: {message}',
+      popupBlocked:
+        'The browser blocked the Meta popup. Allow popups for this site and try again.',
       diagnostics: 'Connection diagnostics',
       copyDiagnostics: 'Copy diagnostics',
       diagnosticsCopied: 'Diagnostics copied.',

@@ -290,7 +290,18 @@ export function WhatsAppEmbeddedSignupButton({
       try {
         const raw =
           typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-        if (raw?.type !== 'WA_EMBEDDED_SIGNUP') return;
+        if (raw?.type !== 'WA_EMBEDDED_SIGNUP') {
+          // Log foreign Facebook traffic too: if the dialog talks to us at
+          // all but never sends a signup event, that narrows the fault to
+          // the Meta-side config rather than this listener.
+          if (connectingRef.current) {
+            track('fb:message', {
+              origin: event.origin,
+              type: raw?.type ?? typeof event.data,
+            });
+          }
+          return;
+        }
 
         const eventName = String(raw.event ?? '').toUpperCase();
         const payload = (raw.data ?? {}) as EmbeddedSignupSession;
@@ -353,6 +364,26 @@ export function WhatsAppEmbeddedSignupButton({
     setConnectingSafe(true);
     track('launch', { configId, appId, formPhoneNumberId: phoneNumberId ?? null });
 
+    // The SDK opens its dialog through window.open during this call. Shim it
+    // just for that window so we can tell "popup blocked" and "popup opened
+    // on the wrong URL" apart from "popup fine, Meta never answered".
+    const nativeOpen = window.open;
+    let popup: Window | null = null;
+    let popupUrl = '';
+    window.open = function patchedOpen(
+      url?: string | URL,
+      target?: string,
+      features?: string,
+    ) {
+      popupUrl = url ? String(url) : '';
+      popup = nativeOpen.call(window, url, target, features);
+      return popup;
+    } as typeof window.open;
+
+    const restoreOpen = () => {
+      window.open = nativeOpen;
+    };
+
     window.FB.login(
       (response) => {
         const code = response.authResponse?.code;
@@ -403,6 +434,31 @@ export function WhatsAppEmbeddedSignupButton({
         },
       },
     );
+
+    restoreOpen();
+    track('popup', {
+      opened: Boolean(popup),
+      url: popupUrl.slice(0, 400) || null,
+    });
+
+    if (!popup) {
+      setConnectingSafe(false);
+      toast.error(t('settings.whatsapp.embeddedSignup.popupBlocked'));
+      return;
+    }
+
+    // The SDK's own close detection is unreliable when the dialog errors out,
+    // which leaves the button spinning. Watch the handle ourselves.
+    const handle = popup as Window;
+    const watcher = window.setInterval(() => {
+      if (!handle.closed) return;
+      window.clearInterval(watcher);
+      if (!connectingRef.current) return;
+      track('popup:closed', { hadCode: Boolean(pendingCodeRef.current) });
+      if (pendingCodeRef.current) return; // exchange already in flight
+      setConnectingSafe(false);
+      toast.message(t('settings.whatsapp.embeddedSignup.cancelled'));
+    }, 700);
   }, [
     appId,
     configId,
