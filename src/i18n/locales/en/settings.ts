@@ -358,6 +358,7 @@ export const settings = {
       verifyTokenHint: 'Save this webhook verify token (or keep the one already on the Meta app):',
       timeout:
         'The connection took too long. Close the Meta popup if it is still open, then try again.',
+      cancel: 'Cancel',
     },
     webhook: {
       title: 'Webhook Configuration',

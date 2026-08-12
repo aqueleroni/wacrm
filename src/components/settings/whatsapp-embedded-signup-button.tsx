@@ -36,12 +36,10 @@ interface EmbeddedSignupSession {
   phone_number_id?: string;
   waba_id?: string;
   current_step?: string;
-  event?: string;
 }
 
 type Props = {
   disabled?: boolean;
-  /** Fallback when reconnecting — form fields already filled. */
   phoneNumberId?: string;
   wabaId?: string;
   onConnected: () => void;
@@ -49,8 +47,7 @@ type Props = {
 
 const GRAPH_VERSION = 'v26.0';
 const SDK_SRC = 'https://connect.facebook.net/en_US/sdk.js';
-const ASSET_WAIT_MS = 8000;
-const CONNECT_TIMEOUT_MS = 120_000;
+const CONNECT_TIMEOUT_MS = 90_000;
 
 function loadFacebookSdk(appId: string): Promise<void> {
   if (typeof window === 'undefined') return Promise.reject(new Error('SSR'));
@@ -76,7 +73,7 @@ function loadFacebookSdk(appId: string): Promise<void> {
       try {
         prev?.();
       } catch {
-        /* ignore prior init errors */
+        /* ignore */
       }
       init();
       resolve();
@@ -84,7 +81,6 @@ function loadFacebookSdk(appId: string): Promise<void> {
 
     const existing = document.getElementById('facebook-jssdk');
     if (existing) {
-      // Script already injecting — wait for FB global.
       const started = Date.now();
       const tick = () => {
         if (window.FB) {
@@ -113,31 +109,6 @@ function loadFacebookSdk(appId: string): Promise<void> {
   });
 }
 
-function waitForAssets(
-  getSession: () => EmbeddedSignupSession,
-  fallback: { phone_number_id?: string; waba_id?: string },
-  timeoutMs: number,
-): Promise<{ phone_number_id: string; waba_id: string }> {
-  return new Promise((resolve, reject) => {
-    const started = Date.now();
-    const tick = () => {
-      const s = getSession();
-      const phone = s.phone_number_id || fallback.phone_number_id;
-      const waba = s.waba_id || fallback.waba_id;
-      if (phone && waba) {
-        resolve({ phone_number_id: phone, waba_id: waba });
-        return;
-      }
-      if (Date.now() - started >= timeoutMs) {
-        reject(new Error('missing_assets'));
-        return;
-      }
-      window.setTimeout(tick, 150);
-    };
-    tick();
-  });
-}
-
 export function WhatsAppEmbeddedSignupButton({
   disabled,
   phoneNumberId,
@@ -150,32 +121,99 @@ export function WhatsAppEmbeddedSignupButton({
   const [configId, setConfigId] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [pin, setPin] = useState('');
+
   const sessionRef = useRef<EmbeddedSignupSession>({});
+  const pendingCodeRef = useRef<string | null>(null);
+  const finishingRef = useRef(false);
   const connectingRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const setConnectingSafe = useCallback((value: boolean) => {
-    connectingRef.current = value;
-    setConnecting(value);
+  const clearConnectTimer = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-    if (value) {
-      timeoutRef.current = setTimeout(() => {
-        if (!connectingRef.current) return;
-        connectingRef.current = false;
-        setConnecting(false);
-        toast.error(t('settings.whatsapp.embeddedSignup.timeout'));
-      }, CONNECT_TIMEOUT_MS);
+  }, []);
+
+  const setConnectingSafe = useCallback(
+    (value: boolean) => {
+      connectingRef.current = value;
+      setConnecting(value);
+      clearConnectTimer();
+      if (value) {
+        timeoutRef.current = setTimeout(() => {
+          if (!connectingRef.current) return;
+          finishingRef.current = false;
+          pendingCodeRef.current = null;
+          connectingRef.current = false;
+          setConnecting(false);
+          toast.error(t('settings.whatsapp.embeddedSignup.timeout'));
+        }, CONNECT_TIMEOUT_MS);
+      }
+    },
+    [clearConnectTimer, t],
+  );
+
+  const resolveAssets = useCallback((): { phone_number_id: string; waba_id: string } | null => {
+    const phone =
+      sessionRef.current.phone_number_id?.trim() || phoneNumberId?.trim() || '';
+    const waba = sessionRef.current.waba_id?.trim() || wabaId?.trim() || '';
+    if (!phone || !waba) return null;
+    return { phone_number_id: phone, waba_id: waba };
+  }, [phoneNumberId, wabaId]);
+
+  const finishIfReady = useCallback(async () => {
+    if (finishingRef.current) return;
+    const code = pendingCodeRef.current;
+    const assets = resolveAssets();
+    if (!code || !assets) return;
+
+    finishingRef.current = true;
+    pendingCodeRef.current = null;
+
+    try {
+      const res = await fetch('/api/whatsapp/embedded-signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          phone_number_id: assets.phone_number_id,
+          waba_id: assets.waba_id,
+          pin: pin.trim() || undefined,
+        }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        verify_token?: string;
+        registration_error?: string | null;
+      };
+      if (!res.ok) {
+        toast.error(data.error || t('settings.whatsapp.embeddedSignup.failed'));
+        return;
+      }
+      if (data.registration_error) {
+        toast.warning(t('settings.whatsapp.embeddedSignup.savedWithRegisterError'));
+      } else {
+        toast.success(t('settings.whatsapp.embeddedSignup.success'));
+      }
+      if (data.verify_token) {
+        toast.message(t('settings.whatsapp.embeddedSignup.verifyTokenHint'), {
+          description: data.verify_token,
+          duration: 12000,
+        });
+      }
+      onConnected();
+    } catch {
+      toast.error(t('settings.whatsapp.embeddedSignup.failed'));
+    } finally {
+      finishingRef.current = false;
+      setConnectingSafe(false);
     }
-  }, [t]);
+  }, [onConnected, pin, resolveAssets, setConnectingSafe, t]);
 
   useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, []);
+    return () => clearConnectTimer();
+  }, [clearConnectTimer]);
 
   useEffect(() => {
     let cancelled = false;
@@ -196,7 +234,7 @@ export function WhatsAppEmbeddedSignupButton({
           if (!cancelled) setReady(true);
         }
       } catch {
-        /* leave button hidden */
+        /* hide button */
       }
     })();
     return () => {
@@ -217,9 +255,10 @@ export function WhatsAppEmbeddedSignupButton({
           typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
         if (raw?.type !== 'WA_EMBEDDED_SIGNUP') return;
 
-        const eventName = String(raw.event ?? raw.data?.event ?? '').toUpperCase();
+        const eventName = String(raw.event ?? '').toUpperCase();
         if (eventName === 'CANCEL' || eventName === 'CANCELLED') {
           if (connectingRef.current) {
+            pendingCodeRef.current = null;
             setConnectingSafe(false);
             toast.message(t('settings.whatsapp.embeddedSignup.cancelled'));
           }
@@ -233,77 +272,35 @@ export function WhatsAppEmbeddedSignupButton({
             ...payload,
           };
         }
+
+        // FINISH (or any payload with ids) + code already received → complete.
+        if (
+          eventName === 'FINISH' ||
+          eventName === 'FINISH_ONLY_WABA' ||
+          payload.phone_number_id ||
+          payload.waba_id
+        ) {
+          void finishIfReady();
+        }
       } catch {
-        /* ignore non-JSON */
+        /* ignore */
       }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [setConnectingSafe, t]);
-
-  const finish = useCallback(
-    async (code: string) => {
-      try {
-        const assets = await waitForAssets(
-          () => sessionRef.current,
-          {
-            phone_number_id: phoneNumberId?.trim() || undefined,
-            waba_id: wabaId?.trim() || undefined,
-          },
-          ASSET_WAIT_MS,
-        );
-
-        const res = await fetch('/api/whatsapp/embedded-signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            code,
-            phone_number_id: assets.phone_number_id,
-            waba_id: assets.waba_id,
-            pin: pin.trim() || undefined,
-          }),
-        });
-        const data = (await res.json()) as {
-          error?: string;
-          verify_token?: string;
-          registration_error?: string | null;
-        };
-        if (!res.ok) {
-          toast.error(data.error || t('settings.whatsapp.embeddedSignup.failed'));
-          return;
-        }
-        if (data.registration_error) {
-          toast.warning(t('settings.whatsapp.embeddedSignup.savedWithRegisterError'));
-        } else {
-          toast.success(t('settings.whatsapp.embeddedSignup.success'));
-        }
-        if (data.verify_token) {
-          toast.message(t('settings.whatsapp.embeddedSignup.verifyTokenHint'), {
-            description: data.verify_token,
-            duration: 12000,
-          });
-        }
-        onConnected();
-      } catch (err) {
-        if (err instanceof Error && err.message === 'missing_assets') {
-          toast.error(t('settings.whatsapp.embeddedSignup.missingAssets'));
-        } else {
-          toast.error(t('settings.whatsapp.embeddedSignup.failed'));
-        }
-      } finally {
-        setConnectingSafe(false);
-      }
-    },
-    [onConnected, phoneNumberId, pin, setConnectingSafe, t, wabaId],
-  );
+  }, [finishIfReady, setConnectingSafe, t]);
 
   const launch = useCallback(() => {
     if (!window.FB || !configId) {
       toast.error(t('settings.whatsapp.embeddedSignup.sdkNotReady'));
       return;
     }
-    setConnectingSafe(true);
+
+    pendingCodeRef.current = null;
+    finishingRef.current = false;
     sessionRef.current = {};
+    setConnectingSafe(true);
+
     window.FB.login(
       (response) => {
         const code = response.authResponse?.code;
@@ -316,20 +313,42 @@ export function WhatsAppEmbeddedSignupButton({
           }
           return;
         }
-        void finish(code);
+        pendingCodeRef.current = code;
+        // Code often arrives before session postMessage — wait briefly
+        // for assets, then finish with form fallbacks if needed.
+        window.setTimeout(() => {
+          if (!resolveAssets() && connectingRef.current) {
+            // keep waiting for WA_EMBEDDED_SIGNUP message (finishIfReady)
+            return;
+          }
+          void finishIfReady();
+        }, 400);
+        window.setTimeout(() => {
+          if (pendingCodeRef.current && connectingRef.current) {
+            if (!resolveAssets()) {
+              toast.error(t('settings.whatsapp.embeddedSignup.missingAssets'));
+              pendingCodeRef.current = null;
+              setConnectingSafe(false);
+              return;
+            }
+            void finishIfReady();
+          }
+        }, 5000);
       },
       {
         config_id: configId,
         response_type: 'code',
         override_default_response_type: true,
+        // Must match Meta dashboard: ES v4 + sessionInfoVersion 3
+        // (see onboard URL extras).
         extras: {
           setup: {},
-          featureType: '',
           sessionInfoVersion: '3',
+          version: 'v4',
         },
       },
     );
-  }, [configId, finish, setConnectingSafe, t]);
+  }, [configId, finishIfReady, resolveAssets, setConnectingSafe, t]);
 
   if (!ready || !appId || !configId) return null;
 
@@ -360,21 +379,36 @@ export function WhatsAppEmbeddedSignupButton({
           disabled={connecting || disabled}
         />
       </div>
-      <Button
-        type="button"
-        onClick={launch}
-        disabled={disabled || connecting}
-        className="gap-2"
-      >
-        {connecting ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <Link2 className="size-4" />
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          onClick={launch}
+          disabled={disabled || connecting}
+          className="gap-2"
+        >
+          {connecting ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Link2 className="size-4" />
+          )}
+          {connecting
+            ? t('settings.whatsapp.embeddedSignup.connecting')
+            : t('settings.whatsapp.embeddedSignup.cta')}
+        </Button>
+        {connecting && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              pendingCodeRef.current = null;
+              finishingRef.current = false;
+              setConnectingSafe(false);
+            }}
+          >
+            {t('settings.whatsapp.embeddedSignup.cancel')}
+          </Button>
         )}
-        {connecting
-          ? t('settings.whatsapp.embeddedSignup.connecting')
-          : t('settings.whatsapp.embeddedSignup.cta')}
-      </Button>
+      </div>
     </div>
   );
 }
