@@ -29,7 +29,7 @@ npm run dev                          # http://localhost:3000
 - **Supabase project ref:** `tvssbeqafnodzvgzfbsp`
 - **MCP Supabase:** configurado em `.cursor/mcp.json`
 - **Agent Skills:** `.agents/skills/supabase` e `supabase-postgres-best-practices`
-- **Migrations:** `supabase/migrations/` (001–**045**) — rodar novas migrations via MCP ou SQL Editor após sync upstream
+- **Migrations:** `supabase/migrations/` (001–**045** + `20260723230245_account_scoped_message_templates`) — rodar novas migrations via MCP ou SQL Editor após sync upstream
 - **Ignorados no git:** `.codex/`, `supabase/.temp/` (ver `.gitignore`)
 - **Locale padrão:** `NEXT_PUBLIC_LOCALE=pt-BR` em `.env.local`
 - **Sem senha padrão** — conta criada em `/signup`
@@ -102,6 +102,7 @@ git push origin main
 | 2026-08-12 | **Fix flow builder:** menu "+ Adicionar nó" — `DropdownMenuLabel` exige `DropdownMenuGroup` (Base UI); corrigido em `flow-builder.tsx` e `flow-canvas.tsx` (regressão #336) |
 | 2026-08-12 | **Pendências pós-merge:** i18n inbox P1 + toasts; labels PT para node keys; `.gitignore` `.codex/` + `supabase/.temp/`; stash `pre-upstream-merge` reintegrado parcialmente (handoff cap, rotas WhatsApp leves) — evolução completa de IA em `feat/ai-agent-evolution` |
 | 2026-08-12 | i18n: automações builder, dashboard atividade, settings overview/rail, WhatsApp setup passos, broadcast step1 layout |
+| 2026-08-12 | Housekeeping: migration `20260723230245_account_scoped_message_templates` no repo; i18n datas em notificações, execuções de fluxo e uso de IA |
 
 ## Smoke test manual (pós-merge upstream)
 

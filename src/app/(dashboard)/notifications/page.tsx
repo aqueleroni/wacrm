@@ -10,7 +10,8 @@ import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useT } from "@/hooks/use-i18n";
+import { useI18n, useT } from "@/hooks/use-i18n";
+import { getDateFnsLocale } from "@/lib/i18n/date-fns-locale";
 
 // Icon per notification type. Only one type exists today
 // (conversation_assigned) but this keeps future types a one-line add.
@@ -19,6 +20,7 @@ const TYPE_ICON: Record<Notification["type"], typeof Bell> = {
 };
 
 export default function NotificationsPage() {
+  const { locale } = useI18n();
   const t = useT();
   const router = useRouter();
   const { accountId } = useAuth();
@@ -255,6 +257,7 @@ export default function NotificationsPage() {
                     <p className="mt-1 text-[11px] text-muted-foreground/70">
                       {formatDistanceToNow(new Date(n.created_at), {
                         addSuffix: true,
+                        locale: getDateFnsLocale(locale),
                       })}
                     </p>
                   </div>

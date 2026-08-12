@@ -51,6 +51,26 @@ export const agents = {
     empty: 'Nenhuma entrada de conhecimento ainda',
   },
   usage: {
+    title: 'Uso de tokens',
+    description:
+      'Tokens gastos na sua chave de provedor por rascunhos e resposta automática. Apenas contagens — nenhum conteúdo de mensagem é armazenado aqui.',
+    windowLastDays: 'Últimos {days} dias',
+    empty: 'Nenhum uso de IA nos últimos {days} dias.',
+    emptyHint: 'Os dados aparecem conforme o assistente rascunha e responde automaticamente.',
+    stats: {
+      totalTokens: 'Total de tokens',
+      llmCalls: 'Chamadas LLM',
+      autoReply: 'Resposta automática',
+      drafts: 'Rascunhos',
+    },
+    chartTokensPerDay: 'Tokens por dia',
+    chartCategory: 'Tokens',
+    byModel: 'Por modelo',
+    call: 'chamada',
+    calls: 'chamadas',
+    tok: 'tok',
+    truncated:
+      'Janela parcial — o uso é alto o suficiente para resumir apenas os registros mais recentes.',
     toast: {
       loadFailed: 'Falha ao carregar uso',
     },

@@ -51,6 +51,26 @@ export const agents = {
     empty: 'No knowledge entries yet',
   },
   usage: {
+    title: 'Token usage',
+    description:
+      'Tokens spent on your provider key by drafts and the auto-reply bot. Counts only — no message content is stored here.',
+    windowLastDays: 'Last {days} days',
+    empty: 'No AI usage in the last {days} days yet.',
+    emptyHint: 'This fills in as the assistant drafts and auto-replies.',
+    stats: {
+      totalTokens: 'Total tokens',
+      llmCalls: 'LLM calls',
+      autoReply: 'Auto-reply',
+      drafts: 'Drafts',
+    },
+    chartTokensPerDay: 'Tokens per day',
+    chartCategory: 'Tokens',
+    byModel: 'By model',
+    call: 'call',
+    calls: 'calls',
+    tok: 'tok',
+    truncated:
+      'Showing a partial window — usage is high enough that only the most recent records are summarized here.',
     toast: {
       loadFailed: 'Failed to load usage',
     },
