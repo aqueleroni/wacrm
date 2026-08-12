@@ -263,7 +263,7 @@ export function TemplatePicker({
             {slots && slots.headerVarCount > 0 && (
               <div className="space-y-1">
                 <Label className="text-xs text-popover-foreground">
-                  {t("inbox.templates.headerLabel")}
+                  {t.raw("inbox.templates.headerLabel")}
                 </Label>
                 <Input
                   value={headerText}
@@ -283,7 +283,7 @@ export function TemplatePicker({
                     next[i] = e.target.value;
                     setParams(next);
                   }}
-                  placeholder={t("inbox.templates.bodyVariablePlaceholder").replace("{{index}}", String(v))}
+                  placeholder={t.raw("inbox.templates.bodyVariablePlaceholder").replace("{{index}}", String(v))}
                   className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                 />
               </div>
@@ -291,7 +291,7 @@ export function TemplatePicker({
             {slots?.urlButtonSlots.map((slot) => (
               <div key={slot.index} className="space-y-1">
                 <Label className="text-xs text-popover-foreground">
-                  {t("inbox.templates.urlButtonLabel", { text: slot.text })}
+                  {t.raw("inbox.templates.urlButtonLabel").replace("{text}", slot.text)}
                 </Label>
                 <Input
                   value={buttonParams[slot.index] ?? ""}

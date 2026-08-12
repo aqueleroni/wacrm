@@ -66,11 +66,7 @@ import { RequireRole } from '@/components/auth/require-role';
 import { useAuth } from '@/hooks/use-auth';
 import { usePresence } from '@/hooks/use-presence';
 import type { AccountRole } from '@/lib/auth/roles';
-import {
-  formatLastSeen,
-  summarize,
-  type PresenceStatus,
-} from '@/lib/presence';
+import { presenceLabel, summarize } from '@/lib/presence';
 import {
   PRESENCE_DOT_CLASS,
   PresenceDot,
@@ -97,11 +93,21 @@ interface Invitation {
   expires_at: string;
 }
 
-type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
+// Editable roles in the inline dropdown. Owner is never an option —
+// promotions go through the (deferred) Transfer Ownership flow.
+const EDITABLE_ROLES: { value: AccountRole; label: string; hint: string }[] = [
+  { value: 'admin', label: 'Admin', hint: 'Manage members + everything' },
+  { value: 'agent', label: 'Agent', hint: 'Use features; no settings' },
+  { value: 'viewer', label: 'Viewer', hint: 'Read-only across the app' },
+];
 
-const EDITABLE_ROLE_VALUES: AccountRole[] = ['admin', 'agent', 'viewer'];
+// Per-role chip metadata (icon / label / colour) lives in the shared
+// getRoleMeta helper so this roster and the Overview identity chip can't
+// drift. The colour scale runs amber (owner — scarce, immutable) →
+// primary (admin) → muted (agent / viewer).
 
 function fmtDate(iso: string): string {
+  // Match the rest of the dashboard's locale-light formatting.
   const d = new Date(iso);
   return d.toLocaleDateString(undefined, {
     year: 'numeric',
@@ -110,43 +116,13 @@ function fmtDate(iso: string): string {
   });
 }
 
-function fmtExpiresIn(iso: string, t: TranslateFn): string {
+function fmtExpiresIn(iso: string): string {
   const ms = new Date(iso).getTime() - Date.now();
-  if (ms <= 0) return t('settings.members.expired');
+  if (ms <= 0) return 'expired';
   const days = Math.floor(ms / (24 * 60 * 60 * 1000));
-  if (days >= 1) {
-    return t(
-      days === 1
-        ? 'settings.members.expiresInDays'
-        : 'settings.members.expiresInDays_plural',
-      { days },
-    );
-  }
+  if (days >= 1) return `expires in ${days} day${days === 1 ? '' : 's'}`;
   const hours = Math.max(1, Math.floor(ms / (60 * 60 * 1000)));
-  return t(
-    hours === 1
-      ? 'settings.members.expiresInHours'
-      : 'settings.members.expiresInHours_plural',
-    { hours },
-  );
-}
-
-function memberPresenceLabel(
-  status: PresenceStatus,
-  lastSeenAt: string | null | undefined,
-  now: number,
-  t: TranslateFn,
-): string {
-  switch (status) {
-    case 'online':
-      return t('settings.members.presence.onlineActive');
-    case 'away':
-      return t('settings.members.presence.awayIdle');
-    case 'offline':
-      return t('settings.members.presence.offlineLastSeen', {
-        when: formatLastSeen(lastSeenAt, now),
-      });
-  }
+  return `expires in ${hours} hour${hours === 1 ? '' : 's'}`;
 }
 
 export function MembersTab() {
@@ -185,9 +161,7 @@ export function MembersTab() {
       if (ires) {
         if (!ires.ok) {
           const payload = await ires.json().catch(() => ({}));
-          toast.error(
-            payload.error || t('settings.members.toast.loadInvitationsFailed'),
-          );
+          toast.error(payload.error || t('settings.members.toast.loadInvitationsFailed'));
           return;
         }
         const idata = (await ires.json()) as { invitations: Invitation[] };
@@ -197,7 +171,7 @@ export function MembersTab() {
       }
     } catch (err) {
       console.error('[MembersTab] load error:', err);
-      toast.error(t('common.errors.serverUnreachable'));
+      toast.error(t('settings.members.toast.networkError'));
     } finally {
       setLoading(false);
     }
@@ -209,6 +183,9 @@ export function MembersTab() {
 
   async function handleRoleChange(member: Member, nextRole: AccountRole) {
     if (member.role === nextRole) return;
+    // Optimistic update — flip the dropdown immediately so the UI
+    // feels snappy. If the server PATCH fails we revert below so
+    // the dropdown doesn't lie about the persisted state.
     const previousRole = member.role;
     setPendingMemberAction(member.user_id);
     setMembers((prev) =>
@@ -223,6 +200,11 @@ export function MembersTab() {
         body: JSON.stringify({ role: nextRole }),
       });
       if (!res.ok) {
+        // Revert the optimistic flip. The toast on its own wasn't
+        // enough — the dropdown was left showing the new role
+        // forever, so the next interaction operated on a wrong
+        // baseline (re-trying the same change would no-op via the
+        // `member.role === nextRole` guard at the top).
         setMembers((prev) =>
           prev.map((m) =>
             m.user_id === member.user_id ? { ...m, role: previousRole } : m,
@@ -234,18 +216,19 @@ export function MembersTab() {
       }
       toast.success(
         t('settings.members.toast.roleUpdated', {
-          name: member.full_name || t('settings.members.toast.memberFallback'),
-          role: roleMetaByRole[nextRole].label,
+          name: member.full_name || 'member',
+          role: nextRole,
         }),
       );
     } catch (err) {
+      // Same revert on network failure.
       setMembers((prev) =>
         prev.map((m) =>
           m.user_id === member.user_id ? { ...m, role: previousRole } : m,
         ),
       );
       console.error('[MembersTab] role change error:', err);
-      toast.error(t('common.errors.serverUnreachable'));
+      toast.error(t('settings.members.toast.networkError'));
     } finally {
       setPendingMemberAction(null);
     }
@@ -266,9 +249,7 @@ export function MembersTab() {
       }
       toast.success(
         t('settings.members.toast.memberRemoved', {
-          name:
-            removingMember.full_name ||
-            t('settings.members.toast.memberFallback'),
+          name: removingMember.full_name || 'member',
         }),
       );
       setMembers((prev) =>
@@ -277,7 +258,7 @@ export function MembersTab() {
       setRemovingMember(null);
     } catch (err) {
       console.error('[MembersTab] remove error:', err);
-      toast.error(t('common.errors.serverUnreachable'));
+      toast.error(t('settings.members.toast.networkError'));
     } finally {
       setPendingMemberAction(null);
     }
@@ -293,11 +274,11 @@ export function MembersTab() {
         toast.error(payload.error || t('settings.members.toast.revokeFailed'));
         return;
       }
-      toast.success(t('settings.members.toast.inviteRevoked'));
+      toast.success(t('settings.members.toast.invitationRevoked'));
       setInvitations((prev) => prev.filter((i) => i.id !== invite.id));
     } catch (err) {
       console.error('[MembersTab] revoke error:', err);
-      toast.error(t('common.errors.serverUnreachable'));
+      toast.error(t('settings.members.toast.networkError'));
     }
   }
 
@@ -312,18 +293,20 @@ export function MembersTab() {
   return (
     <section className="animate-in fade-in-50 space-y-6 duration-200">
       <SettingsPanelHead
-        title={t('settings.members.title')}
-        description={t('settings.members.description')}
+        title="Team members"
+        description="People with access to this account. Roles control what each teammate can do."
         action={
           <RequireRole min="admin">
             <Button onClick={() => setInviteOpen(true)}>
               <Plus className="size-4" />
-              {t('settings.members.invite')}
+              Invite member
             </Button>
           </RequireRole>
         }
       />
 
+      {/* Live presence summary across the roster. Updates without a
+          full refresh as heartbeats and the local re-derive tick land. */}
       {members.length > 0 &&
         (() => {
           const counts = summarize(members.map((m) => getPresence(m.user_id)));
@@ -331,29 +314,24 @@ export function MembersTab() {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
                 <PresenceDot status="online" />
-                {t('settings.members.onlineCount', { count: counts.online })}
+                {counts.online} online
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <PresenceDot status="away" />
-                {t('settings.members.awayCount', { count: counts.away })}
+                {counts.away} away
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <PresenceDot status="offline" />
-                {t('settings.members.offlineCount', { count: counts.offline })}
+                {counts.offline} offline
               </span>
               <span className="text-muted-foreground/70">
-                ·{' '}
-                {t(
-                  members.length === 1
-                    ? 'settings.members.memberCount'
-                    : 'settings.members.memberCount_plural',
-                  { count: members.length },
-                )}
+                · {members.length} member{members.length === 1 ? '' : 's'}
               </span>
             </div>
           );
         })()}
 
+      {/* Roster */}
       <Card>
         <CardContent className="p-0">
           <ul className="divide-y divide-border">
@@ -365,7 +343,7 @@ export function MembersTab() {
               const isBusy = pendingMemberAction === member.user_id;
               const presence = getPresence(member.user_id);
               const presenceRow = getRow(member.user_id);
-              const presenceText = memberPresenceLabel(
+              const presenceText = presenceLabel(
                 presence,
                 presenceRow?.last_seen_at ?? null,
                 now,
@@ -375,6 +353,11 @@ export function MembersTab() {
               return (
                 <li
                   key={member.user_id}
+                  // Mobile: stack identity (avatar+name+email) above the
+                  // role/remove actions so the role dropdown's fixed
+                  // 128px width doesn't force the name into a 50-pixel
+                  // truncation. Desktop (sm+): everything inline as
+                  // before.
                   className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-4">
@@ -385,7 +368,7 @@ export function MembersTab() {
                             {member.avatar_url ? (
                               <AvatarImage
                                 src={member.avatar_url}
-                                alt={member.full_name || t('common.misc.unnamed')}
+                                alt={member.full_name || 'Member'}
                               />
                             ) : null}
                             <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
@@ -393,6 +376,10 @@ export function MembersTab() {
                                 .charAt(0)
                                 .toUpperCase()}
                             </AvatarFallback>
+                            {/* role+label so screen readers announce
+                                presence — the hover tooltip alone isn't
+                                reachable by keyboard/AT on a non-focusable
+                                avatar. */}
                             <AvatarBadge
                               role="img"
                               aria-label={presenceText}
@@ -407,11 +394,11 @@ export function MembersTab() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="truncate text-sm font-medium text-foreground">
-                          {member.full_name || t('common.misc.unnamed')}
+                          {member.full_name || 'Unnamed'}
                         </span>
                         {isSelf && (
                           <Badge className="bg-muted text-muted-foreground border-border text-[10px] uppercase tracking-wide">
-                            {t('settings.members.you')}
+                            You
                           </Badge>
                         )}
                       </div>
@@ -423,17 +410,28 @@ export function MembersTab() {
                     </div>
                   </div>
 
+                  {/* Joined date stays desktop-only. The mobile row's
+                      vertical density makes the joined date noise. */}
                   <div className="hidden sm:block text-right text-xs text-muted-foreground">
-                    {t('settings.members.joined', {
-                      date: fmtDate(member.joined_at),
-                    })}
+                    Joined {fmtDate(member.joined_at)}
                   </div>
 
+                  {/* Actions cluster. On mobile this is its own row
+                      below the identity block; on desktop it sits
+                      inline. Items align to the start on mobile so the
+                      role dropdown lines up under the avatar. */}
                   <div className="flex items-center gap-2 sm:gap-3">
+                    {/* Role display / editor. Inline Select is admin+
+                        only AND not allowed on the owner row (owner
+                        changes go through transfer, which lands later). */}
                     {canManageMembers && !isOwnerRow && !isSelf ? (
                       <Select
                         value={member.role}
                         onValueChange={(v) =>
+                          // Base UI Select can emit null on clear. We
+                          // don't expose a clear affordance, so the
+                          // guard is defensive — but the typed
+                          // signature requires it.
                           v && handleRoleChange(member, v as AccountRole)
                         }
                       >
@@ -441,12 +439,12 @@ export function MembersTab() {
                           className="w-32 bg-muted border-border text-foreground"
                           disabled={isBusy}
                         >
-                          <SelectValue />
+                          <SelectValue>{roleMetaByRole[member.role]?.label ?? member.role}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          {EDITABLE_ROLE_VALUES.map((value) => (
-                            <SelectItem key={value} value={value}>
-                              {roleMetaByRole[value].label}
+                          {EDITABLE_ROLES.map((r) => (
+                            <SelectItem key={r.value} value={r.value}>
+                              {r.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -460,6 +458,13 @@ export function MembersTab() {
                       </span>
                     )}
 
+                    {/* Remove. Admin+ only; never on the owner row;
+                        never on yourself. Pre-polish styling was
+                        neutral-default + red-on-hover — the
+                        destructive intent was invisible until the
+                        user moused over. Now red is the default
+                        state with a darker shade on hover so the
+                        affordance reads at-a-glance. */}
                     {canManageMembers && !isOwnerRow && !isSelf && (
                       <Button
                         variant="outline"
@@ -479,20 +484,28 @@ export function MembersTab() {
         </CardContent>
       </Card>
 
+      {/* Pending invitations — admin+ only */}
       <RequireRole min="admin">
         <div>
           <div className="mb-2 flex items-center gap-2">
             <UsersRound className="size-4 text-muted-foreground" />
             <h3 className="text-sm font-semibold text-foreground">
-              {t('settings.members.pending')}
+              Pending invitations
             </h3>
             <Badge className="bg-muted text-muted-foreground border-border">
               {invitations.length}
             </Badge>
           </div>
+          {/* P10 — make the no-resend design explicit. Admins were
+              confused why the pending list shows roles + expiry but
+              no "copy link again" button. Stating the constraint up
+              front (rather than letting the user discover it by
+              looking for a button) keeps it from feeling like a bug. */}
           {invitations.length > 0 ? (
             <p className="mb-3 text-xs text-muted-foreground">
-              {t('settings.members.pendingSecurityHint')}
+              The plaintext invite URL is only shown once at creation
+              for security — to re-share, revoke the invite below and
+              create a new one.
             </p>
           ) : null}
 
@@ -501,12 +514,11 @@ export function MembersTab() {
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                 <Mail className="size-6 text-muted-foreground" />
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {t('settings.members.emptyPending')}
+                  No pending invitations.
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {t('settings.members.emptyPendingHint', {
-                    action: t('settings.members.invite'),
-                  })}
+                  Click <span className="text-muted-foreground">Invite member</span>{' '}
+                  above to generate a shareable link.
                 </p>
               </CardContent>
             </Card>
@@ -525,7 +537,7 @@ export function MembersTab() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-foreground">
-                            {inv.label || t('settings.members.untitledInvite')}
+                            {inv.label || 'Untitled invite'}
                           </span>
                           <span
                             className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium ${inviteRoleMeta.className}`}
@@ -535,13 +547,14 @@ export function MembersTab() {
                           </span>
                         </div>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {t('settings.members.created', {
-                            date: fmtDate(inv.created_at),
-                          })}{' '}
-                          · {fmtExpiresIn(inv.expires_at, t)}
+                          Created {fmtDate(inv.created_at)} · {fmtExpiresIn(inv.expires_at)}
                         </p>
                       </div>
 
+                      {/* Revoke: red default state, mirrors the
+                          members-tab Remove button. Pre-polish version
+                          read as a neutral secondary button until
+                          hover. */}
                       <Button
                         variant="outline"
                         size="sm"
@@ -549,7 +562,7 @@ export function MembersTab() {
                         className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200"
                       >
                         <MailX className="size-4" />
-                        {t('settings.members.revoke')}
+                        Revoke
                       </Button>
                     </li>
                     );
@@ -577,14 +590,16 @@ export function MembersTab() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-popover-foreground">
               <AlertTriangle className="size-4 text-amber-400" />
-              {t('settings.members.removeTitle')}
+              Remove member
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              {t('settings.members.removeDescription', {
-                name:
-                  removingMember?.full_name ||
-                  t('settings.members.thisTeammate'),
-              })}
+              Remove{' '}
+              <span className="font-medium text-muted-foreground">
+                {removingMember?.full_name || 'this teammate'}
+              </span>{' '}
+              from the account? They&apos;ll be signed out of this account
+              and given a fresh personal account on their next sign-in. Their
+              login isn&apos;t deleted.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="bg-popover border-border">
@@ -593,7 +608,7 @@ export function MembersTab() {
               onClick={() => setRemovingMember(null)}
               className="border-border text-muted-foreground hover:bg-muted"
             >
-              {t('common.actions.cancel')}
+              Cancel
             </Button>
             <Button
               onClick={handleRemove}
@@ -603,10 +618,10 @@ export function MembersTab() {
               {pendingMemberAction ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  {t('settings.members.removing')}
+                  Removing...
                 </>
               ) : (
-                t('settings.members.remove')
+                'Remove member'
               )}
             </Button>
           </DialogFooter>

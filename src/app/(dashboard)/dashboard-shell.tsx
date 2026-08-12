@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { useT } from "@/hooks/use-i18n";
 import { BrandApplier } from "@/hooks/use-branding";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { AccountAccessAlert } from "@/components/layout/account-access-alert";
 import { PresenceHeartbeat } from "@/components/presence/presence-heartbeat";
-import { WhatsNewDialog } from "@/components/layout/whats-new-dialog";
-import { useT } from "@/hooks/use-i18n";
 
 // Auth-gated dashboard shell. Extracted from the layout so the layout
 // itself can stay a server component and export metadata (noindex) —
@@ -32,12 +32,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex h-dvh items-center justify-center bg-background">
+      <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">
-            {t("common.actions.loading")}
-          </p>
+          <p className="text-sm text-muted-foreground">{t("common.actions.loading")}</p>
         </div>
       </div>
     );
@@ -46,19 +44,21 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   if (!user) return null;
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       <BrandApplier />
       {/* Reports this tab's online/away presence once we know a user is
           signed in. Headless — renders nothing. */}
       <PresenceHeartbeat />
-      <WhatsNewDialog />
       <Sidebar open={sidebarOpen} onClose={closeSidebar} />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
-        {/* Thinner horizontal padding on mobile so cards have room to breathe.
-            min-h-0 is required so this flex child can shrink and scroll
-            internally instead of growing the page (double scrollbar). */}
-        <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
+        {/* Thinner horizontal padding on mobile so cards have room to breathe. */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+          {/* Above every page: writes are being rejected and here's why.
+              Renders nothing unless the account/role failed to resolve. */}
+          <AccountAccessAlert />
+          {children}
+        </main>
       </div>
     </div>
   );

@@ -93,7 +93,7 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
                     <Icon className="h-3.5 w-3.5" />
                   </span>
                   <span className="min-w-0 flex-1 truncate text-sm text-foreground">
-                    {it.text}
+                    {formatActivityLabel(it, t)}
                   </span>
                   <span className="flex-shrink-0 text-xs text-muted-foreground tabular-nums">
                     {relativeTime(it.at, t)}
@@ -153,6 +153,22 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
   )
 }
 
+function formatActivityLabel(
+  item: ActivityItem,
+  t: ReturnType<typeof useT>,
+): string {
+  const params = { ...item.params }
+  for (const [key, value] of Object.entries(params)) {
+    if (value === 'unknownContact') {
+      params[key] = t('dashboard.activity.items.unknownContact')
+    }
+    if (value === 'unknownAutomation') {
+      params[key] = t('dashboard.activity.items.unknownAutomation')
+    }
+  }
+  return t(`dashboard.activity.items.${item.labelKey}`, params)
+}
+
 function relativeTime(
   iso: string,
   t: ReturnType<typeof useT>,
@@ -160,9 +176,7 @@ function relativeTime(
   const then = new Date(iso).getTime()
   if (Number.isNaN(then)) return ''
   const diffSec = Math.round((Date.now() - then) / 1000)
-  if (diffSec < 60) {
-    return t('common.time.secondsAgo', { count: Math.max(1, diffSec) })
-  }
+  if (diffSec < 60) return t('common.time.justNow')
   if (diffSec < 3600) return t('common.time.minutesAgo', { count: Math.floor(diffSec / 60) })
   if (diffSec < 86400) return t('common.time.hoursAgo', { count: Math.floor(diffSec / 3600) })
   if (diffSec < 2_592_000) return t('common.time.daysAgo', { count: Math.floor(diffSec / 86400) })

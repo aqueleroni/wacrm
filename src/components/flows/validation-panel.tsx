@@ -21,6 +21,7 @@ import { CircleAlert, CircleCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TranslatedValidationIssue } from "@/lib/flows/validate";
 import { useT } from "@/hooks/use-i18n";
+import { nodeKeyDisplayLabel } from "./shared";
 import { useFlowEditor } from "./flow-editor-state";
 
 export function ValidationPanel() {
@@ -100,7 +101,7 @@ export function IssueLine({
       <span className="min-w-0 flex-1">
         {issue.node_key && (
           <code className="mr-1 rounded bg-muted px-1 py-0.5 text-[10px] text-muted-foreground">
-            {issue.node_key}
+            {nodeKeyDisplayLabel(issue.node_key, t)}
           </code>
         )}
         {issue.message}
@@ -121,7 +122,7 @@ export function IssueLine({
           tone,
         )}
         aria-label={t("flows.validation.panel.jumpToNode", {
-          node: issue.node_key!,
+          node: nodeKeyDisplayLabel(issue.node_key!, t),
         })}
       >
         {body}

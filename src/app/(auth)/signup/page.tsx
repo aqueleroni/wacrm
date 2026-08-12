@@ -15,8 +15,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { AuthPageLogo } from "@/components/brand/auth-page-logo";
-import { CheckCircle, Eye, EyeOff } from "lucide-react";
+import { AppLogo } from "@/components/brand/app-logo";
+import { CheckCircle, UsersRound, Eye, EyeOff } from "lucide-react";
 
 // `useSearchParams` opts the component out of static prerendering
 // unless wrapped in Suspense — same pattern as /login.
@@ -99,10 +99,8 @@ function SignupPageInner() {
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <Card className="w-full max-w-md border-border bg-card">
           <CardHeader className="justify-items-center text-center">
-            <div className="mb-3 flex w-full justify-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                <CheckCircle className="h-6 w-6 text-primary" />
-              </div>
+            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-xl bg-primary/10">
+              <CheckCircle className="size-6 text-primary" />
             </div>
             <CardTitle className="text-xl text-foreground">
               {t("auth.signup.checkEmailTitle")}
@@ -136,7 +134,13 @@ function SignupPageInner() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md border-border bg-card">
         <CardHeader className="justify-items-center text-center">
-          <AuthPageLogo inviteMode={Boolean(inviteToken)} />
+          <div className="mx-auto mb-2 flex size-12 items-center justify-center overflow-hidden rounded-xl bg-primary p-2">
+            {inviteToken ? (
+              <UsersRound className="size-6 text-primary-foreground" />
+            ) : (
+              <AppLogo size={32} className="object-contain object-center" />
+            )}
+          </div>
           <CardTitle className="text-xl text-foreground">
             {inviteToken
               ? t("auth.signup.titleInvite")

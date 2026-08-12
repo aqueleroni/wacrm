@@ -101,9 +101,24 @@ export async function dispatchInboundToAiReply(
     if (convErr || !conv) return
     if (conv.assigned_agent_id) return // a human owns this thread
     if (conv.ai_autoreply_disabled) return // handed off / turned off here
-    // Cheap early-out; the authoritative cap check is the atomic claim
-    // below (this read can race a concurrent inbound).
-    if (conv.ai_reply_count >= config.autoReplyMaxPerConversation) return
+
+    // Reply cap reached → hand off to a human instead of silently ignoring.
+    if (conv.ai_reply_count >= config.autoReplyMaxPerConversation) {
+      const summary = buildHandoffSummary({
+        messages,
+        replyCount: conv.ai_reply_count ?? 0,
+        reason: 'max_replies',
+      })
+      const update: Record<string, unknown> = {
+        ai_autoreply_disabled: true,
+        ai_handoff_summary: summary,
+      }
+      if (config.handoffAgentId && !conv.assigned_agent_id) {
+        update.assigned_agent_id = config.handoffAgentId
+      }
+      await db.from('conversations').update(update).eq('id', conversationId)
+      return
+    }
 
     if (messages.length === 0) return
 

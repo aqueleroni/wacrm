@@ -149,7 +149,6 @@ export const settings = {
       invalidEmail: 'Enter a valid email address',
       displayNameRequired: 'Display name is required',
       saveFailed: 'Save failed',
-      uploadFailed: 'Avatar upload failed: {message}',
       emailChangeFailed: 'Email change failed: {message}',
     },
     success: {
@@ -201,58 +200,11 @@ export const settings = {
   },
   members: {
     title: 'Team members',
-    description:
-      'People with access to this account. Roles control what each teammate can do.',
+    description: 'Invite teammates and manage roles.',
     invite: 'Invite member',
     pending: 'Pending invitations',
     remove: 'Remove member',
     changeRole: 'Change role',
-    you: 'You',
-    joined: 'Joined {date}',
-    onlineCount: '{count} online',
-    awayCount: '{count} away',
-    offlineCount: '{count} offline',
-    memberCount: '{count} member',
-    memberCount_plural: '{count} members',
-    pendingSecurityHint:
-      'The plaintext invite URL is only shown once at creation for security — to re-share, revoke the invite below and create a new one.',
-    emptyPending: 'No pending invitations.',
-    emptyPendingHint:
-      'Click {action} above to generate a shareable link.',
-    revoke: 'Revoke',
-    untitledInvite: 'Untitled invite',
-    created: 'Created {date}',
-    expired: 'expired',
-    expiresInDays: 'expires in {days} day',
-    expiresInDays_plural: 'expires in {days} days',
-    expiresInHours: 'expires in {hours} hour',
-    expiresInHours_plural: 'expires in {hours} hours',
-    removeTitle: 'Remove member',
-    removeDescription:
-      "Remove {name} from the account? They'll be signed out of this account and given a fresh personal account on their next sign-in. Their login isn't deleted.",
-    thisTeammate: 'this teammate',
-    removing: 'Removing...',
-    roleHints: {
-      admin: 'Manage members + everything',
-      agent: 'Use features; no settings',
-      viewer: 'Read-only across the app',
-    },
-    presence: {
-      onlineActive: 'Online — active now',
-      awayIdle: 'Away — idle',
-      offlineLastSeen: 'Offline — last seen {when}',
-    },
-    toast: {
-      loadMembersFailed: 'Failed to load members',
-      loadInvitationsFailed: 'Failed to load invitations',
-      updateRoleFailed: 'Failed to update role',
-      roleUpdated: 'Updated {name} to {role}',
-      memberFallback: 'member',
-      removeFailed: 'Failed to remove member',
-      memberRemoved: 'Removed {name}',
-      revokeFailed: 'Failed to revoke invitation',
-      inviteRevoked: 'Invitation revoked',
-    },
     inviteDialog: {
       title: 'Invite a teammate',
       description:
@@ -300,6 +252,39 @@ export const settings = {
         clipboardBlocked: 'Clipboard blocked — copy the link manually',
       },
     },
+    toast: {
+      loadMembersFailed: 'Failed to load members',
+      loadInvitationsFailed: 'Failed to load invitations',
+      networkError: 'Could not reach the server',
+      updateRoleFailed: 'Failed to update role',
+      roleUpdated: 'Updated {name} to {role}',
+      removeFailed: 'Failed to remove member',
+      memberRemoved: 'Removed {name}',
+      revokeFailed: 'Failed to revoke invitation',
+      invitationRevoked: 'Invitation revoked',
+    },
+  },
+  quickReplies: {
+    title: 'Quick replies',
+    description:
+      'Reusable snippets — plain text or a saved interactive message — that agents can insert from the inbox composer.',
+    newButton: 'New quick reply',
+    empty: 'No quick replies yet. Create one to reuse it across conversations.',
+    editTitle: 'Edit quick reply',
+    createTitle: 'New quick reply',
+    nameLabel: 'Name',
+    namePlaceholder: 'e.g. Business hours',
+    kindText: 'Text',
+    kindInteractive: 'Interactive',
+    contentPlaceholder: 'The message text to insert',
+    toast: {
+      nameRequired: 'Give the quick reply a name.',
+      saveFailed: "Couldn't save the quick reply.",
+      updated: 'Quick reply updated.',
+      created: 'Quick reply created.',
+      deleteFailed: "Couldn't delete the quick reply.",
+      deleteConfirm: 'Delete this quick reply?',
+    },
   },
   whatsapp: {
     title: 'WhatsApp connection',
@@ -313,9 +298,9 @@ export const settings = {
       notConnectedHint:
         'Configure your Meta API credentials below to connect your WhatsApp Business account.',
       tokenExpired:
-        'Your Meta access token expired. Generate a new token in Meta for Developers and save it again under credentials.',
+        'Meta access token has expired — generate a new permanent token in Meta Business Suite and save it here.',
       tokenCorrupted:
-        'The stored access token cannot be decrypted with the current ENCRYPTION_KEY. Reset the configuration and save again.',
+        "Stored token can't be decrypted — reset the configuration and re-enter your credentials.",
       credentialsRejected: 'Meta rejected the credentials: {detail}',
     },
     registration: {
@@ -328,7 +313,7 @@ export const settings = {
       lastFailed: 'Last attempt failed with: "{error}".',
       retryHint: 'Enter (or correct) the 2-step PIN below and click Save Configuration to retry.',
       legacyHint:
-        'This number is not fully registered yet (skipped or saved before tracking existed). If Meta requires a 2-step PIN, enter it below and click Save Configuration. Test numbers often have no PIN — in that case configure the webhook in Meta and click Verify with Meta.',
+        'This number was saved before registration tracking existed, or registration was skipped. Enter the 2-step PIN below and click Save Configuration to subscribe it.',
       diagnostic: 'Diagnostic — last run:',
       live: 'live',
       notLive: 'not live',
@@ -348,24 +333,29 @@ export const settings = {
       accessToken: 'Permanent Access Token',
       accessTokenPlaceholder: 'Enter your access token',
       tokenHidden: 'Token is hidden for security. Re-enter it to update configuration.',
-      tokenCantReveal:
-        'For security the saved token cannot be shown. Paste it again only if you need to change it.',
       verifyToken: 'Webhook Verify Token',
       verifyTokenPlaceholder: 'Create a custom verify token',
       verifyTokenHint:
         'A custom string you create. Must match the token you set in Meta webhook settings.',
-      verifyTokenSaved:
-        'Verify token already saved. Click the field only if you want to replace it.',
       pin: 'Two-step verification PIN',
       pinOptional: '(optional)',
       pinPlaceholder: '6-digit PIN from Meta WhatsApp Manager',
-      pinHint:
-        'Needed only to wire inbound messages for a production number. Set it in Meta Business Manager → WhatsApp Accounts → Phone Numbers → Two-step verification, then paste it here so wacrm can subscribe the number. Meta test numbers have no PIN and are pre-registered — leave this blank for them. Leaving it blank also keeps an existing registration untouched.',
     },
     webhook: {
       title: 'Webhook Configuration',
       description: 'Use this URL as your webhook callback in the Meta App Dashboard.',
       callbackUrl: 'Webhook Callback URL',
+    },
+    media: {
+      title: 'Attachment Storage',
+      description:
+        'Meta deletes received media about 30 days after it arrives. Attachments can be copied to your own storage so they stay viewable.',
+      mirrorInbound: 'Keep inbound attachments',
+      mirrorInboundDesc:
+        'Save a copy of every photo, video, voice note and document customers send. Uses your Supabase storage; files over 16 MB are skipped.',
+      mirrorInboundOffWarning:
+        'New attachments will stop being copied and will become unavailable about 30 days after they arrive.',
+      mirrorInboundSaveFailed: 'Could not update the attachment setting.',
     },
     actions: {
       save: 'Save Configuration',
@@ -378,44 +368,26 @@ export const settings = {
       title: 'Setup Instructions',
       description: 'Follow these steps to connect your WhatsApp Business API.',
       docsLink: 'Meta WhatsApp API Documentation',
-      steps: {
-        createApp: {
-          title: 'Create a Meta App',
-          item1: 'Go to developers.facebook.com',
-          item2: 'Click "My Apps" and then "Create App"',
-          item3: 'Select "Business" as the app type',
-          item4: 'Fill in app details and create',
-        },
-        addProduct: {
-          title: 'Add WhatsApp Product',
-          item1: 'In your app dashboard, click "Add Product"',
-          item2: 'Find "WhatsApp" and click "Set Up"',
-          item3: 'Follow the setup wizard to link your business',
-        },
-        credentials: {
-          title: 'Get API Credentials',
-          item1: 'Go to WhatsApp > API Setup',
-          item2Before: 'Copy your',
-          phoneNumberId: 'Phone Number ID',
-          item3Before: 'Copy your',
-          wabaId: 'WhatsApp Business Account ID',
-          item4Before: 'Generate a',
-          permanentToken: 'Permanent Access Token',
-          item4After: 'from Business Settings > System Users',
-        },
-        webhooks: {
-          title: 'Configure Webhooks',
-          item1: 'Go to WhatsApp > Configuration',
-          item2: 'Click "Edit" on the Webhook section',
-          item3Before: 'Paste the',
-          callbackUrl: 'Webhook Callback URL',
-          item3After: 'from above',
-          item4Before: 'Enter the same',
-          verifyToken: 'Verify Token',
-          item4After: 'you set here',
-          item5: 'Subscribe to "messages" webhook field',
-        },
-      },
+      step1Title: 'Create a Meta App',
+      step1_1: 'Go to developers.facebook.com',
+      step1_2: 'Click "My Apps" and then "Create App"',
+      step1_3: 'Select "Business" as the app type',
+      step1_4: 'Fill in app details and create',
+      step2Title: 'Add WhatsApp Product',
+      step2_1: 'In your app dashboard, click "Add Product"',
+      step2_2: 'Find "WhatsApp" and click "Set Up"',
+      step2_3: 'Follow the setup wizard to link your business',
+      step3Title: 'Get API Credentials',
+      step3_1: 'Go to WhatsApp > API Setup',
+      step3_2: 'Copy your <strong class="text-foreground">Phone Number ID</strong>',
+      step3_3: 'Copy your <strong class="text-foreground">WhatsApp Business Account ID</strong>',
+      step3_4: 'Generate a <strong class="text-foreground">Permanent Access Token</strong> from Business Settings > System Users',
+      step4Title: 'Configure Webhooks',
+      step4_1: 'Go to WhatsApp > Configuration',
+      step4_2: 'Click "Edit" on the Webhook section',
+      step4_3: 'Paste the <strong class="text-foreground">Webhook Callback URL</strong> from above',
+      step4_4: 'Enter the same <strong class="text-foreground">Verify Token</strong> you set here',
+      step4_5: 'Subscribe to "messages" webhook field',
     },
     toast: {
       loadFailed: 'Failed to load WhatsApp configuration',
@@ -433,11 +405,8 @@ export const settings = {
       testFailed: 'API connection failed',
       testNetworkFailed: 'Connection test failed. Check network and try again.',
       verifySuccess: 'Number is fully wired — Meta is delivering events.',
-      verifyPromoted:
-        'Checks passed. Registration flagged — the “not registered” banner can clear now.',
       verifyFailed:
         'Number is not fully registered. See the checks below for which step failed.',
-      verifyFailedDetail: 'Verification failed: {error}',
       verifyEndpointFailed: 'Could not reach the verification endpoint.',
       resetConfirm:
         'This will delete the current WhatsApp config so you can re-enter it. Continue?',
@@ -445,28 +414,6 @@ export const settings = {
       resetSuccess: 'Configuration cleared. You can now re-enter your credentials.',
       webhookCopied: 'Webhook URL copied to clipboard',
     },
-  },
-  quickReplies: {
-    title: 'Quick replies',
-    description:
-      'Reusable snippets — plain text or a saved interactive message — that agents can insert from the inbox composer.',
-    new: 'New quick reply',
-    empty: 'No quick replies yet. Create one to reuse it across conversations.',
-    editTitle: 'Edit quick reply',
-    createTitle: 'New quick reply',
-    nameLabel: 'Name',
-    namePlaceholder: 'e.g. Business hours',
-    nameRequired: 'Give the quick reply a name.',
-    kindText: 'Text',
-    kindInteractive: 'Interactive',
-    textPlaceholder: 'The message text to insert',
-    cancel: 'Cancel',
-    save: 'Save',
-    created: 'Quick reply created.',
-    updated: 'Quick reply updated.',
-    saveFailed: "Couldn't save the quick reply.",
-    deleteConfirm: 'Delete this quick reply?',
-    deleteFailed: "Couldn't delete the quick reply.",
   },
   templates: {
     title: 'Message templates',
@@ -483,89 +430,6 @@ export const settings = {
     delete: 'Delete',
     submit: 'Submit for Approval',
     submitting: 'Submitting…',
-    saveResubmit: 'Save & Resubmit',
-    saving: 'Saving…',
-    form: {
-      newTitle: 'New message template',
-      editTitle: 'Edit message template',
-      newDescription:
-        'Build a template and submit it to Meta for approval. Once approved, you can use it in broadcasts and the inbox.',
-      editDescription:
-        'Save your changes to re-submit to Meta. Status will flip back to PENDING during review.',
-      authWarning:
-        'AUTHENTICATION templates have a fixed body + OTP button shape that needs a different builder. Create them in Meta WhatsApp Manager for now and use Sync from Meta to bring them in.',
-      name: 'Template name',
-      namePlaceholder: 'e.g. order_confirmation',
-      nameHint: 'Lowercase letters, digits, and underscores only.',
-      nameFixed:
-        'Name is fixed once a template exists on Meta — create a new template to change it.',
-      category: 'Category',
-      language: 'Language',
-      languageFixed: 'Language is fixed once a template exists on Meta.',
-      languageHint:
-        'Must match the exact code on Meta — en_US and en are distinct.',
-      categories: {
-        Marketing: 'Marketing',
-        Utility: 'Utility',
-        Authentication: 'Authentication',
-      },
-      header: 'Header',
-      headerNone: 'None',
-      headerText: 'Text',
-      headerImage: 'Image',
-      headerVideo: 'Video',
-      headerDocument: 'Document',
-      headerTextPlaceholder: 'Header text (max 60 chars, optional {{1}})',
-      headerTextAria: 'Header text',
-      headerSamplePlaceholder:
-        'Sample value for {{1}} (required for Meta review)',
-      headerSampleAria: 'Sample value for header variable',
-      uploadImage: 'Upload image',
-      uploadImageHint: 'JPEG or PNG, ≤5 MB',
-      headerMediaPlaceholder: 'https://… (or paste a public {format} link)',
-      headerSampleAlt: 'Header sample',
-      headerImageHint:
-        'Upload a JPEG/PNG (≤5 MB, ≥800×418 px recommended) or paste a public HTTPS link — we upload it to Meta for review automatically.',
-      headerMediaHint:
-        'Must be a publicly accessible HTTPS link. Meta fetches it once during review, so it needs to stay live for ~24 hrs.',
-      headerVideoHint: ' Recommended: MP4 / 3GPP, ≤16 MB, ≤60 seconds.',
-      headerDocumentHint: ' Recommended: PDF, ≤100 MB.',
-      body: 'Body text',
-      bodyPlaceholder: 'Hello {{1}}, your order {{2}} is confirmed.',
-      bodyHint:
-        'Use {{1}}, {{2}} for variables (must be contiguous starting at {{1}}).',
-      bodySamples: 'Sample values (Meta uses these to review your template)',
-      bodySamplePlaceholder: 'Sample for {token}',
-      bodySampleAria: 'Sample value for body variable {token}',
-      footer: 'Footer (optional)',
-      footerPlaceholder: 'Optional footer text (max 60 chars)',
-      buttons: 'Buttons (optional)',
-      addButton: 'Add button',
-      buttonsHint:
-        'Up to {max} buttons. Quick reply buttons must come before URL / phone / copy-code buttons.',
-      buttonTypes: {
-        QUICK_REPLY: 'Quick reply',
-        URL: 'URL',
-        PHONE_NUMBER: 'Phone',
-        COPY_CODE: 'Copy code',
-      },
-      buttonLabel: 'Button label',
-      buttonUrlPlaceholder: 'https://example.com/path or with {{1}} suffix',
-      buttonUrlExample:
-        'Example value for {{1}} (required when URL has a variable)',
-      buttonPhonePlaceholder: '+15551234567',
-      buttonCopyPlaceholder: 'Example code (e.g. SUMMER20)',
-    },
-    list: {
-      editTitle: 'Editing triggers Meta re-review — status flips to PENDING.',
-      editAria: 'Edit template',
-      resubmitTitle: 'Edit the template and resubmit to Meta for review.',
-      resubmitAria: 'Edit and resubmit template',
-      deleteMetaTitle: 'Delete template from Meta and locally',
-      deleteLocalTitle: 'Delete template locally',
-      deleteMetaAria: 'Delete from Meta and locally',
-      deleteLocalAria: 'Delete locally',
-    },
     deleteDialog: {
       title: 'Delete template?',
       meta:
@@ -584,17 +448,15 @@ export const settings = {
       headerImageSize: 'Header image must be under {maxMb} MB.',
       imageUploaded: 'Image uploaded.',
       uploadFailed: 'Upload failed.',
-      submitSuccess:
-        'Submitted to Meta — typical review time is 24 hours. Status updates automatically.',
-      editSuccess:
-        'Edit submitted — Meta typically reviews within 24 hours.',
-      dryRunCreated: 'Template saved (dry-run — no Meta call)',
-      dryRunUpdated: 'Template updated (dry-run — no Meta call)',
-      syncTruncated:
-        'Synced the first 2000 templates only — your account has more. Sync again to continue, or contact support if this persists.',
-      imageTooLarge: "Image is {sizeMb} MB — Meta's limit is 5 MB.",
-      syncSuccess: 'Synced {total} template(s) from Meta',
-      syncSuccessDetail: ' ({inserted} new, {updated} updated)',
+    },
+    form: {
+      headerTextPlaceholder: 'Header text (max 60 chars, optional {{1}})',
+      headerSampleAria: 'Sample value for header variable',
+      headerSamplePlaceholder: 'Sample value for {{1}} (required for Meta review)',
+      bodyPlaceholder: 'Hello {{1}}, your order {{2}} is confirmed.',
+      bodyHint: 'Use {{1}}, {{2}} for variables (must be contiguous starting at {{1}}).',
+      urlPlaceholder: 'https://example.com/path or with {{1}} suffix',
+      urlSamplePlaceholder: 'Example value for {{1}} (required when URL has a variable)',
     },
   },
   fields: {
@@ -672,15 +534,6 @@ export const settings = {
       name: 'Name',
       namePlaceholder: 'e.g. Zapier automation',
       scopes: 'Scopes',
-      scopeDescriptions: {
-        'messages:send': 'Send WhatsApp messages',
-        'messages:read': 'Read messages and their delivery status',
-        'contacts:read': 'List and read contacts',
-        'contacts:write': 'Create and update contacts',
-        'conversations:read': 'List and read conversations',
-        'broadcasts:send': 'Launch broadcast campaigns',
-        'webhooks:manage': 'Register and manage outbound event webhooks',
-      },
       noScopesHint:
         'A key with no scopes can still call GET /api/v1/me to verify it works.',
       create: 'Create key',
@@ -720,86 +573,14 @@ export const settings = {
         openai: 'OpenAI',
         anthropic: 'Anthropic (Claude)',
       },
-      modelHint:
-        'Economy models work best for WhatsApp auto-replies. Premium models cost more tokens per message.',
-      modelTiers: {
-        economy: 'Economy',
-        balanced: 'Balanced',
-        premium: 'Premium',
-      },
-      modelRecommended: 'Recommended',
-      modelCustom: 'Saved model (not in list)',
-      models: {
-        'gpt-5.4-mini': {
-          label: 'GPT-5.4 mini',
-          summary: 'Best value for automated customer replies',
-          details:
-            'OpenAI’s latest compact model. Fast responses, strong instruction-following, and natural tone in short threads. Best for WhatsApp auto-reply, triage, and FAQs when volume is high and cost per message matters.',
-        },
-        'gpt-4o-mini': {
-          label: 'GPT-4o mini',
-          summary: 'Very cheap, great for high volume',
-          details:
-            'Lightweight and well-established. Handles repetitive questions, confirmations, and short answers well. Uses few tokens — pick this when maximum savings matter more than deep reasoning.',
-        },
-        'gpt-4.1-mini': {
-          label: 'GPT-4.1 mini',
-          summary: 'Low cost with solid general quality',
-          details:
-            'Balance of price and context understanding. Coping better with longer business instructions and varied customer phrasing than 4o mini. A good middle ground when you want savings with a bit more nuance.',
-        },
-        'gpt-5.4': {
-          label: 'GPT-5.4',
-          summary: 'Smarter — for harder customer questions',
-          details:
-            'Full model for ambiguous questions, multiple intents in one message, or a large knowledge base. Moderate cost per reply; use when mini models fall short and you can spend a little more per conversation.',
-        },
-        'gpt-4o': {
-          label: 'GPT-4o',
-          summary: 'Proven quality, moderate cost',
-          details:
-            'OpenAI’s stable chat benchmark. Strong persona and context adherence — useful for inbox drafts and auto-reply when questions vary. Costs more than mini models but is predictable and reliable.',
-        },
-        'claude-haiku-4-5-20251001': {
-          label: 'Claude Haiku 4.5',
-          summary: 'Best Anthropic value for WhatsApp',
-          details:
-            'Fastest and cheapest in the current Claude line. Great for short replies, warm tone, and handoff when unsure. Recommended default for auto-reply and high volume with an Anthropic key.',
-        },
-        'claude-3-5-haiku-20241022': {
-          label: 'Claude 3.5 Haiku',
-          summary: 'Affordable and stable at scale',
-          details:
-            'Previous generation, still very cost-efficient. Fine for direct messages and simple flows. Prefer Haiku 4.5 if your account has access — it follows context and instructions more accurately.',
-        },
-        'claude-sonnet-4-5-20250929': {
-          label: 'Claude Sonnet 4.5',
-          summary: 'Balance of intelligence and price',
-          details:
-            'Anthropic’s middle tier: sharper reasoning than Haiku, cheaper than Opus. Good for rich knowledge bases, objections, or when customers send long, detailed messages.',
-        },
-        'claude-opus-4-6-20250514': {
-          label: 'Claude Opus 4.6',
-          summary: 'Top capability — use sparingly',
-          details:
-            'Flagship for hard cases: sensitive negotiations, many business rules, or answers that need maximum precision. High cost per message — reserve for manual drafts or premium accounts, not bulk auto-reply.',
-        },
-      },
     },
     behaviour: {
-      title: 'Persona & behaviour',
+      title: 'Behaviour',
       description:
-        'Who the agent is, tone of voice, and what it may or may not promise. Persona takes priority over generic system instructions.',
-      promptLabel: 'Persona & instructions',
+        'Tell the assistant about your business — products, tone, what it may and may not promise. This context feeds both drafts and auto-replies.',
+      promptLabel: 'Business context & instructions',
       promptPlaceholder:
-        'e.g. You are Gabriella from Wepost. Warm, concise WhatsApp tone. Introduce yourself on greetings…',
-      examplesLabel: 'Conversation examples (optional)',
-      examplesPlaceholder:
-        'Customer: hi good afternoon\nYou: Hi! I\'m Gabriella from Wepost…\n\nCustomer: how much does it cost?\nYou: Investment depends on scope…',
-      examplesHint:
-        'Customer/You pairs that show the desired tone. The agent adapts to context — does not copy verbatim.',
-      previewTitle: 'Tone preview',
-      previewEmpty: 'Set persona and examples to preview how the agent should sound.',
+        'e.g. We are Acme, a coffee-equipment store. Be warm and concise. Never quote prices or delivery dates — hand off to a human for those.',
       enableTitle: 'Enable AI assistant',
       enableDescription:
         'Master switch. Turns on the “Draft with AI” button in the inbox.',
@@ -808,10 +589,10 @@ export const settings = {
         'The bot answers new inbound messages automatically (only when no flow handles them and no agent is assigned). Hands off to a human when it can’t help.',
       maxRepliesLabel: 'Max auto-replies per conversation',
       maxRepliesDescription:
-        'After this many bot replies in one thread, the bot goes quiet.',
+        'After this many bot replies in one thread, the AI stops and hands that conversation to a human (the teammate set under “Hand off to”, or the shared queue).',
       handoffTo: 'Hand off to',
       handoffToDesc:
-        'When the bot can’t help, assign the conversation to this teammate (or leave it in the shared queue).',
+        'When the bot can’t help or hits the reply limit, assign the conversation to this teammate (or leave it in the shared queue).',
       handoffQueue: 'Shared queue (unassigned)',
     },
     knowledge: {

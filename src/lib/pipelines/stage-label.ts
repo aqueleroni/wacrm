@@ -1,6 +1,8 @@
-type TranslateFn = (key: string) => string;
+import type { createTranslator } from '@/i18n/translate';
 
-/** Spec default stage names (English) → i18n keys. Stored in DB as English historically. */
+type TFunction = ReturnType<typeof createTranslator>;
+
+/** English seed names from `SPEC_DEFAULT_STAGES` → i18n keys. */
 const DEFAULT_STAGE_KEYS: Record<string, string> = {
   'New Lead': 'pipelines.stages.newLead',
   Qualified: 'pipelines.stages.qualified',
@@ -9,15 +11,13 @@ const DEFAULT_STAGE_KEYS: Record<string, string> = {
   Won: 'pipelines.stages.won',
 };
 
-/** Display label for a pipeline stage — translates known default names. */
-export function localizeStageName(name: string, t: TranslateFn): string {
+/** Show a localized label for built-in stage names; custom names pass through. */
+export function translateStageName(name: string, t: TFunction): string {
   const key = DEFAULT_STAGE_KEYS[name];
-  if (!key) return name;
-  const translated = t(key);
-  return translated === key ? name : translated;
+  return key ? t(key) : name;
 }
 
-export function getDefaultStages(t: TranslateFn) {
+export function getDefaultStages(t: TFunction) {
   return [
     { name: t('pipelines.stages.newLead'), color: '#3b82f6', position: 0 },
     { name: t('pipelines.stages.qualified'), color: '#eab308', position: 1 },

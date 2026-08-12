@@ -51,10 +51,6 @@ function SettingsPageInner() {
   const urlSection = resolveSection(searchParams.get('tab'));
   const [section, setSection] = useState<SettingsSection>(urlSection);
 
-  // Soft-nav into /settings?tab=… (sidebar / header Link) bumps
-  // useSearchParams. Re-read the address bar — not urlSection alone —
-  // so a stale Next router cache can't overwrite a tab we already set
-  // via history.replaceState.
   useEffect(() => {
     const fromBar = resolveSection(
       new URLSearchParams(window.location.search).get('tab'),
@@ -81,10 +77,10 @@ function SettingsPageInner() {
 
   const hints: Partial<Record<SettingsSection, ReactNode>> = useMemo(
     () => ({
-      appearance: mode.charAt(0).toUpperCase() + mode.slice(1),
+      appearance: t(`settings.appearance.mode.${mode}`),
       deals: defaultCurrency,
     }),
-    [mode, defaultCurrency],
+    [mode, defaultCurrency, t],
   );
 
   const panel: Record<SettingsSection, ReactNode> = {

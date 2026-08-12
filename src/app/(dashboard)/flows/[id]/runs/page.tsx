@@ -18,8 +18,9 @@ import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
-import { useT } from "@/hooks/use-i18n";
-import { getDateFnsLocale } from "@/lib/date-fns-locale";
+import { useI18n, useT } from "@/hooks/use-i18n";
+import { getDateFnsLocale } from "@/lib/i18n/date-fns-locale";
+import { nodeKeyDisplayLabel } from "@/components/flows/shared";
 import { cn } from "@/lib/utils";
 
 interface RunRow {
@@ -202,6 +203,7 @@ function RunCard({
   expanded: boolean;
   onToggle: () => void;
 }) {
+  const { locale } = useI18n();
   const t = useT();
   const StatusIcon = STATUS_ICONS[run.status];
   const contactLabel =
@@ -209,7 +211,7 @@ function RunCard({
   const duration = run.ended_at
     ? formatDistanceToNow(new Date(run.ended_at), {
         addSuffix: false,
-        locale: getDateFnsLocale(),
+        locale: getDateFnsLocale(locale),
       })
     : null;
   return (
@@ -238,15 +240,17 @@ function RunCard({
             </Badge>
             {run.status === "active" && run.current_node_key && (
               <code className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                {t("flows.runs.atNode", { node: run.current_node_key })}
+                {t("flows.runs.atNode", {
+                  node: nodeKeyDisplayLabel(run.current_node_key, t),
+                })}
               </code>
             )}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
             <span>
               {t("flows.runs.startedAt", {
-                date: format(new Date(run.started_at), "PP p", {
-                  locale: getDateFnsLocale(),
+                date: format(new Date(run.started_at), "PPp", {
+                  locale: getDateFnsLocale(locale),
                 }),
               })}
             </span>

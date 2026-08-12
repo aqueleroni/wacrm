@@ -31,6 +31,16 @@ import {
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+
+/** Shared width/padding for list + canvas “Add node” menus. */
+export const ADD_NODE_MENU_CONTENT_CLASS =
+  'border-border bg-popover w-[min(100vw-2rem,280px)] p-1.5';
 
 // ============================================================
 // Node-type union — single source of truth for every place the UI
@@ -294,6 +304,56 @@ export function NodeIconChip({
 }
 
 // ============================================================
+// Add-node menu rows — one layout for list view and canvas so labels
+// don’t wrap awkwardly beside tiny inline icons.
+// ============================================================
+
+export function AddNodeMenuContent({
+  types,
+  onSelect,
+  t,
+}: {
+  types: NodeType[];
+  onSelect: (type: NodeType) => void;
+  t: TranslateFn;
+}) {
+  const nodeMeta = getNodeMeta(t);
+  return groupNodeTypesByCategory(types, t).map((group, i) => (
+    <DropdownMenuGroup key={group.id}>
+      {i > 0 && <DropdownMenuSeparator />}
+      <DropdownMenuLabel className="text-muted-foreground px-2 py-1.5 text-[11px] font-semibold tracking-wider uppercase">
+        {group.label}
+      </DropdownMenuLabel>
+      {group.types.map((type) => {
+        const meta = nodeMeta[type];
+        return (
+          <DropdownMenuItem
+            key={type}
+            onClick={() => onSelect(type)}
+            className="items-start gap-3 rounded-lg py-2.5 pr-3 pl-2"
+          >
+            <NodeIconChip
+              type={type}
+              size={28}
+              iconSize={16}
+              className="mt-0.5 rounded-md"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="text-popover-foreground block text-[13px] font-semibold leading-snug">
+                {meta.label}
+              </span>
+              <span className="text-muted-foreground mt-0.5 block text-[11.5px] leading-snug">
+                {meta.blurb}
+              </span>
+            </span>
+          </DropdownMenuItem>
+        );
+      })}
+    </DropdownMenuGroup>
+  ));
+}
+
+// ============================================================
 // Pure editing helpers — used by forms in both views.
 // ============================================================
 
@@ -310,6 +370,17 @@ export function slugify(s: string, fallback: string): string {
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
   return cleaned || fallback;
+}
+
+/** Human-readable label for a node_key in UI (dropdowns, canvas). */
+export function nodeKeyDisplayLabel(
+  key: string,
+  t: { (key: string, params?: Record<string, string | number>): string; raw: (key: string) => string },
+): string {
+  const path = `flows.nodeKeys.${key}`;
+  const localized = t.raw(path);
+  if (localized !== path) return localized;
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // ============================================================

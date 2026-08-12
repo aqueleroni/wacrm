@@ -79,9 +79,11 @@ import {
   ALL_NODE_TYPES,
   getNodeMeta,
   NodeIconChip,
-  groupNodeTypesByCategory,
+  AddNodeMenuContent,
+  ADD_NODE_MENU_CONTENT_CLASS,
   nodeColors,
   summarizeNode,
+  nodeKeyDisplayLabel,
   type BuilderNode,
   type NodeType,
 } from './shared';
@@ -89,9 +91,6 @@ import { useT } from '@/hooks/use-i18n';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useFlowEditor } from './flow-editor-state';
@@ -201,8 +200,8 @@ function FlowNodeCard({ data, selected }: NodeProps) {
           </span>
         )}
       </div>
-      <div className="text-muted-foreground mt-2 truncate font-mono text-[11px]">
-        {node.node_key}
+      <div className="text-muted-foreground mt-2 truncate text-[11px]">
+        {nodeKeyDisplayLabel(node.node_key, t)}
       </div>
       {summary && (
         <div className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-relaxed">
@@ -641,8 +640,8 @@ function NodeEditSheet({
               {meta.blurb}
             </SheetDescription>
           </div>
-          <code className="bg-muted text-muted-foreground shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px]">
-            {node.node_key}
+          <code className="bg-muted text-muted-foreground shrink-0 rounded px-1.5 py-0.5 text-[10px]">
+            {nodeKeyDisplayLabel(node.node_key, t)}
           </code>
         </SheetHeader>
 
@@ -689,7 +688,6 @@ const ADD_NODE_TYPES = ALL_NODE_TYPES;
 
 function CanvasAddNodeButton() {
   const t = useT();
-  const nodeMeta = getNodeMeta(t);
   const reactFlow = useReactFlow();
   const { addNode, updateNodePosition } = useFlowEditor();
 
@@ -726,43 +724,8 @@ function CanvasAddNodeButton() {
         <Plus className="h-4 w-4" />
         {t('flows.actions.addNode')}
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        className="border-border bg-popover w-[268px] p-1.5"
-      >
-        {groupNodeTypesByCategory(ADD_NODE_TYPES, t).map((group, i) => (
-          <div key={group.id}>
-            {i > 0 && <DropdownMenuSeparator />}
-            <DropdownMenuLabel className="text-muted-foreground px-2 py-1.5 text-[11px] font-semibold tracking-wider uppercase">
-              {group.label}
-            </DropdownMenuLabel>
-            {group.types.map((type) => {
-              const meta = nodeMeta[type];
-              return (
-                <DropdownMenuItem
-                  key={type}
-                  onClick={() => handleAdd(type)}
-                  className="gap-3 py-2"
-                >
-                  <NodeIconChip
-                    type={type}
-                    size={28}
-                    iconSize={16}
-                    className="rounded-md"
-                  />
-                  <span className="flex flex-col">
-                    <span className="text-popover-foreground text-[13px] font-semibold">
-                      {meta.label}
-                    </span>
-                    <span className="text-muted-foreground text-[11.5px]">
-                      {meta.blurb}
-                    </span>
-                  </span>
-                </DropdownMenuItem>
-              );
-            })}
-          </div>
-        ))}
+      <DropdownMenuContent align="start" className={ADD_NODE_MENU_CONTENT_CLASS}>
+        <AddNodeMenuContent types={ADD_NODE_TYPES} onSelect={handleAdd} t={t} />
       </DropdownMenuContent>
     </DropdownMenu>
   );

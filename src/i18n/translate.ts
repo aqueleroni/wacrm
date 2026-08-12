@@ -32,8 +32,14 @@ export function createTranslator(
 ) {
   const active = catalogs[locale] ?? catalogs.en;
 
-  return function t(key: string, params?: Params): string {
+  function t(key: string, params?: Params): string {
     const text = active[key] ?? catalogs.en[key] ?? key;
     return interpolate(text, params);
-  };
+  }
+
+  /** Return the catalogue string without `{param}` interpolation — for
+   *  WhatsApp `{{1}}` placeholders and HTML destined for innerHTML. */
+  t.raw = (key: string): string => active[key] ?? catalogs.en[key] ?? key;
+
+  return t;
 }

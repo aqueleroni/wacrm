@@ -5,8 +5,6 @@ import { createClient } from '@/lib/supabase/client';
 import { addContactTag, deleteContactTag } from '@/lib/contacts/tag-api';
 import { useAuth } from '@/hooks/use-auth';
 import { formatCurrency } from '@/lib/currency';
-import { localizeStageName } from '@/lib/pipelines/stage-label';
-import { translateWhatsAppSendError } from '@/lib/whatsapp/send-error-label';
 import { toast } from 'sonner';
 import type { Contact, Tag, ContactTag, ContactNote, CustomField, ContactCustomValue, Deal, MessageTemplate } from '@/types';
 import {
@@ -43,6 +41,7 @@ import {
   LayoutTemplate,
 } from 'lucide-react';
 import { useT } from '@/hooks/use-i18n';
+import { translateStageName } from '@/lib/pipelines/stage-label';
 
 interface ContactDetailViewProps {
   open: boolean;
@@ -355,22 +354,14 @@ export function ContactDetailView({
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
         const reason = payload?.error || `HTTP ${res.status}`;
-        toast.error(
-          t('contacts.detail.templateSendFailed', {
-            error: translateWhatsAppSendError(reason, t),
-          }),
-        );
+        toast.error(t('contacts.detail.templateSendFailed', { error: reason }));
         return;
       }
 
       toast.success(t('contacts.detail.templateSent', { name: template.name }));
     } catch (err) {
       const reason = err instanceof Error ? err.message : 'network error';
-      toast.error(
-        t('contacts.detail.templateSendFailed', {
-          error: translateWhatsAppSendError(reason, t),
-        }),
-      );
+      toast.error(t('contacts.detail.templateSendFailed', { error: reason }));
     } finally {
       setSendingTemplate(false);
     }
@@ -725,7 +716,7 @@ export function ContactDetailView({
                                 color: deal.stage.color,
                               }}
                             >
-                              {localizeStageName(deal.stage.name, t)}
+                              {translateStageName(deal.stage.name, t)}
                             </span>
                           )}
                         </div>
@@ -745,11 +736,7 @@ export function ContactDetailView({
                                   : 'text-red-400'
                               }
                             >
-                              {deal.status === 'won'
-                                ? t('pipelines.deal.won')
-                                : deal.status === 'lost'
-                                  ? t('pipelines.deal.lost')
-                                  : deal.status}
+                              {deal.status}
                             </span>
                           )}
                         </div>

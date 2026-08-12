@@ -13,7 +13,6 @@
 |------|-------|
 | **Produto base** | [wacrm](https://github.com/ArnasDon/wacrm) — CRM self-hosted para WhatsApp |
 | **Marca do fork** | **Wp CRM** (nome padrão; white-label por conta em Configurações) |
-| **Produto irmão (planejado)** | **WeBoard** — kanban de materiais da agência em `/Volumes/SITES e APPS/Trello` (mesmo stack/estilo) |
 | **Fork** | `https://github.com/aqueleroni/wacrm.git` (`origin`) |
 | **Upstream (criador)** | `https://github.com/ArnasDon/wacrm.git` (`upstream`) |
 | **Stack** | Next.js 16 (App Router), React 19, TypeScript, Tailwind v4, Supabase |
@@ -30,7 +29,8 @@ npm run dev                          # http://localhost:3000
 - **Supabase project ref:** `tvssbeqafnodzvgzfbsp`
 - **MCP Supabase:** configurado em `.cursor/mcp.json`
 - **Agent Skills:** `.agents/skills/supabase` e `supabase-postgres-best-practices`
-- **Migrations:** `supabase/migrations/` (001–**037**) — rodar novas migrations via MCP ou SQL Editor após sync upstream
+- **Migrations:** `supabase/migrations/` (001–**045** + `20260723230245_account_scoped_message_templates`) — rodar novas migrations via MCP ou SQL Editor após sync upstream
+- **Ignorados no git:** `.codex/`, `supabase/.temp/` (ver `.gitignore`)
 - **Locale padrão:** `NEXT_PUBLIC_LOCALE=pt-BR` em `.env.local`
 - **Sem senha padrão** — conta criada em `/signup`
 
@@ -58,24 +58,18 @@ git push origin main
 | i18n módulos | auth, layout, settings, dashboard, contacts, inbox, pipelines, broadcasts, automations, flows, agents, etc. | UI traduzida via `useT()` |
 | i18n AI settings | `ai-config.tsx`, `ai-knowledge.tsx`, `locales/*/settings.ts` | Seção Assistente de IA completa em PT-BR |
 | i18n flows templates | `flow-template-content.ts`, `templates.ts`, `node-config-form.tsx` | Textos prontos dos modelos de fluxo em PT ao clonar |
+| i18n flows node keys | `flows.nodeKeys`, `nodeKeyDisplayLabel()` | IDs internos (`welcome`, `start`…) exibem rótulo PT na UI (dropdown, canvas, validação) |
+| i18n inbox P1 | `locales/pt-BR/inbox.ts` | composer, actions, replyQuote, templatePicker traduzidos |
+| Toasts i18n | inbox, settings.members, settings.quickReplies, agents.usage | Toasts do composer, thread, membros, respostas rápidas e uso de IA via `t()` |
 | Moedas | `src/lib/currency.ts`, `locales/*/currency.ts` | Labels de moeda traduzidos (deals, settings) |
 | Fonte | `src/app/fonts/SpaceGrotesk-*.ttf`, `layout.tsx` | Space Grotesk como `--font-sans` (substitui Inter) |
 | Marca padrão | `public/logo-wepost.webp`, `AppLogo`, `nav.appName` | Logo wepost (branco invert) + nome **Wp CRM** |
 | White-label | `031_account_branding.sql`, `branding-settings.tsx`, `use-branding.tsx` | Nome, logo e cor de destaque **por conta** em Configurações → Aparência |
 | Sidebar | `sidebar.tsx` | Logo + nome dinâmicos via `useBranding()` |
-| IA — modelos | `src/lib/ai/models.ts`, `ai-config.tsx` | Select curado de modelos OpenAI/Anthropic com descrições |
-| IA — preset Wepost | `src/lib/ai/presets/wepost.ts` | System prompt + 5 docs de KB para [agenciawepost.com](https://agenciawepost.com/) |
-| IA — roadmap agente | `docs/ai-agent-evolution-plan.md` | Auditoria + plano por etapas (persona, memória, skills, Configurações) |
-| Canais omnichannel | `docs/omnichannel-channels-plan.md` | Plano Site (widget + embed) + Instagram DM + inbox unificada + IA por canal |
-| IA — Etapa 0 | `scripts/seed-wepost-knowledge.ts`, `docs/ai-agent-playground-checklist.md` | KB 5/5 seed + checklist + env doc |
-| IA — Etapa 6 | `docs/ai-agent-etapa-6-cron.md`, cron `/api/ai/cron/consolidate` | Aprendizado supervisionado: extract → pending → aprovação humana |
-| Sync upstream | merge `upstream/main` (2026-07-12) | Mantido `useT` (shim `use-translations`); **não** adotar next-intl |
-| Sync upstream | merge `upstream/main` (2026-07-19) | Login `window.location`, Suspense inbox/automations, cron timing-safe, tag_added, COP, allowedDevOrigins; settings com `history.replaceState` do fork |
+| Sync upstream | merge `upstream/main` (2026-07-12) | Mantido `useT` (shim `use-translations` + `t.raw()`); **não** adotar next-intl |
+| Sync upstream | merge `upstream/main` (2026-08-12) | Next 16.2.12, viewer/download mídia inbox, espelhamento inbound, broadcast resumível, webhook idempotente, RBAC WhatsApp; settings mantém `history.replaceState` |
 | Quick replies | `quick-replies-manager.tsx`, `?tab=quick-replies` | Respostas rápidas + mensagens interativas no composer |
-| i18n interativos/inbox | `interactive-builder.tsx`, `interactive-preview.tsx`, `locales/pt-BR/inbox.ts` | Builder e prévia interativos via `useT()`; novas seções da inbox traduzidas |
-| i18n erros interativos | `interactive.ts` + `locales/*/interactive.ts` | Validação com `code`/`params`; UI traduz erros via `translateInteractiveError` |
 | AI usage | `agents/ai-usage.tsx`, tab Usage | Dashboard de tokens (admin) |
-| What's new | `whats-new.ts`, `whats-new-dialog.tsx`, `locales/*/whats-new.ts` | Popup pós-login por versão (`WHATS_NEW_VERSION`); bump + bullets i18n a cada release |
 
 **Commits publicados:**
 - `54006c0` — toggle senha login/signup
@@ -98,37 +92,35 @@ git push origin main
 | 2026-07-04 | Marca Wp CRM + logo wepost (`AppLogo`, favicon, auth pages) |
 | 2026-07-04 | Modelos de fluxo: conteúdo PT-BR ao clonar template |
 | 2026-07-04 | **White-label v1:** migration `031_account_branding` — `brand_name`, `brand_logo_url`, `brand_primary_color` + bucket `account-branding`; UI em Configurações → Aparência → Marca |
-| 2026-07-04 | IA: select de modelos curados; preset Wepost (`presets/wepost.ts`) — comportamento + KB a partir de agenciawepost.com |
-| 2026-07-04 | Plano agente evolutivo: `docs/ai-agent-evolution-plan.md` (auditoria + 7 etapas; config em Settings) |
-| 2026-07-04 | **Etapa 0:** KB Wepost 5/5, checklist Playground, env doc, branch `feat/ai-agent-evolution`, `npm run seed:wepost-kb` |
-| 2026-07-04 | Plano omnichannel: `docs/omnichannel-channels-plan.md` — Site (widget), Instagram DM, inbox com filtro por canal, agente IA por canal |
-| 2026-07-05 | **Etapa 6:** aprendizado supervisionado — cron consolidate, badge pendentes, extrair na inbox, doc cron |
 | 2026-07-12 | **Sync upstream/main:** merge de 51 commits; mantido i18n próprio (`useT`) + branding Wp CRM; incorporados interactive WhatsApp, quick replies, AI usage, MCP server, security fixes; migration slot grant renomeada `031`→`037` (evitar colisão com branding) |
 | 2026-07-12 | Supabase remoto: aplicadas migrations `032`–`037` (knowledge INVOKER, AI polish, profiles RLS, interactive/quick_replies, dedup conversas, slot grant) |
-| 2026-07-12 | i18n pós-sync: builder/prévia de mensagens interativas conectados ao `useT()` e seções restantes da inbox traduzidas para PT-BR |
-| 2026-07-12 | Erros de validação interativa: códigos estáveis + chaves `interactive.errors.*` (EN/PT); toasts e builder usam `translateInteractiveError` |
-| 2026-07-12 | i18n: passos de setup WhatsApp + aba Membros da equipe (títulos, presença, convites) |
-| 2026-07-12 | Fix rolagem dupla em Configurações: `min-h-0` no shell + layout contido (só o painel rola) |
-| 2026-07-12 | Reverte layout contido de Settings (quebrava clique abaixo de Modelos); mantém `min-h-0` no shell |
-| 2026-07-12 | i18n: textos de status de registro WhatsApp (antes hardcoded EN) via `useT()` |
-| 2026-07-12 | i18n: hint do PIN WhatsApp (produção vs número de teste) em PT-BR |
-| 2026-07-12 | WhatsApp config: token/verify mascarados sem apagar no save; olho explica que não revela secret |
-| 2026-07-12 | Settings rail: `max-h` + scroll no aside (cliques abaixo de Modelos não “furavam” mais o menu) |
-| 2026-07-12 | Settings: remove sticky (causa real do clique furado); menu em fluxo normal com 1 scroll |
-| 2026-07-12 | **Root cause cliques Settings:** Next 16.2.x ignora `router.replace` same-path `?tab=` após algumas navegações (cache do router). Fix: estado local + `history.replaceState` em `settings/page.tsx` |
-| 2026-07-13 | WhatsApp: “Verificar com a Meta” agora marca `registered_at` quando Meta OK (número de teste sem PIN); save também marca após `subscribed_apps` |
-| 2026-07-13 | Fix upload avatar 400: migration `042` restaura SELECT próprio no bucket `avatars` (037 tinha removido); upload sem upsert |
-| 2026-07-13 | Feature: popup “O que há de novo” (`WhatsNewDialog`) — versão em `src/lib/whats-new.ts` + i18n EN/PT |
-| 2026-07-19 | **Sync upstream/main:** login full-page nav (#365), Suspense em inbox/automations/settings, cron timing-safe, automação tag_added, moeda COP, `allowedDevOrigins`; mantidos `useT`, branding, settings `history.replaceState` |
-| 2026-07-19 | i18n: timestamps relativos da inbox/notificações/flows usam locale `pt-BR` do date-fns (`getDateFnsLocale`) |
-| 2026-07-19 | i18n: painel do contato na inbox — etapa do negócio (`localizeStageName`), valor (`formatCurrency`) e datas das notas; detalhe do contato idem + status ganho/perdido |
-| 2026-07-19 | i18n: toasts de envio WhatsApp (inbox/contato) + erros Meta comuns (#131030 lista permitida, janela 24h, etc.) via `translateWhatsAppSendError` |
-| 2026-07-19 | fix: `/api/ai/memory/extract` 500 — `loadAiConfig` via `supabaseAdmin()` (colunas `api_key` só service_role após migration 038) |
-| 2026-07-19 | i18n: status WhatsApp “token expirado / credenciais rejeitadas” via `translateWhatsAppConnectionError` |
-| 2026-07-19 | i18n: modal Novo modelo de mensagem (Configurações → Modelos) + toasts/status via `useT()` |
-| 2026-07-19 | i18n: descrições dos escopos no modal Nova chave de API |
-| 2026-07-19 | fix(inbox): badge de não lida — proteger conversa ativa no refetch + confirmar UPDATE e sincronizar estado local |
-| 2026-07-19 | i18n: atividade recente do painel + spinner “Carregando…” no dashboard shell; nome WeBoard anotado como produto irmão |
+| 2026-08-12 | **Sync upstream/main** (~127 commits desde jul/2026): ver [ArnasDon/wacrm](https://github.com/ArnasDon/wacrm); 825 testes passando; build OK |
+| 2026-08-12 | Migrations upstream renomeadas **043–045** — **aplicadas** no Supabase remoto (`043_webhook_broadcast_reliability`, `044_broadcast_resume`, `045_inbound_media_mirror`) |
+| 2026-08-12 | Vercel: `NEXT_PUBLIC_LOCALE=pt-BR` em Production + Development (redeploy para valer) |
+| 2026-08-12 | **P0 i18n pós-merge:** chaves `settings.whatsapp.media.*` e `broadcasts.detail.resume.*` em EN + PT-BR; componentes corrigidos (espelhamento inbound + retomar disparo) |
+| 2026-08-12 | Auth: logo centralizado em login, cadastro e esqueci a senha (`justify-items-center`, `object-contain`) |
+| 2026-08-12 | **Fix flow builder:** menu "+ Adicionar nó" — `DropdownMenuLabel` exige `DropdownMenuGroup` (Base UI); corrigido em `flow-builder.tsx` e `flow-canvas.tsx` (regressão #336) |
+| 2026-08-12 | **Pendências pós-merge:** i18n inbox P1 + toasts; labels PT para node keys; `.gitignore` `.codex/` + `supabase/.temp/`; stash `pre-upstream-merge` reintegrado parcialmente (handoff cap, rotas WhatsApp leves) — evolução completa de IA em `feat/ai-agent-evolution` |
+| 2026-08-12 | i18n: automações builder, dashboard atividade, settings overview/rail, WhatsApp setup passos, broadcast step1 layout |
+| 2026-08-12 | Housekeeping: migration `20260723230245_account_scoped_message_templates` no repo; i18n datas em notificações, execuções de fluxo e uso de IA |
+
+## Smoke test manual (pós-merge upstream)
+
+Roteiro rápido em produção ou `npm run dev` (conta com WhatsApp conectado):
+
+| # | Área | O que validar |
+|---|------|----------------|
+| 1 | **Inbox — mídia** | Receber foto/vídeo/doc; lightbox abre; download; espelhamento inbound (Settings → WhatsApp → mídia) |
+| 2 | **Inbox — composer** | Placeholders PT; gravar nota de voz; anexar mídia; toasts em PT |
+| 3 | **Inbox — thread** | Atribuir conversa; reagir a mensagem; toasts de erro em PT |
+| 4 | **Broadcast resume** | Disparo interrompido → detalhe do disparo → **Retomar**; toast PT |
+| 5 | **Automações** | Keyword trigger; builder PT; validação |
+| 6 | **Fluxos** | Clonar "Menu de boas-vindas"; node keys mostram rótulos PT (não `existing_handoff` cru) |
+| 7 | **Settings** | Overview tiles PT; membros (convite/revogar toasts PT); templates sync |
+| 8 | **Auth alert** | Conta sem acesso WhatsApp — banner na dashboard |
+| 9 | **Webhook** | Mensagem inbound chega (sem duplicar; idempotência 043) |
+
+**CI local:** `npm test` (830 testes) + `npm run build` antes de deploy.
 
 ## Onde customizar branding / UI (referência)
 
@@ -145,7 +137,6 @@ git push origin main
 | Cores / temas (dispositivo) | `globals.css` + `themes.ts` + Aparência (modo claro/escuro + presets) |
 | Textos da UI (i18n) | `src/i18n/locales/{en,pt-BR}/*.ts` |
 | Locale padrão | `DEFAULT_LOCALE = 'pt-BR'` em `src/i18n/config.ts` |
-| Popup “O que há de novo” | Bump `WHATS_NEW_VERSION` + bullets em `locales/*/whats-new.ts` (`src/lib/whats-new.ts`) |
 
 **Limitação v1 white-label:** login/cadastro ainda usam marca padrão (Wp CRM). Personalização aparece após login. White-label na tela de login exigiria subdomínio/URL por tenant (futuro).
 
@@ -166,11 +157,11 @@ git push origin main
 - Branding: colunas em `accounts` (031); logo em bucket `account-branding/account-{id}/`
 - Deletar usuário: apagar `accounts` (CASCADE) antes de `auth.users`
 
-## Deploy (futuro)
+## Deploy
 
-- Recomendado upstream: Hostinger Managed Node.js
-- Variáveis: `NEXT_PUBLIC_SUPABASE_*`, `SUPABASE_SERVICE_ROLE_KEY`, `ENCRYPTION_KEY`, `META_APP_SECRET`, `NEXT_PUBLIC_LOCALE=pt-BR`
-- Docs upstream: [wacrm.tech/docs](https://wacrm.tech/docs)
+- **Produção atual:** Vercel — `https://wpcrm-ten.vercel.app`
+- Variáveis: `NEXT_PUBLIC_SUPABASE_*`, `SUPABASE_SERVICE_ROLE_KEY`, `ENCRYPTION_KEY`, `META_APP_SECRET`, **`NEXT_PUBLIC_LOCALE=pt-BR`**
+- Upstream recomenda também: Hostinger Managed Node.js — [wacrm.tech/docs](https://wacrm.tech/docs)
 
 ## Checklist rápido para o agente
 

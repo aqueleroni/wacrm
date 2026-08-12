@@ -99,6 +99,19 @@ export const common = {
     minutesAgo: '{count}m ago',
     secondsAgo: '{count}s ago',
   },
+  presence: {
+    justNow: 'just now',
+    oneMinuteAgo: '1 minute ago',
+    minutesAgo: '{count} minutes ago',
+    oneHourAgo: '1 hour ago',
+    hoursAgo: '{count} hours ago',
+    oneDayAgo: '1 day ago',
+    daysAgo: '{count} days ago',
+    aWhileAgo: 'a while ago',
+    onlineActive: 'Online — active now',
+    awayIdle: 'Away — idle',
+    offlineLastSeen: 'Offline — last seen {lastSeen}',
+  },
   misc: {
     user: 'User',
     avatar: 'Avatar',
@@ -126,5 +139,14 @@ export const common = {
   gate: {
     readOnly: "Read-only — your role can't send messages",
     readOnlyBrowse: "Read-only — viewers can browse but not reply",
+  },
+  accountAccess: {
+    unlinkedTitle: 'This user is not linked to an account',
+    unlinkedBody:
+      'Nothing you change will be saved while this is unresolved — the database rejects every write from a user with no account or role. If you were invited to a team, ask the owner to re-send the invitation. On a self-hosted install, check that the account-bootstrap migration ran for this user.',
+    errorTitle: 'Could not load your permissions',
+    errorBody:
+      'Your account role did not load, so every action is treated as read-only and changes will not save. Check your connection and try again.',
+    retry: 'Retry',
   },
 } as const;

@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
 import { SettingsPanelHead } from './settings-panel-head';
 import {
   Accordion,
@@ -30,7 +31,6 @@ import {
   AccordionContent,
 } from '@/components/ui/accordion';
 import type { WhatsAppConfig as WhatsAppConfigType } from '@/types';
-import { translateWhatsAppConnectionError } from '@/lib/whatsapp/send-error-label';
 
 const MASKED_TOKEN = '••••••••••••••••';
 
@@ -45,7 +45,13 @@ export function WhatsAppConfig() {
   // context and key every read off it — so a teammate who just
   // joined an account sees the inviter's saved config without
   // having to re-enter anything.
-  const { user, accountId, loading: authLoading, profileLoading } = useAuth();
+  const {
+    user,
+    accountId,
+    loading: authLoading,
+    profileLoading,
+    canEditSettings,
+  } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -70,7 +76,16 @@ export function WhatsAppConfig() {
   const [verifyToken, setVerifyToken] = useState('');
   const [pin, setPin] = useState('');
   const [tokenEdited, setTokenEdited] = useState(false);
-  const [verifyEdited, setVerifyEdited] = useState(false);
+
+  // Inbound-media mirror (issue #466). Unlike everything else on this
+  // page it is NOT part of handleSave: that path insists on re-entering
+  // the access token so it can re-verify with Meta, which is a silly
+  // toll to pay for flipping a boolean. The switch writes straight to
+  // the row instead — RLS (migration 017) restricts whatsapp_config
+  // UPDATE to admins, hence the canEditSettings gate below; without it
+  // a viewer's toggle would match zero rows and appear to work.
+  const [mirrorMedia, setMirrorMedia] = useState(true);
+  const [savingMirror, setSavingMirror] = useState(false);
 
   // True once /register has succeeded on Meta's side (timestamp set
   // in the row). When false, the saved config is metadata-only and
@@ -82,7 +97,6 @@ export function WhatsAppConfig() {
   const [verifyingRegistration, setVerifyingRegistration] = useState(false);
   type RegistrationProbe = {
     live: boolean;
-    promoted?: boolean;
     checks: Record<string, boolean | null>;
     errors?: string[];
     last_registration_error?: string | null;
@@ -121,12 +135,12 @@ export function WhatsAppConfig() {
         setPhoneNumberId(data.phone_number_id || '');
         setWabaId(data.waba_id || '');
         setAccessToken(MASKED_TOKEN);
-        // Never echo secrets back — show a mask when one is stored so
-        // Save doesn't wipe verify_token by sending an empty string.
-        setVerifyToken(data.verify_token ? MASKED_TOKEN : '');
+        setVerifyToken('');
         setPin('');
         setTokenEdited(false);
-        setVerifyEdited(false);
+        // Undefined on a row read before migration 039 — treat that as
+        // on, matching the webhook's own default.
+        setMirrorMedia(data.mirror_inbound_media !== false);
       } else {
         setConfig(null);
         setPhoneNumberId('');
@@ -135,7 +149,7 @@ export function WhatsAppConfig() {
         setVerifyToken('');
         setPin('');
         setTokenEdited(false);
-        setVerifyEdited(false);
+        setMirrorMedia(true);
       }
       // Clear any stale probe result when reloading the row.
       setRegistrationProbe(null);
@@ -189,6 +203,29 @@ export function WhatsAppConfig() {
     fetchConfig(accountId);
   }, [authLoading, profileLoading, user?.id, accountId, fetchConfig]);
 
+  async function handleToggleMirrorMedia(next: boolean) {
+    if (!config || !accountId || savingMirror) return;
+    // Optimistic — the switch should feel instant; a failure rolls it
+    // back rather than leaving the UI ahead of the row.
+    const previous = mirrorMedia;
+    setMirrorMedia(next);
+    setSavingMirror(true);
+    try {
+      const { error } = await supabase
+        .from('whatsapp_config')
+        .update({ mirror_inbound_media: next })
+        .eq('account_id', accountId);
+      if (error) throw new Error(error.message);
+      setConfig({ ...config, mirror_inbound_media: next });
+    } catch (error) {
+      console.error('Failed to update media retention setting:', error);
+      setMirrorMedia(previous);
+      toast.error(t('settings.whatsapp.media.mirrorInboundSaveFailed'));
+    } finally {
+      setSavingMirror(false);
+    }
+  }
+
   async function handleSave() {
     if (!phoneNumberId.trim()) {
       toast.error(t('settings.whatsapp.toast.phoneRequired'));
@@ -209,6 +246,7 @@ export function WhatsAppConfig() {
       const payload: Record<string, unknown> = {
         phone_number_id: phoneNumberId.trim(),
         waba_id: wabaId.trim() || null,
+        verify_token: verifyToken.trim() || null,
         // Optional — only sent when the user filled it in. The server
         // requires it on first save or when changing numbers; for a
         // simple token rotation, leaving it blank skips re-register.
@@ -218,21 +256,13 @@ export function WhatsAppConfig() {
       if (tokenEdited && accessToken !== MASKED_TOKEN && accessToken.trim()) {
         payload.access_token = accessToken.trim();
       } else if (config) {
-        // Reuse the encrypted token already in the DB — user is only
-        // updating webhook verify token / ids, not rotating Meta auth.
-        payload.reuse_stored_token = true;
-      } else {
-        toast.error(t('settings.whatsapp.toast.tokenRequired'));
+        // Existing config — reuse stored encrypted token by decrypting on the
+        // server. But our POST handler requires an access_token to verify
+        // with Meta. If the user didn't change the token, we need to signal
+        // that. Simplest: require token re-entry if they're updating.
+        toast.error(t('settings.whatsapp.toast.reenterToken'));
         setSaving(false);
         return;
-      }
-
-      if (verifyEdited && verifyToken !== MASKED_TOKEN) {
-        payload.verify_token = verifyToken.trim() || null;
-      } else if (config?.verify_token) {
-        payload.keep_verify_token = true;
-      } else {
-        payload.verify_token = verifyToken.trim() || null;
       }
 
       const res = await fetch('/api/whatsapp/config', {
@@ -336,19 +366,11 @@ export function WhatsAppConfig() {
       const data = (await res.json()) as RegistrationProbe;
       setRegistrationProbe(data);
       if (data.live) {
-        toast.success(
-          data.promoted
-            ? t('settings.whatsapp.toast.verifyPromoted')
-            : t('settings.whatsapp.toast.verifySuccess'),
-        );
+        toast.success(t('settings.whatsapp.toast.verifySuccess'));
       } else {
-        const detail = data.errors?.[0];
-        toast.error(
-          detail
-            ? t('settings.whatsapp.toast.verifyFailedDetail', { error: detail })
-            : t('settings.whatsapp.toast.verifyFailed'),
-          { duration: 10000 },
-        );
+        toast.error(t('settings.whatsapp.toast.verifyFailed'), {
+          duration: 8000,
+        });
       }
       if (accountId) await fetchConfig(accountId);
     } catch (err) {
@@ -381,7 +403,6 @@ export function WhatsAppConfig() {
       setAccessToken('');
       setVerifyToken('');
       setTokenEdited(false);
-      setVerifyEdited(false);
       setConnectionStatus('disconnected');
       setResetReason(null);
       setStatusMessage('');
@@ -433,7 +454,7 @@ export function WhatsAppConfig() {
                   {t('settings.whatsapp.resetBanner.title')}
                 </AlertTitle>
                 <AlertDescription className="text-amber-100/80 text-sm">
-                  {translateWhatsAppConnectionError(statusMessage, t)}
+                  {statusMessage}
                 </AlertDescription>
                 <Button
                   onClick={handleReset}
@@ -475,9 +496,8 @@ export function WhatsAppConfig() {
           <AlertDescription className="text-muted-foreground">
             {connectionStatus === 'connected'
               ? t('settings.whatsapp.connection.validHint')
-              : statusMessage
-                ? translateWhatsAppConnectionError(statusMessage, t)
-                : t('settings.whatsapp.connection.notConnectedHint')}
+              : statusMessage ||
+                t('settings.whatsapp.connection.notConnectedHint')}
           </AlertDescription>
         </Alert>
 
@@ -529,33 +549,38 @@ export function WhatsAppConfig() {
             <AlertDescription className="text-muted-foreground mt-2 text-xs leading-relaxed">
               {isRegistered ? (
                 <>
-                  {t('settings.whatsapp.registration.subscribedSince', {
-                    date: config.registered_at
-                      ? new Date(config.registered_at).toLocaleString()
-                      : t('settings.whatsapp.registration.subscribedUnknown'),
-                  })}{' '}
-                  {t('settings.whatsapp.registration.verifyHint')}
+                  Subscribed since{' '}
+                  {config.registered_at
+                    ? new Date(config.registered_at).toLocaleString()
+                    : 'unknown'}
+                  . Click <strong>Verify with Meta</strong> if events
+                  stop arriving.
                 </>
               ) : lastRegistrationError ? (
                 <>
-                  {t('settings.whatsapp.registration.lastFailed', {
-                    error: lastRegistrationError,
-                  })}{' '}
-                  {t('settings.whatsapp.registration.retryHint')}
+                  Last attempt failed with:{' '}
+                  <span className="text-red-300">
+                    &quot;{lastRegistrationError}&quot;
+                  </span>
+                  . Enter (or correct) the 2-step PIN below and click
+                  Save Configuration to retry.
                 </>
               ) : (
-                t('settings.whatsapp.registration.legacyHint')
+                <>
+                  This number was saved before registration tracking
+                  existed, or registration was skipped. Enter the
+                  2-step PIN below and click Save Configuration to
+                  subscribe it.
+                </>
               )}
             </AlertDescription>
 
             {registrationProbe && (
               <div className="mt-3 rounded border border-border bg-card/60 px-3 py-2 space-y-1.5 text-[11px]">
                 <p className="font-medium text-foreground">
-                  {t('settings.whatsapp.registration.diagnostic')}{' '}
+                  Diagnostic — last run: {' '}
                   <span className={registrationProbe.live ? 'text-emerald-400' : 'text-amber-400'}>
-                    {registrationProbe.live
-                      ? t('settings.whatsapp.registration.live')
-                      : t('settings.whatsapp.registration.notLive')}
+                    {registrationProbe.live ? 'live' : 'not live'}
                   </span>
                 </p>
                 <ul className="space-y-0.5 text-muted-foreground">
@@ -634,13 +659,7 @@ export function WhatsAppConfig() {
                 />
                 <button
                   type="button"
-                  onClick={() => {
-                    if (accessToken === MASKED_TOKEN) {
-                      toast.message(t('settings.whatsapp.credentials.tokenCantReveal'));
-                      return;
-                    }
-                    setShowToken(!showToken);
-                  }}
+                  onClick={() => setShowToken(!showToken)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showToken ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -656,25 +675,13 @@ export function WhatsAppConfig() {
             <div className="space-y-2">
               <Label className="text-muted-foreground">{t('settings.whatsapp.credentials.verifyToken')}</Label>
               <Input
-                type="password"
                 placeholder={t('settings.whatsapp.credentials.verifyTokenPlaceholder')}
                 value={verifyToken}
-                onChange={(e) => {
-                  setVerifyToken(e.target.value);
-                  setVerifyEdited(true);
-                }}
-                onFocus={() => {
-                  if (verifyToken === MASKED_TOKEN) {
-                    setVerifyToken('');
-                    setVerifyEdited(true);
-                  }
-                }}
+                onChange={(e) => setVerifyToken(e.target.value)}
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
               <p className="text-xs text-muted-foreground">
-                {config?.verify_token && !verifyEdited
-                  ? t('settings.whatsapp.credentials.verifyTokenSaved')
-                  : t('settings.whatsapp.credentials.verifyTokenHint')}
+                {t('settings.whatsapp.credentials.verifyTokenHint')}
               </p>
             </div>
 
@@ -695,7 +702,20 @@ export function WhatsAppConfig() {
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground tracking-widest"
               />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                {t('settings.whatsapp.credentials.pinHint')}
+                Needed only to wire <strong className="text-muted-foreground">inbound</strong> messages
+                for a <strong className="text-muted-foreground">production</strong> number. Set it in{' '}
+                <strong className="text-muted-foreground">
+                  Meta Business Manager → WhatsApp Accounts → Phone
+                  Numbers → Two-step verification
+                </strong>
+                , then paste it here so wacrm can subscribe the number —
+                otherwise Meta routes inbound events to whichever app
+                last claimed it (the symptom that hits second numbers
+                under a shared WABA).{' '}
+                <strong className="text-muted-foreground">Meta test numbers</strong> have no
+                PIN and are pre-registered — leave this blank for them.
+                Leaving it blank also keeps an existing registration
+                untouched.
               </p>
             </div>
           </CardContent>
@@ -730,6 +750,43 @@ export function WhatsAppConfig() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Attachment retention. Only meaningful once a number is
+            connected, since it governs what the webhook does with
+            inbound media. */}
+        {config && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-foreground">{t('settings.whatsapp.media.title')}</CardTitle>
+              <CardDescription className="text-muted-foreground">
+                {t('settings.whatsapp.media.description')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between gap-4 rounded-md border border-border p-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {t('settings.whatsapp.media.mirrorInbound')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('settings.whatsapp.media.mirrorInboundDesc')}
+                  </p>
+                  {!mirrorMedia && (
+                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
+                      {t('settings.whatsapp.media.mirrorInboundOffWarning')}
+                    </p>
+                  )}
+                </div>
+                <Switch
+                  checked={mirrorMedia}
+                  onCheckedChange={handleToggleMirrorMedia}
+                  disabled={savingMirror || !canEditSettings}
+                  aria-label={t('settings.whatsapp.media.mirrorInbound')}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-3">
@@ -803,15 +860,15 @@ export function WhatsAppConfig() {
                 <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">1</span>
-                    {t('settings.whatsapp.setup.steps.createApp.title')}
+                    {t('settings.whatsapp.setup.step1Title')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>{t('settings.whatsapp.setup.steps.createApp.item1')}</li>
-                    <li>{t('settings.whatsapp.setup.steps.createApp.item2')}</li>
-                    <li>{t('settings.whatsapp.setup.steps.createApp.item3')}</li>
-                    <li>{t('settings.whatsapp.setup.steps.createApp.item4')}</li>
+                    <li>{t('settings.whatsapp.setup.step1_1')}</li>
+                    <li>{t('settings.whatsapp.setup.step1_2')}</li>
+                    <li>{t('settings.whatsapp.setup.step1_3')}</li>
+                    <li>{t('settings.whatsapp.setup.step1_4')}</li>
                   </ol>
                 </AccordionContent>
               </AccordionItem>
@@ -820,14 +877,14 @@ export function WhatsAppConfig() {
                 <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</span>
-                    {t('settings.whatsapp.setup.steps.addProduct.title')}
+                    {t('settings.whatsapp.setup.step2Title')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>{t('settings.whatsapp.setup.steps.addProduct.item1')}</li>
-                    <li>{t('settings.whatsapp.setup.steps.addProduct.item2')}</li>
-                    <li>{t('settings.whatsapp.setup.steps.addProduct.item3')}</li>
+                    <li>{t('settings.whatsapp.setup.step2_1')}</li>
+                    <li>{t('settings.whatsapp.setup.step2_2')}</li>
+                    <li>{t('settings.whatsapp.setup.step2_3')}</li>
                   </ol>
                 </AccordionContent>
               </AccordionItem>
@@ -836,31 +893,15 @@ export function WhatsAppConfig() {
                 <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">3</span>
-                    {t('settings.whatsapp.setup.steps.credentials.title')}
+                    {t('settings.whatsapp.setup.step3Title')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>{t('settings.whatsapp.setup.steps.credentials.item1')}</li>
-                    <li>
-                      {t('settings.whatsapp.setup.steps.credentials.item2Before')}{' '}
-                      <strong className="text-foreground">
-                        {t('settings.whatsapp.setup.steps.credentials.phoneNumberId')}
-                      </strong>
-                    </li>
-                    <li>
-                      {t('settings.whatsapp.setup.steps.credentials.item3Before')}{' '}
-                      <strong className="text-foreground">
-                        {t('settings.whatsapp.setup.steps.credentials.wabaId')}
-                      </strong>
-                    </li>
-                    <li>
-                      {t('settings.whatsapp.setup.steps.credentials.item4Before')}{' '}
-                      <strong className="text-foreground">
-                        {t('settings.whatsapp.setup.steps.credentials.permanentToken')}
-                      </strong>{' '}
-                      {t('settings.whatsapp.setup.steps.credentials.item4After')}
-                    </li>
+                    <li>{t('settings.whatsapp.setup.step3_1')}</li>
+                    <li dangerouslySetInnerHTML={{ __html: t.raw('settings.whatsapp.setup.step3_2') }} />
+                    <li dangerouslySetInnerHTML={{ __html: t.raw('settings.whatsapp.setup.step3_3') }} />
+                    <li dangerouslySetInnerHTML={{ __html: t.raw('settings.whatsapp.setup.step3_4') }} />
                   </ol>
                 </AccordionContent>
               </AccordionItem>
@@ -869,28 +910,16 @@ export function WhatsAppConfig() {
                 <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">4</span>
-                    {t('settings.whatsapp.setup.steps.webhooks.title')}
+                    {t('settings.whatsapp.setup.step4Title')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>{t('settings.whatsapp.setup.steps.webhooks.item1')}</li>
-                    <li>{t('settings.whatsapp.setup.steps.webhooks.item2')}</li>
-                    <li>
-                      {t('settings.whatsapp.setup.steps.webhooks.item3Before')}{' '}
-                      <strong className="text-foreground">
-                        {t('settings.whatsapp.setup.steps.webhooks.callbackUrl')}
-                      </strong>{' '}
-                      {t('settings.whatsapp.setup.steps.webhooks.item3After')}
-                    </li>
-                    <li>
-                      {t('settings.whatsapp.setup.steps.webhooks.item4Before')}{' '}
-                      <strong className="text-foreground">
-                        {t('settings.whatsapp.setup.steps.webhooks.verifyToken')}
-                      </strong>{' '}
-                      {t('settings.whatsapp.setup.steps.webhooks.item4After')}
-                    </li>
-                    <li>{t('settings.whatsapp.setup.steps.webhooks.item5')}</li>
+                    <li>{t('settings.whatsapp.setup.step4_1')}</li>
+                    <li>{t('settings.whatsapp.setup.step4_2')}</li>
+                    <li dangerouslySetInnerHTML={{ __html: t.raw('settings.whatsapp.setup.step4_3') }} />
+                    <li dangerouslySetInnerHTML={{ __html: t.raw('settings.whatsapp.setup.step4_4') }} />
+                    <li>{t('settings.whatsapp.setup.step4_5')}</li>
                   </ol>
                 </AccordionContent>
               </AccordionItem>

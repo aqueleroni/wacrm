@@ -99,6 +99,19 @@ export const common = {
     minutesAgo: 'há {count}min',
     secondsAgo: 'há {count}s',
   },
+  presence: {
+    justNow: 'agora mesmo',
+    oneMinuteAgo: 'há 1 minuto',
+    minutesAgo: 'há {count} minutos',
+    oneHourAgo: 'há 1 hora',
+    hoursAgo: 'há {count} horas',
+    oneDayAgo: 'há 1 dia',
+    daysAgo: 'há {count} dias',
+    aWhileAgo: 'há algum tempo',
+    onlineActive: 'Online — ativo agora',
+    awayIdle: 'Ausente — inativo',
+    offlineLastSeen: 'Offline — visto por último {lastSeen}',
+  },
   misc: {
     user: 'Usuário',
     avatar: 'Avatar',
@@ -126,5 +139,14 @@ export const common = {
   gate: {
     readOnly: 'Somente leitura — seu perfil não pode enviar mensagens',
     readOnlyBrowse: 'Somente leitura — visualizadores podem navegar, mas não responder',
+  },
+  accountAccess: {
+    unlinkedTitle: 'Este usuário não está vinculado a uma conta',
+    unlinkedBody:
+      'Nada do que você alterar será salvo enquanto isso não for resolvido — o banco rejeita gravações de usuários sem conta ou perfil. Se você foi convidado para uma equipe, peça ao proprietário para reenviar o convite. Em instalação self-hosted, verifique se a migration de bootstrap da conta rodou para este usuário.',
+    errorTitle: 'Não foi possível carregar suas permissões',
+    errorBody:
+      'Seu perfil na conta não carregou, então todas as ações ficam somente leitura e alterações não serão salvas. Verifique a conexão e tente novamente.',
+    retry: 'Tentar novamente',
   },
 } as const;

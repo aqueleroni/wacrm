@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { useT } from "@/hooks/use-i18n";
+import { useT, useI18n } from "@/hooks/use-i18n";
+import { getDateFnsLocale } from "@/lib/i18n/date-fns-locale";
+import { translateStageName } from "@/lib/pipelines/stage-label";
 import { cn } from "@/lib/utils";
 import type { Contact, Deal, ContactNote, Tag } from "@/types";
 import {
@@ -20,15 +22,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
-import { formatCurrency } from "@/lib/currency";
-import { getDateFnsLocale } from "@/lib/date-fns-locale";
-import { localizeStageName } from "@/lib/pipelines/stage-label";
 
 interface ContactSidebarProps {
   contact: Contact | null;
 }
 
 export function ContactSidebar({ contact }: ContactSidebarProps) {
+  const { locale } = useI18n();
   const t = useT();
   const { accountId } = useAuth();
   const [copied, setCopied] = useState(false);
@@ -231,7 +231,8 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                     </p>
                     <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
                       <span>
-                        {formatCurrency(deal.value ?? 0, deal.currency)}
+                        {deal.currency ?? "$"}
+                        {deal.value.toLocaleString()}
                       </span>
                       {deal.stage && (
                         <span
@@ -241,7 +242,7 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                             color: deal.stage.color,
                           }}
                         >
-                          {localizeStageName(deal.stage.name, t)}
+                          {translateStageName(deal.stage.name, t)}
                         </span>
                       )}
                     </div>
@@ -289,8 +290,8 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                       {note.note_text}
                     </p>
                     <p className="mt-1 text-[10px] text-muted-foreground">
-                      {format(new Date(note.created_at), "MMM d, yyyy HH:mm", {
-                        locale: getDateFnsLocale(),
+                      {format(new Date(note.created_at), "PPp", {
+                        locale: getDateFnsLocale(locale),
                       })}
                     </p>
                   </div>

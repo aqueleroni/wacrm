@@ -27,11 +27,11 @@ import {
   RefreshCw,
   PanelRightOpen,
   PanelRightClose,
-  Brain,
 } from "lucide-react";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { useTranslations } from "@/hooks/use-translations";
-import { useT } from "@/hooks/use-i18n";
+import { useI18n, useT } from "@/hooks/use-i18n";
+import { getDateFnsLocale } from "@/lib/i18n/date-fns-locale";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -40,32 +40,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageBubble } from "./message-bubble";
 import { MessageActions } from "./message-actions";
+import { MediaLightbox } from "./media-lightbox";
+import { collectMediaGallery } from "@/lib/media/gallery";
 import {
   MessageComposer,
   CHAT_MEDIA_BUCKET,
   type SendMediaPayload,
 } from "./message-composer";
 import { deleteAccountMedia } from "@/lib/storage/upload-media";
-import { canEditSettings } from "@/lib/auth/roles";
 import { TemplatePicker } from "./template-picker";
 import { AiThreadBanner } from "./ai-thread-banner";
 import { buildReplyPreview } from "./reply-quote";
+import { renderTemplateBody } from "@/lib/whatsapp/template-body";
 import { toast } from "sonner";
-import { translateWhatsAppSendError } from "@/lib/whatsapp/send-error-label";
 
 interface ReplyDraft {
   id: string;
   authorLabel: string;
   preview: string;
-}
-
-function renderTemplateBody(body: string, params: string[]): string {
-  return body.replace(/\{\{(\d+)\}\}/g, (_, raw) => {
-    const idx = Number(raw) - 1;
-    return params[idx] ?? `{{${raw}}}`;
-  });
 }
 
 interface MessageThreadProps {
@@ -120,11 +115,15 @@ interface MessageThreadProps {
   onUnreadCleared?: (conversationId: string) => void;
 }
 
-function formatDateSeparator(dateStr: string, t: ReturnType<typeof useTranslations>): string {
+function formatDateSeparator(
+  dateStr: string,
+  t: ReturnType<typeof useTranslations>,
+  locale: ReturnType<typeof useI18n>['locale'],
+): string {
   const date = new Date(dateStr);
   if (isToday(date)) return t("today");
   if (isYesterday(date)) return t("yesterday");
-  return format(date, "MMMM d, yyyy");
+  return format(date, "PPP", { locale: getDateFnsLocale(locale) });
 }
 
 function groupMessagesByDate(messages: Message[]) {
@@ -178,12 +177,14 @@ export function MessageThread({
   onToggleContactPanel,
   onUnreadCleared,
 }: MessageThreadProps) {
-  const tExtract = useT();
+  const { locale } = useI18n();
+  const tGlobal = useT();
   const t = useTranslations("Inbox.messageThread");
   const tTimer = useTranslations("Inbox.sessionTimer");
   const tQuote = useTranslations("Inbox.replyQuote");
-  const { user, accountRole } = useAuth();
-  const canExtractMemory = accountRole ? canEditSettings(accountRole) : false;
+  const tErr = useTranslations("Inbox.thread");
+
+  const { user } = useAuth();
   const { getPresence, getRow, now } = usePresence();
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -195,7 +196,6 @@ export function MessageThread({
   // parent's resyncToken); the 700ms spin is just feedback so the click
   // doesn't feel like a no-op. Cleared via the timer ref on unmount.
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [extractingMemory, setExtractingMemory] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     return () => {
@@ -213,36 +213,16 @@ export function MessageThread({
       refreshTimerRef.current = null;
     }, 700);
   }, [isRefreshing, onRefresh]);
-
-  const handleExtractMemory = useCallback(async () => {
-    if (!conversation || extractingMemory) return;
-    setExtractingMemory(true);
-    try {
-      const res = await fetch("/api/ai/memory/extract", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversation_id: conversation.id }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(data.error ?? tExtract("inbox.ai.extractFailed"));
-        return;
-      }
-      if (data.inserted > 0) {
-        toast.success(
-          tExtract("inbox.ai.extractSuccess", { count: data.inserted as number }),
-        );
-      } else {
-        toast.info(tExtract("inbox.ai.extractEmpty"));
-      }
-    } catch {
-      toast.error(tExtract("inbox.ai.extractFailed"));
-    } finally {
-      setExtractingMemory(false);
-    }
-  }, [conversation, extractingMemory, tExtract]);
-
   const [replyTo, setReplyTo] = useState<ReplyDraft | null>(null);
+  // Which attachment the media viewer is showing. Lives here rather than in
+  // the bubble so the viewer can page through every image/video in the
+  // thread (issue #373). Paired with the conversation it belongs to and read
+  // back through that check below, so switching threads closes the viewer
+  // without an effect racing the messages refetch.
+  const [openMedia, setOpenMedia] = useState<{
+    conversationId: string;
+    messageId: string;
+  } | null>(null);
 
   // Profiles are bounded by RLS to rows the current user is allowed to
   // see — today that's just the current user, but the dropdown keeps the
@@ -276,7 +256,7 @@ export function MessageThread({
       .reverse()
       .find((m) => m.sender_type === "customer");
 
-    if (!lastCustomerMsg) return { expired: true, remaining: "No customer messages" };
+    if (!lastCustomerMsg) return { expired: true, remaining: tTimer("noCustomerMessages") };
 
     const hoursSince = differenceInHours(new Date(), new Date(lastCustomerMsg.created_at));
     const expired = hoursSince >= 24;
@@ -308,6 +288,19 @@ export function MessageThread({
 
   const conversationId = conversation?.id;
   const hasUnread = (conversation?.unread_count ?? 0) > 0;
+
+  const mediaMessageId =
+    openMedia && openMedia.conversationId === conversationId
+      ? openMedia.messageId
+      : null;
+  const handleMediaChange = useCallback(
+    (messageId: string | null) => {
+      setOpenMedia(
+        messageId && conversationId ? { conversationId, messageId } : null,
+      );
+    },
+    [conversationId],
+  );
 
   // Fetch messages whenever the selected conversation changes. Kept
   // separate from the unread-reset effect so that incoming messages
@@ -466,10 +459,6 @@ export function MessageThread({
   //
   // Guarding on hasUnread prevents the eq-update loop: once unread_count
   // is 0 the condition is false, so no further UPDATE is issued.
-  //
-  // `.select("id")` so a silent RLS miss (0 rows, no error) is visible;
-  // on success we notify the parent so list + active stay in sync even
-  // if the realtime echo is dropped.
   useEffect(() => {
     if (!conversationId || !hasUnread) return;
     let cancelled = false;
@@ -545,11 +534,7 @@ export function MessageThread({
         if (!res.ok) {
           const reason = payload?.error || `HTTP ${res.status}`;
           console.error("Failed to send message:", reason);
-          toast.error(
-            tExtract("inbox.thread.errors.sendFailed", {
-              reason: translateWhatsAppSendError(reason, tExtract),
-            }),
-          );
+          toast.error(`Failed to send: ${reason}`);
           // Mark the optimistic bubble as failed so the user sees what happened
           onUpdateMessage(tempId, { status: "failed" });
           return;
@@ -562,15 +547,11 @@ export function MessageThread({
       } catch (err) {
         console.error("Failed to send message:", err);
         const reason = err instanceof Error ? err.message : "network error";
-        toast.error(
-          tExtract("inbox.thread.errors.sendFailed", {
-            reason: translateWhatsAppSendError(reason, tExtract),
-          }),
-        );
+        toast.error(`Failed to send: ${reason}`);
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage, tExtract]
+    [conversation, onNewMessage, onUpdateMessage]
   );
 
   const handleSendMedia = useCallback(
@@ -619,11 +600,7 @@ export function MessageThread({
         if (!res.ok) {
           const reason = data?.error || `HTTP ${res.status}`;
           console.error("Failed to send media:", reason);
-          toast.error(
-            tExtract("inbox.thread.errors.sendFailed", {
-              reason: translateWhatsAppSendError(reason, tExtract),
-            }),
-          );
+          toast.error(`Failed to send: ${reason}`);
           onUpdateMessage(tempId, { status: "failed" });
           // The upload never reached the recipient — GC the orphaned
           // object rather than leaving it in the public bucket forever.
@@ -635,16 +612,12 @@ export function MessageThread({
       } catch (err) {
         console.error("Failed to send media:", err);
         const reason = err instanceof Error ? err.message : "network error";
-        toast.error(
-          tExtract("inbox.thread.errors.sendFailed", {
-            reason: translateWhatsAppSendError(reason, tExtract),
-          }),
-        );
+        toast.error(`Failed to send: ${reason}`);
         onUpdateMessage(tempId, { status: "failed" });
         void deleteAccountMedia(CHAT_MEDIA_BUCKET, payload.path).catch(() => {});
       }
     },
-    [conversation, onNewMessage, onUpdateMessage, tExtract],
+    [conversation, onNewMessage, onUpdateMessage],
   );
 
   const handleSendInteractive = useCallback(
@@ -684,11 +657,7 @@ export function MessageThread({
         if (!res.ok) {
           const reason = data?.error || `HTTP ${res.status}`;
           console.error("Failed to send interactive message:", reason);
-          toast.error(
-            tExtract("inbox.thread.errors.sendFailed", {
-              reason: translateWhatsAppSendError(reason, tExtract),
-            }),
-          );
+          toast.error(`Failed to send: ${reason}`);
           onUpdateMessage(tempId, { status: "failed" });
           return;
         }
@@ -697,15 +666,11 @@ export function MessageThread({
       } catch (err) {
         console.error("Failed to send interactive message:", err);
         const reason = err instanceof Error ? err.message : "network error";
-        toast.error(
-          tExtract("inbox.thread.errors.sendFailed", {
-            reason: translateWhatsAppSendError(reason, tExtract),
-          }),
-        );
+        toast.error(`Failed to send: ${reason}`);
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage, tExtract],
+    [conversation, onNewMessage, onUpdateMessage],
   );
 
   const handleStatusChange = useCallback(
@@ -781,11 +746,7 @@ export function MessageThread({
         if (!res.ok) {
           const reason = payload?.error || `HTTP ${res.status}`;
           console.error("Failed to send template:", reason);
-          toast.error(
-            tExtract("inbox.thread.errors.sendTemplateFailed", {
-              reason: translateWhatsAppSendError(reason, tExtract),
-            }),
-          );
+          toast.error(`Failed to send template: ${reason}`);
           onUpdateMessage(tempId, { status: "failed" });
           return;
         }
@@ -794,15 +755,11 @@ export function MessageThread({
       } catch (err) {
         console.error("Failed to send template:", err);
         const reason = err instanceof Error ? err.message : "network error";
-        toast.error(
-          tExtract("inbox.thread.errors.sendTemplateFailed", {
-            reason: translateWhatsAppSendError(reason, tExtract),
-          }),
-        );
+        toast.error(`Failed to send template: ${reason}`);
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage, tExtract],
+    [conversation, onNewMessage, onUpdateMessage],
   );
 
   // Build a quick id → Message map so reply quotes can be rendered without
@@ -812,6 +769,10 @@ export function MessageThread({
     for (const m of messages) map.set(m.id, m);
     return map;
   }, [messages]);
+
+  // Images + videos in the thread, in order — the set the media viewer
+  // pages through with ← / →.
+  const mediaGallery = useMemo(() => collectMediaGallery(messages), [messages]);
 
   // Bucket reactions by their target message_id for O(1) per-bubble lookup.
   const reactionsByMessageId = useMemo(() => {
@@ -845,7 +806,7 @@ export function MessageThread({
         preview: buildReplyPreview(msg, tQuote),
       });
     },
-    [authorLabelFor, tQuote],
+    [authorLabelFor],
   );
 
   // Single reaction-set primitive. emoji === "" removes; otherwise adds/swaps.
@@ -859,7 +820,7 @@ export function MessageThread({
         return;
       }
       if (messageId.startsWith("temp-")) {
-        toast.error(tExtract("inbox.thread.errors.waitForSend"));
+        toast.error(tErr("errors.waitForSend"));
         return;
       }
 
@@ -905,15 +866,11 @@ export function MessageThread({
         }
       } catch (err) {
         const reason = err instanceof Error ? err.message : "network error";
-        toast.error(
-          tExtract("inbox.thread.errors.reactionFailed", {
-            reason: translateWhatsAppSendError(reason, tExtract),
-          }),
-        );
+        toast.error(tErr("errors.reactionFailed", { reason }));
         setReactions(snapshot);
       }
     },
-    [conversation, user?.id, tExtract],
+    [conversation, user?.id, tErr],
   );
 
   const handleAssignChange = useCallback(
@@ -928,13 +885,13 @@ export function MessageThread({
 
       if (error) {
         console.error("Failed to update assignment:", error);
-        toast.error(tExtract("inbox.thread.errors.assignmentFailed"));
+        toast.error(tErr("errors.assignmentFailed"));
         return;
       }
 
       onAssignChange(conversation.id, agentId);
     },
-    [conversation, onAssignChange, tExtract],
+    [conversation, onAssignChange, tErr],
   );
 
   // Empty state — same WhatsApp-style doodle background as the active
@@ -1042,23 +999,6 @@ export function MessageThread({
             </button>
           )}
 
-          {canExtractMemory && conversation && (
-            <button
-              type="button"
-              onClick={() => void handleExtractMemory()}
-              disabled={extractingMemory}
-              aria-label={tExtract("inbox.ai.extractMemory")}
-              title={tExtract("inbox.ai.extractMemory")}
-              className={cn(
-                "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60",
-              )}
-            >
-              <Brain
-                className={cn("h-3.5 w-3.5", extractingMemory && "animate-pulse")}
-              />
-            </button>
-          )}
-
           {/* Manual refresh — forces a refetch of the messages + the
               conversation list (the parent bumps its resyncToken). Useful
               when realtime missed an event or the agent just wants to be
@@ -1144,7 +1084,8 @@ export function MessageThread({
                         label={presenceLabel(
                           presence,
                           getRow(p.user_id)?.last_seen_at ?? null,
-                          now
+                          now,
+                          tGlobal,
                         )}
                         className="mr-2"
                       />
@@ -1193,7 +1134,7 @@ export function MessageThread({
                 {/* Date separator */}
                 <div className="mb-4 flex items-center justify-center">
                   <span className="rounded-full bg-muted px-3 py-1 text-[10px] font-medium text-muted-foreground">
-                    {formatDateSeparator(group.date, t)}
+                    {formatDateSeparator(group.date, t, locale)}
                   </span>
                 </div>
                 {/* Messages */}
@@ -1206,7 +1147,7 @@ export function MessageThread({
                       ? {
                           authorLabel:
                             parent.sender_type === "agent" || parent.sender_type === "bot"
-                              ? t("me")
+                              ? t("me") 
                               : contact?.name || contact?.phone || "Unknown",
                           preview: buildReplyPreview(parent, tQuote),
                         }
@@ -1238,6 +1179,7 @@ export function MessageThread({
                           reactions={msgReactions}
                           currentUserId={user?.id}
                           onToggleReaction={handlePillToggle}
+                          onOpenMedia={handleMediaChange}
                         />
                       </MessageActions>
                     );
@@ -1281,6 +1223,15 @@ export function MessageThread({
         open={templateModalOpen}
         onOpenChange={setTemplateModalOpen}
         onSelect={handleSendTemplate}
+      />
+
+      {/* Full-size viewer for the thread's images/videos. Renders nothing
+          until a bubble opens it. */}
+      <MediaLightbox
+        items={mediaGallery}
+        activeId={mediaMessageId}
+        onActiveIdChange={handleMediaChange}
+        contactLabel={contactDisplayName}
       />
     </div>
   );

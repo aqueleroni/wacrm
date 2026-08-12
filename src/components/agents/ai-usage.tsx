@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { BarChart3, Bot, PencilLine } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { useT } from '@/hooks/use-i18n';
 import { canEditSettings } from '@/lib/auth/roles';
 import {
   Card,
@@ -24,8 +23,8 @@ import { Skeleton } from '@/components/dashboard/skeleton';
 import { BarChart } from '@/components/tremor/bar-chart';
 import { formatCompactNumber } from '@/lib/currency';
 import { format, parseISO } from 'date-fns';
-import { ptBR, enUS } from 'date-fns/locale';
-import { getLocale } from '@/i18n/config';
+import { useI18n, useT } from '@/hooks/use-i18n';
+import { getDateFnsLocale } from '@/lib/i18n/date-fns-locale';
 
 interface UsageResponse {
   window_days: number;
@@ -57,40 +56,36 @@ const WINDOWS = [7, 30, 90] as const;
  * `GET /api/ai/usage` route. Renders nothing for non-admins.
  */
 export function AiUsageCard() {
+  const { locale } = useI18n();
   const t = useT();
   const { accountId, accountRole, profileLoading } = useAuth();
   const canView = accountRole ? canEditSettings(accountRole) : false;
-  const dateLocale = getLocale() === 'pt-BR' ? ptBR : enUS;
-  const seriesKey = t('agents.usage.chartSeries');
 
   const [days, setDays] = useState<number>(30);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<UsageResponse | null>(null);
   const loadedRef = useRef<string | null>(null);
 
-  const fetchUsage = useCallback(
-    async (windowDays: number) => {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/ai/usage?days=${windowDays}`, {
-          cache: 'no-store',
-        });
-        const json = await res.json().catch(() => null);
-        if (!res.ok) {
-          toast.error(json?.error ?? t('agents.usage.loadFailed'));
-          setData(null);
-          return;
-        }
-        setData(json as UsageResponse);
-      } catch {
-        toast.error(t('agents.usage.loadFailed'));
+  const fetchUsage = useCallback(async (windowDays: number) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/ai/usage?days=${windowDays}`, {
+        cache: 'no-store',
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(json?.error ?? t('agents.usage.toast.loadFailed'));
         setData(null);
-      } finally {
-        setLoading(false);
+        return;
       }
-    },
-    [t],
-  );
+      setData(json as UsageResponse);
+    } catch {
+      toast.error(t('agents.usage.toast.loadFailed'));
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
 
   useEffect(() => {
     if (!canView || !accountId) return;
@@ -103,10 +98,13 @@ export function AiUsageCard() {
 
   if (profileLoading || !canView) return null;
 
+  const tokenCategory = t('agents.usage.chartCategory');
   const chartData =
     data?.daily.map((d) => ({
-      day: format(parseISO(d.date), 'MMM d', { locale: dateLocale }),
-      [seriesKey]: d.tokens,
+      day: format(parseISO(d.date), 'd MMM', {
+        locale: getDateFnsLocale(locale),
+      }),
+      [tokenCategory]: d.tokens,
     })) ?? [];
   const hasSpend = (data?.totals.total_tokens ?? 0) > 0;
 
@@ -124,13 +122,13 @@ export function AiUsageCard() {
             value={String(days)}
             onValueChange={(v) => setDays(Number(v))}
           >
-            <SelectTrigger className="w-36 flex-shrink-0">
+            <SelectTrigger className="w-32 flex-shrink-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {WINDOWS.map((w) => (
                 <SelectItem key={w} value={String(w)}>
-                  {t('agents.usage.lastDays', { days: w })}
+                  {t('agents.usage.windowLastDays', { days: w })}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -150,20 +148,20 @@ export function AiUsageCard() {
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Stat
-                label={t('agents.usage.totalTokens')}
+                label={t('agents.usage.stats.totalTokens')}
                 value={formatCompactNumber(data.totals.total_tokens)}
               />
               <Stat
-                label={t('agents.usage.llmCalls')}
+                label={t('agents.usage.stats.llmCalls')}
                 value={String(data.totals.calls)}
               />
               <Stat
-                label={t('agents.usage.autoReply')}
+                label={t('agents.usage.stats.autoReply')}
                 value={formatCompactNumber(data.by_mode.auto_reply.tokens)}
                 icon={Bot}
               />
               <Stat
-                label={t('agents.usage.drafts')}
+                label={t('agents.usage.stats.drafts')}
                 value={formatCompactNumber(data.by_mode.draft.tokens)}
                 icon={PencilLine}
               />
@@ -171,12 +169,12 @@ export function AiUsageCard() {
 
             <div>
               <p className="mb-2 text-xs font-medium text-muted-foreground">
-                {t('agents.usage.tokensPerDay')}
+                {t('agents.usage.chartTokensPerDay')}
               </p>
               <BarChart
                 data={chartData}
                 index="day"
-                categories={[seriesKey]}
+                categories={[tokenCategory]}
                 colors={['violet']}
                 valueFormatter={(v) => formatCompactNumber(v)}
                 showLegend={false}
@@ -203,8 +201,7 @@ export function AiUsageCard() {
                         </span>
                       </span>
                       <span className="flex-shrink-0 tabular-nums text-muted-foreground">
-                        {formatCompactNumber(m.tokens)} {t('agents.usage.tokensAbbrev')} ·{' '}
-                        {m.calls}{' '}
+                        {formatCompactNumber(m.tokens)} {t('agents.usage.tok')} · {m.calls}{' '}
                         {m.calls === 1
                           ? t('agents.usage.call')
                           : t('agents.usage.calls')}

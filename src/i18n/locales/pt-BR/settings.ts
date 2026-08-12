@@ -1,12 +1,12 @@
 export const settings = {
   title: 'Configurações',
   subtitle:
-    'Tudo em um só lugar — sua conta e seu workspace. Escolha uma seção para gerenciar.',
+    'Tudo em um só lugar — sua conta e seu ambiente de trabalho. Escolha uma seção para gerenciar.',
   rail: {
     ariaLabel: 'Seções de configurações',
     groups: {
       account: 'Conta',
-      workspace: 'Workspace',
+      workspace: 'Ambiente de trabalho',
     },
   },
   sections: {
@@ -149,7 +149,6 @@ export const settings = {
       invalidEmail: 'Informe um endereço de e-mail válido',
       displayNameRequired: 'Nome de exibição é obrigatório',
       saveFailed: 'Falha ao salvar',
-      uploadFailed: 'Falha no upload do avatar: {message}',
       emailChangeFailed: 'Falha ao alterar e-mail: {message}',
     },
     success: {
@@ -201,58 +200,11 @@ export const settings = {
   },
   members: {
     title: 'Membros da equipe',
-    description:
-      'Pessoas com acesso a esta conta. Os perfis controlam o que cada colega pode fazer.',
+    description: 'Convide colegas e gerencie perfis de acesso.',
     invite: 'Convidar membro',
     pending: 'Convites pendentes',
     remove: 'Remover membro',
     changeRole: 'Alterar perfil',
-    you: 'Você',
-    joined: 'Entrou em {date}',
-    onlineCount: '{count} online',
-    awayCount: '{count} ausente',
-    offlineCount: '{count} offline',
-    memberCount: '{count} membro',
-    memberCount_plural: '{count} membros',
-    pendingSecurityHint:
-      'O link do convite em texto claro só é mostrado uma vez na criação, por segurança — para reenviar, revogue o convite abaixo e crie um novo.',
-    emptyPending: 'Nenhum convite pendente.',
-    emptyPendingHint:
-      'Clique em {action} acima para gerar um link compartilhável.',
-    revoke: 'Revogar',
-    untitledInvite: 'Convite sem título',
-    created: 'Criado em {date}',
-    expired: 'expirado',
-    expiresInDays: 'expira em {days} dia',
-    expiresInDays_plural: 'expira em {days} dias',
-    expiresInHours: 'expira em {hours} hora',
-    expiresInHours_plural: 'expira em {hours} horas',
-    removeTitle: 'Remover membro',
-    removeDescription:
-      'Remover {name} da conta? A pessoa será desconectada desta conta e receberá uma conta pessoal nova no próximo login. O login em si não é excluído.',
-    thisTeammate: 'este colega',
-    removing: 'Removendo...',
-    roleHints: {
-      admin: 'Gerencia membros e tudo mais',
-      agent: 'Usa as funções; sem configurações',
-      viewer: 'Somente leitura em todo o app',
-    },
-    presence: {
-      onlineActive: 'Online — ativo agora',
-      awayIdle: 'Ausente — ocioso',
-      offlineLastSeen: 'Offline — visto por último {when}',
-    },
-    toast: {
-      loadMembersFailed: 'Falha ao carregar membros',
-      loadInvitationsFailed: 'Falha ao carregar convites',
-      updateRoleFailed: 'Falha ao atualizar perfil',
-      roleUpdated: 'Atualizado {name} para {role}',
-      memberFallback: 'membro',
-      removeFailed: 'Falha ao remover membro',
-      memberRemoved: 'Removido {name}',
-      revokeFailed: 'Falha ao revogar convite',
-      inviteRevoked: 'Convite revogado',
-    },
     inviteDialog: {
       title: 'Convidar um colega',
       description:
@@ -300,6 +252,39 @@ export const settings = {
         clipboardBlocked: 'Área de transferência bloqueada — copie o link manualmente',
       },
     },
+    toast: {
+      loadMembersFailed: 'Falha ao carregar membros',
+      loadInvitationsFailed: 'Falha ao carregar convites',
+      networkError: 'Não foi possível conectar ao servidor',
+      updateRoleFailed: 'Falha ao atualizar perfil',
+      roleUpdated: '{name} atualizado para {role}',
+      removeFailed: 'Falha ao remover membro',
+      memberRemoved: '{name} removido',
+      revokeFailed: 'Falha ao revogar convite',
+      invitationRevoked: 'Convite revogado',
+    },
+  },
+  quickReplies: {
+    title: 'Respostas rápidas',
+    description:
+      'Trechos reutilizáveis — texto simples ou mensagem interativa salva — que agentes podem inserir no compositor da caixa de entrada.',
+    newButton: 'Nova resposta rápida',
+    empty: 'Nenhuma resposta rápida ainda. Crie uma para reutilizar em conversas.',
+    editTitle: 'Editar resposta rápida',
+    createTitle: 'Nova resposta rápida',
+    nameLabel: 'Nome',
+    namePlaceholder: 'ex.: Horário comercial',
+    kindText: 'Texto',
+    kindInteractive: 'Interativa',
+    contentPlaceholder: 'Texto da mensagem a inserir',
+    toast: {
+      nameRequired: 'Informe um nome para a resposta rápida.',
+      saveFailed: 'Não foi possível salvar a resposta rápida.',
+      updated: 'Resposta rápida atualizada.',
+      created: 'Resposta rápida criada.',
+      deleteFailed: 'Não foi possível excluir a resposta rápida.',
+      deleteConfirm: 'Excluir esta resposta rápida?',
+    },
   },
   whatsapp: {
     title: 'Conexão WhatsApp',
@@ -313,9 +298,9 @@ export const settings = {
       notConnectedHint:
         'Configure suas credenciais da API Meta abaixo para conectar sua conta WhatsApp Business.',
       tokenExpired:
-        'O token de acesso da Meta expirou. Gere um novo token no Meta for Developers e salve novamente nas credenciais.',
+        'O token de acesso da Meta expirou — gere um novo token permanente no Meta Business Suite e salve aqui.',
       tokenCorrupted:
-        'O token armazenado não pode ser descriptografado com a ENCRYPTION_KEY atual. Redefina a configuração e salve de novo.',
+        'O token armazenado não pôde ser descriptografado — redefina a configuração e informe as credenciais novamente.',
       credentialsRejected: 'A Meta rejeitou as credenciais: {detail}',
     },
     registration: {
@@ -329,7 +314,7 @@ export const settings = {
       retryHint:
         'Informe (ou corrija) o PIN de 2 etapas abaixo e clique em Salvar configuração para tentar novamente.',
       legacyHint:
-        'O registro deste número ainda não foi concluído (foi pulado ou ainda não havia rastreamento). Se a Meta pedir PIN de 2 etapas, informe abaixo e clique em Salvar configuração. Número de teste costuma não ter PIN — nesse caso configure o webhook na Meta e clique em Verificar com a Meta.',
+        'Este número foi salvo antes do rastreamento de registro existir, ou o registro foi ignorado. Informe o PIN de 2 etapas abaixo e clique em Salvar configuração para inscrevê-lo.',
       diagnostic: 'Diagnóstico — última execução:',
       live: 'ativo',
       notLive: 'inativo',
@@ -350,24 +335,29 @@ export const settings = {
       accessTokenPlaceholder: 'Informe seu token de acesso',
       tokenHidden:
         'O token está oculto por segurança. Informe-o novamente para atualizar a configuração.',
-      tokenCantReveal:
-        'Por segurança o token salvo não pode ser exibido. Cole de novo só se for trocá-lo.',
       verifyToken: 'Token de verificação do webhook',
       verifyTokenPlaceholder: 'Crie um token de verificação personalizado',
       verifyTokenHint:
         'Uma string personalizada que você cria. Deve coincidir com o token definido nas configurações de webhook da Meta.',
-      verifyTokenSaved:
-        'Token de verificação já salvo. Clique no campo só se quiser trocá-lo.',
       pin: 'PIN de verificação em duas etapas',
       pinOptional: '(opcional)',
       pinPlaceholder: 'PIN de 6 dígitos do Gerenciador WhatsApp da Meta',
-      pinHint:
-        'Só é necessário para receber mensagens de entrada em um número de produção. Defina o PIN em Meta Business Manager → Contas WhatsApp → Números de telefone → Verificação em duas etapas e cole aqui para o wacrm inscrever o número. Números de teste da Meta não têm PIN e já vêm pré-registrados — deixe em branco. Em branco também não altera um registro que já exista.',
     },
     webhook: {
       title: 'Configuração do webhook',
       description: 'Use esta URL como callback do webhook no painel do app Meta.',
       callbackUrl: 'URL de callback do webhook',
+    },
+    media: {
+      title: 'Armazenamento de anexos',
+      description:
+        'A Meta exclui mídias recebidas cerca de 30 dias depois. Os anexos podem ser copiados para o seu próprio storage para continuarem visíveis.',
+      mirrorInbound: 'Manter anexos recebidos',
+      mirrorInboundDesc:
+        'Salva uma cópia de cada foto, vídeo, áudio e documento enviado pelos clientes. Usa o storage do Supabase; arquivos acima de 16 MB são ignorados.',
+      mirrorInboundOffWarning:
+        'Novos anexos deixarão de ser copiados e ficarão indisponíveis cerca de 30 dias após o recebimento.',
+      mirrorInboundSaveFailed: 'Não foi possível atualizar a configuração de anexos.',
     },
     actions: {
       save: 'Salvar configuração',
@@ -380,44 +370,26 @@ export const settings = {
       title: 'Instruções de configuração',
       description: 'Siga estes passos para conectar sua API WhatsApp Business.',
       docsLink: 'Documentação da API WhatsApp da Meta',
-      steps: {
-        createApp: {
-          title: 'Criar um app na Meta',
-          item1: 'Acesse developers.facebook.com',
-          item2: 'Clique em "Meus apps" e depois em "Criar app"',
-          item3: 'Selecione "Empresa" como tipo de app',
-          item4: 'Preencha os dados do app e crie',
-        },
-        addProduct: {
-          title: 'Adicionar o produto WhatsApp',
-          item1: 'No painel do app, clique em "Adicionar produto"',
-          item2: 'Encontre "WhatsApp" e clique em "Configurar"',
-          item3: 'Siga o assistente para vincular sua empresa',
-        },
-        credentials: {
-          title: 'Obter credenciais da API',
-          item1: 'Vá em WhatsApp > Configuração da API',
-          item2Before: 'Copie o',
-          phoneNumberId: 'ID do número de telefone',
-          item3Before: 'Copie o',
-          wabaId: 'ID da conta WhatsApp Business',
-          item4Before: 'Gere um',
-          permanentToken: 'token de acesso permanente',
-          item4After: 'em Configurações comerciais > Usuários do sistema',
-        },
-        webhooks: {
-          title: 'Configurar webhooks',
-          item1: 'Vá em WhatsApp > Configuração',
-          item2: 'Clique em "Editar" na seção Webhook',
-          item3Before: 'Cole a',
-          callbackUrl: 'URL de callback do webhook',
-          item3After: 'acima',
-          item4Before: 'Informe o mesmo',
-          verifyToken: 'token de verificação',
-          item4After: 'que você definiu aqui',
-          item5: 'Inscreva-se no campo de webhook "messages"',
-        },
-      },
+      step1Title: 'Criar um app Meta',
+      step1_1: 'Acesse developers.facebook.com',
+      step1_2: 'Clique em "Meus apps" e depois em "Criar app"',
+      step1_3: 'Selecione "Empresa" como tipo de app',
+      step1_4: 'Preencha os dados e crie o app',
+      step2Title: 'Adicionar produto WhatsApp',
+      step2_1: 'No painel do app, clique em "Adicionar produto"',
+      step2_2: 'Encontre "WhatsApp" e clique em "Configurar"',
+      step2_3: 'Siga o assistente para vincular sua empresa',
+      step3Title: 'Obter credenciais da API',
+      step3_1: 'Vá em WhatsApp > Configuração da API',
+      step3_2: 'Copie o <strong class="text-foreground">ID do número de telefone</strong>',
+      step3_3: 'Copie o <strong class="text-foreground">ID da conta WhatsApp Business</strong>',
+      step3_4: 'Gere um <strong class="text-foreground">Token de acesso permanente</strong> em Configurações comerciais > Usuários do sistema',
+      step4Title: 'Configurar webhooks',
+      step4_1: 'Vá em WhatsApp > Configuração',
+      step4_2: 'Clique em "Editar" na seção Webhook',
+      step4_3: 'Cole a <strong class="text-foreground">URL de callback do webhook</strong> acima',
+      step4_4: 'Informe o mesmo <strong class="text-foreground">Token de verificação</strong> definido aqui',
+      step4_5: 'Inscreva-se no campo de webhook "messages"',
     },
     toast: {
       loadFailed: 'Falha ao carregar configuração do WhatsApp',
@@ -435,11 +407,8 @@ export const settings = {
       testFailed: 'Falha na conexão com a API',
       testNetworkFailed: 'Teste de conexão falhou. Verifique a rede e tente novamente.',
       verifySuccess: 'Número totalmente configurado — a Meta está entregando eventos.',
-      verifyPromoted:
-        'Verificação OK. Registro marcado — o aviso de “não registrado” pode sair agora.',
       verifyFailed:
         'Número não totalmente registrado. Veja as verificações abaixo para saber qual etapa falhou.',
-      verifyFailedDetail: 'Verificação falhou: {error}',
       verifyEndpointFailed: 'Não foi possível acessar o endpoint de verificação.',
       resetConfirm:
         'Isso excluirá a configuração atual do WhatsApp para você informá-la novamente. Continuar?',
@@ -447,28 +416,6 @@ export const settings = {
       resetSuccess: 'Configuração limpa. Agora você pode informar suas credenciais novamente.',
       webhookCopied: 'URL do webhook copiada',
     },
-  },
-  quickReplies: {
-    title: 'Respostas rápidas',
-    description:
-      'Trechos reutilizáveis — texto simples ou mensagem interativa salva — que agentes podem inserir no compositor da caixa de entrada.',
-    new: 'Nova resposta rápida',
-    empty: 'Nenhuma resposta rápida ainda. Crie uma para reutilizar nas conversas.',
-    editTitle: 'Editar resposta rápida',
-    createTitle: 'Nova resposta rápida',
-    nameLabel: 'Nome',
-    namePlaceholder: 'ex.: Horário de atendimento',
-    nameRequired: 'Dê um nome à resposta rápida.',
-    kindText: 'Texto',
-    kindInteractive: 'Interativa',
-    textPlaceholder: 'Texto da mensagem a inserir',
-    cancel: 'Cancelar',
-    save: 'Salvar',
-    created: 'Resposta rápida criada.',
-    updated: 'Resposta rápida atualizada.',
-    saveFailed: 'Não foi possível salvar a resposta rápida.',
-    deleteConfirm: 'Excluir esta resposta rápida?',
-    deleteFailed: 'Não foi possível excluir a resposta rápida.',
   },
   templates: {
     title: 'Modelos de mensagem',
@@ -485,89 +432,6 @@ export const settings = {
     delete: 'Excluir',
     submit: 'Enviar para aprovação',
     submitting: 'Enviando…',
-    saveResubmit: 'Salvar e reenviar',
-    saving: 'Salvando…',
-    form: {
-      newTitle: 'Novo modelo de mensagem',
-      editTitle: 'Editar modelo de mensagem',
-      newDescription:
-        'Monte um modelo e envie para aprovação da Meta. Depois de aprovado, use em disparos e na caixa de entrada.',
-      editDescription:
-        'Salve as alterações para reenviar à Meta. O status volta para PENDENTE durante a análise.',
-      authWarning:
-        'Modelos AUTHENTICATION têm corpo fixo + botão OTP e pedem outro construtor. Crie-os no WhatsApp Manager da Meta por enquanto e use Sincronizar da Meta para importar.',
-      name: 'Nome do modelo',
-      namePlaceholder: 'ex.: confirmacao_pedido',
-      nameHint: 'Apenas letras minúsculas, dígitos e underscores.',
-      nameFixed:
-        'O nome fica fixo depois que o modelo existe na Meta — crie um novo modelo para alterá-lo.',
-      category: 'Categoria',
-      language: 'Idioma',
-      languageFixed: 'O idioma fica fixo depois que o modelo existe na Meta.',
-      languageHint:
-        'Deve bater com o código exato na Meta — en_US e en são distintos.',
-      categories: {
-        Marketing: 'Marketing',
-        Utility: 'Utilidade',
-        Authentication: 'Autenticação',
-      },
-      header: 'Cabeçalho',
-      headerNone: 'Nenhum',
-      headerText: 'Texto',
-      headerImage: 'Imagem',
-      headerVideo: 'Vídeo',
-      headerDocument: 'Documento',
-      headerTextPlaceholder: 'Texto do cabeçalho (máx. 60 caracteres, {{1}} opcional)',
-      headerTextAria: 'Texto do cabeçalho',
-      headerSamplePlaceholder:
-        'Valor de exemplo para {{1}} (obrigatório para análise da Meta)',
-      headerSampleAria: 'Valor de exemplo da variável do cabeçalho',
-      uploadImage: 'Enviar imagem',
-      uploadImageHint: 'JPEG ou PNG, ≤5 MB',
-      headerMediaPlaceholder: 'https://… (ou cole um link público de {format})',
-      headerSampleAlt: 'Amostra do cabeçalho',
-      headerImageHint:
-        'Envie um JPEG/PNG (≤5 MB, ≥800×418 px recomendado) ou cole um link HTTPS público — nós enviamos à Meta para análise automaticamente.',
-      headerMediaHint:
-        'Precisa ser um link HTTPS público. A Meta busca uma vez na análise, então o link deve ficar no ar por ~24 h.',
-      headerVideoHint: ' Recomendado: MP4 / 3GPP, ≤16 MB, ≤60 segundos.',
-      headerDocumentHint: ' Recomendado: PDF, ≤100 MB.',
-      body: 'Texto do corpo',
-      bodyPlaceholder: 'Olá {{1}}, seu pedido {{2}} foi confirmado.',
-      bodyHint:
-        'Use {{1}}, {{2}} para variáveis (devem ser contíguas a partir de {{1}}).',
-      bodySamples: 'Valores de exemplo (a Meta usa para analisar o modelo)',
-      bodySamplePlaceholder: 'Exemplo para {token}',
-      bodySampleAria: 'Valor de exemplo da variável do corpo {token}',
-      footer: 'Rodapé (opcional)',
-      footerPlaceholder: 'Texto do rodapé (máx. 60 caracteres)',
-      buttons: 'Botões (opcional)',
-      addButton: 'Adicionar botão',
-      buttonsHint:
-        'Até {max} botões. Respostas rápidas devem vir antes de URL / telefone / copiar código.',
-      buttonTypes: {
-        QUICK_REPLY: 'Resposta rápida',
-        URL: 'URL',
-        PHONE_NUMBER: 'Telefone',
-        COPY_CODE: 'Copiar código',
-      },
-      buttonLabel: 'Rótulo do botão',
-      buttonUrlPlaceholder: 'https://exemplo.com/caminho ou com sufixo {{1}}',
-      buttonUrlExample:
-        'Valor de exemplo para {{1}} (obrigatório quando a URL tem variável)',
-      buttonPhonePlaceholder: '+5511999999999',
-      buttonCopyPlaceholder: 'Código de exemplo (ex.: VERAO20)',
-    },
-    list: {
-      editTitle: 'Editar dispara nova análise da Meta — status volta para PENDENTE.',
-      editAria: 'Editar modelo',
-      resubmitTitle: 'Edite o modelo e reenvie à Meta para análise.',
-      resubmitAria: 'Editar e reenviar modelo',
-      deleteMetaTitle: 'Excluir modelo da Meta e localmente',
-      deleteLocalTitle: 'Excluir modelo localmente',
-      deleteMetaAria: 'Excluir da Meta e localmente',
-      deleteLocalAria: 'Excluir localmente',
-    },
     deleteDialog: {
       title: 'Excluir modelo?',
       meta:
@@ -586,17 +450,15 @@ export const settings = {
       headerImageSize: 'A imagem do cabeçalho deve ter menos de {maxMb} MB.',
       imageUploaded: 'Imagem enviada.',
       uploadFailed: 'Falha no upload.',
-      submitSuccess:
-        'Enviado à Meta — análise costuma levar até 24 horas. O status atualiza automaticamente.',
-      editSuccess:
-        'Edição enviada — a Meta costuma analisar em até 24 horas.',
-      dryRunCreated: 'Modelo salvo (simulação — sem chamada à Meta)',
-      dryRunUpdated: 'Modelo atualizado (simulação — sem chamada à Meta)',
-      syncTruncated:
-        'Sincronizados só os primeiros 2000 modelos — sua conta tem mais. Sincronize de novo para continuar, ou fale com o suporte se persistir.',
-      imageTooLarge: 'A imagem tem {sizeMb} MB — o limite da Meta é 5 MB.',
-      syncSuccess: 'Sincronizados {total} modelo(s) da Meta',
-      syncSuccessDetail: ' ({inserted} novos, {updated} atualizados)',
+    },
+    form: {
+      headerTextPlaceholder: 'Texto do cabeçalho (máx. 60 caracteres, {{1}} opcional)',
+      headerSampleAria: 'Valor de exemplo para variável do cabeçalho',
+      headerSamplePlaceholder: 'Valor de exemplo para {{1}} (obrigatório para revisão da Meta)',
+      bodyPlaceholder: 'Olá {{1}}, seu pedido {{2}} foi confirmado.',
+      bodyHint: 'Use {{1}}, {{2}} para variáveis (devem ser contíguas começando em {{1}}).',
+      urlPlaceholder: 'https://exemplo.com/caminho ou com sufixo {{1}}',
+      urlSamplePlaceholder: 'Valor de exemplo para {{1}} (obrigatório quando a URL tem variável)',
     },
   },
   fields: {
@@ -674,15 +536,6 @@ export const settings = {
       name: 'Nome',
       namePlaceholder: 'ex.: Automação Zapier',
       scopes: 'Escopos',
-      scopeDescriptions: {
-        'messages:send': 'Enviar mensagens WhatsApp',
-        'messages:read': 'Ler mensagens e status de entrega',
-        'contacts:read': 'Listar e ler contatos',
-        'contacts:write': 'Criar e atualizar contatos',
-        'conversations:read': 'Listar e ler conversas',
-        'broadcasts:send': 'Disparar campanhas de broadcast',
-        'webhooks:manage': 'Registrar e gerenciar webhooks de eventos',
-      },
       noScopesHint:
         'Uma chave sem escopos ainda pode chamar GET /api/v1/me para verificar se funciona.',
       create: 'Criar chave',
@@ -722,86 +575,14 @@ export const settings = {
         openai: 'OpenAI',
         anthropic: 'Anthropic (Claude)',
       },
-      modelHint:
-        'Modelos econômicos são ideais para respostas automáticas no WhatsApp. Premium gasta mais tokens por mensagem.',
-      modelTiers: {
-        economy: 'Econômico',
-        balanced: 'Equilibrado',
-        premium: 'Premium',
-      },
-      modelRecommended: 'Recomendado',
-      modelCustom: 'Modelo salvo (fora da lista)',
-      models: {
-        'gpt-5.4-mini': {
-          label: 'GPT-5.4 mini',
-          summary: 'Melhor custo-benefício para atendimento automático',
-          details:
-            'Versão compacta mais recente da OpenAI. Responde rápido, segue bem instruções de negócio e mantém tom natural em conversas curtas. Ideal para auto-reply, triagem e FAQs no WhatsApp quando o volume é alto e o custo por mensagem importa.',
-        },
-        'gpt-4o-mini': {
-          label: 'GPT-4o mini',
-          summary: 'Muito barato, ótimo para alto volume',
-          details:
-            'Modelo leve e consolidado. Bom para perguntas repetitivas, confirmações e respostas objetivas. Gasta poucos tokens — recomendado se você prioriza economia máxima e não precisa de raciocínio complexo.',
-        },
-        'gpt-4.1-mini': {
-          label: 'GPT-4.1 mini',
-          summary: 'Barato com qualidade geral sólida',
-          details:
-            'Equilíbrio entre preço e compreensão de contexto. Lida melhor com instruções mais longas e variações de linguagem do que o 4o mini. Boa opção intermediária para equipes que querem economia sem abrir mão de um pouco mais de nuance.',
-        },
-        'gpt-5.4': {
-          label: 'GPT-5.4',
-          summary: 'Mais inteligente — casos que exigem raciocínio',
-          details:
-            'Modelo completo, melhor para dúvidas ambíguas, múltiplas intenções na mesma mensagem ou quando a base de conhecimento é extensa. Custo médio por resposta; use quando o mini não resolve bem e você pode investir um pouco mais por conversa.',
-        },
-        'gpt-4o': {
-          label: 'GPT-4o',
-          summary: 'Qualidade comprovada, custo moderado',
-          details:
-            'Referência estável da OpenAI para chat. Boa aderência a persona e contexto, útil para rascunhos na inbox e auto-reply em negócios com perguntas variadas. Custo maior que os modelos mini, mas previsível e confiável.',
-        },
-        'claude-haiku-4-5-20251001': {
-          label: 'Claude Haiku 4.5',
-          summary: 'Melhor custo-benefício Anthropic para WhatsApp',
-          details:
-            'Mais rápido e econômico da linha Claude atual. Excelente para respostas curtas, tom cordial e handoff quando não sabe responder. Recomendado como padrão para auto-reply e alto volume com chave Anthropic.',
-        },
-        'claude-3-5-haiku-20241022': {
-          label: 'Claude 3.5 Haiku',
-          summary: 'Econômico e estável para volume alto',
-          details:
-            'Geração anterior, ainda muito eficiente em custo. Bom para mensagens diretas e fluxos simples. Prefira o Haiku 4.5 se sua conta tiver acesso — ele entende contexto e instruções com mais precisão.',
-        },
-        'claude-sonnet-4-5-20250929': {
-          label: 'Claude Sonnet 4.5',
-          summary: 'Equilíbrio entre inteligência e preço',
-          details:
-            'Meio-termo da Anthropic: melhor raciocínio que o Haiku, mais barato que o Opus. Indicado para atendimentos com base de conhecimento rica, objeções ou quando o cliente escreve mensagens longas e detalhadas.',
-        },
-        'claude-opus-4-6-20250514': {
-          label: 'Claude Opus 4.6',
-          summary: 'Máxima capacidade — use com parcimônia',
-          details:
-            'Topo de linha para casos difíceis: negociação sensível, muitas regras de negócio ou respostas que exigem máxima precisão. Custo alto por mensagem; reserve para rascunhos manuais ou contas premium, não para auto-reply em massa.',
-        },
-      },
     },
     behaviour: {
-      title: 'Persona e comportamento',
+      title: 'Comportamento',
       description:
-        'Quem é o agente, tom de voz e o que pode ou não prometer. A persona tem prioridade sobre instruções genéricas do sistema.',
-      promptLabel: 'Persona e instruções',
+        'Conte ao assistente sobre seu negócio — produtos, tom de voz, o que pode ou não prometer. Esse contexto alimenta rascunhos e respostas automáticas.',
+      promptLabel: 'Contexto do negócio e instruções',
       promptPlaceholder:
-        'Ex.: Você é Gabriella, da Wepost. Cordial, objetiva, estilo WhatsApp. Apresente-se em saudações…',
-      examplesLabel: 'Exemplos de conversa (opcional)',
-      examplesPlaceholder:
-        'Cliente: oi boa tarde\nVocê: Oi, boa tarde! Sou a Gabriella…\n\nCliente: quanto custa?\nVocê: O investimento depende do escopo…',
-      examplesHint:
-        'Pares Cliente/Você que mostram o tom desejado. O agente adapta ao contexto — não copia literalmente.',
-      previewTitle: 'Prévia do tom',
-      previewEmpty: 'Configure a persona e exemplos para ver como o agente deve soar.',
+        'Ex.: Somos a Acme, loja de equipamentos para café. Seja cordial e objetivo. Nunca informe preços ou prazos — encaminhe para um humano nesses casos.',
       enableTitle: 'Ativar assistente de IA',
       enableDescription:
         'Interruptor principal. Ativa o botão “Rascunhar com IA” na inbox.',
@@ -810,10 +591,10 @@ export const settings = {
         'O bot responde novas mensagens automaticamente (somente quando nenhum fluxo trata delas e nenhum agente está atribuído). Encaminha para um humano quando não consegue ajudar.',
       maxRepliesLabel: 'Máx. de respostas automáticas por conversa',
       maxRepliesDescription:
-        'Após esse número de respostas do bot em uma conversa, o bot para de responder.',
+        'Após esse número de respostas do bot em uma conversa, a IA para e passa o atendimento dessa conversa para um humano (agente configurado em “Encaminhar para”, ou fila compartilhada).',
       handoffTo: 'Encaminhar para',
       handoffToDesc:
-        'Quando o bot não puder ajudar, atribui a conversa a este membro (ou deixa na fila compartilhada).',
+        'Quando o bot não puder ajudar ou atingir o limite de respostas, atribui a conversa a este membro (ou deixa na fila compartilhada).',
       handoffQueue: 'Fila compartilhada (sem atribuição)',
     },
     knowledge: {

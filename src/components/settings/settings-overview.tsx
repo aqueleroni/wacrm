@@ -141,55 +141,17 @@ export function SettingsOverview({
     };
   }, [user?.id, accountId, canManageMembers]);
 
-  const displayName = profile?.full_name || profile?.email || t('settings.overview.yourAccount');
+  const displayName =
+    profile?.full_name || profile?.email || t('settings.overview.yourAccount');
   const initial = (profile?.full_name || profile?.email || 'U').charAt(0).toUpperCase();
   const roleMeta = accountRole ? roleMetaByRole[accountRole] : null;
   const RoleIcon = roleMeta?.icon;
 
   const currencyLabel = getCurrencyLabel(defaultCurrency, t);
-  const themes = getThemes(t);
-  const themeName = themes.find((th) => th.id === theme)?.name ?? theme;
-  const modeLabel =
-    mode === 'light'
-      ? t('settings.appearance.mode.light')
-      : t('settings.appearance.mode.dark');
-
-  const membersSubtitle = () => {
-    if (counts?.members == null) return t('settings.overview.members.viewTeam');
-    const base =
-      counts.members === 1
-        ? t('settings.overview.members.count', { count: counts.members })
-        : t('settings.overview.members.count_plural', { count: counts.members });
-    if (!counts.pendingInvites) return base;
-    const pending =
-      counts.pendingInvites === 1
-        ? t('settings.overview.members.pendingInvite', { count: counts.pendingInvites })
-        : t('settings.overview.members.pendingInvites', { count: counts.pendingInvites });
-    return `${base} · ${pending}`;
-  };
-
-  const templatesSubtitle = () => {
-    if (counts?.templates == null) return t('settings.overview.templates.manage');
-    const base =
-      counts.templates === 1
-        ? t('settings.overview.templates.count', { count: counts.templates })
-        : t('settings.overview.templates.count_plural', { count: counts.templates });
-    if (!counts.templatesPending) return base;
-    return `${base} · ${t('settings.overview.templates.pendingReview', {
-      count: counts.templatesPending,
-    })}`;
-  };
-
-  const fieldsSubtitle = () => {
-    if (counts?.tags == null && counts?.customFields == null) {
-      return t('settings.overview.fields.summary');
-    }
-    const tags = counts?.tags ?? 0;
-    const fields = counts?.customFields ?? 0;
-    return tags === 1 && fields === 1
-      ? t('settings.overview.fields.tagsAndFields', { tags, fields })
-      : t('settings.overview.fields.tagsAndFields_plural', { tags, fields });
-  };
+  const themeCatalog = getThemes(t);
+  const themeName =
+    themeCatalog.find((entry) => entry.id === theme)?.name ?? theme;
+  const modeLabel = t(`settings.appearance.mode.${mode}`);
 
   // Per-tile loading + subtitle. `null` counts render as a graceful
   // fallback so a single failed query never blanks a tile.
@@ -216,12 +178,49 @@ export function SettingsOverview({
     {
       section: 'members',
       loading: countsLoading,
-      subtitle: membersSubtitle(),
+      subtitle:
+        counts?.members == null
+          ? t('settings.overview.members.viewTeam')
+          : [
+              t(
+                counts.members === 1
+                  ? 'settings.overview.members.count'
+                  : 'settings.overview.members.count_plural',
+                { count: counts.members },
+              ),
+              counts.pendingInvites
+                ? t(
+                    counts.pendingInvites === 1
+                      ? 'settings.overview.members.pendingInvite'
+                      : 'settings.overview.members.pendingInvites',
+                    { count: counts.pendingInvites },
+                  )
+                : null,
+            ]
+              .filter(Boolean)
+              .join(' · '),
     },
     {
       section: 'templates',
       loading: countsLoading,
-      subtitle: templatesSubtitle(),
+      subtitle:
+        counts?.templates == null
+          ? t('settings.overview.templates.manage')
+          : [
+              t(
+                counts.templates === 1
+                  ? 'settings.overview.templates.count'
+                  : 'settings.overview.templates.count_plural',
+                { count: counts.templates },
+              ),
+              counts.templatesPending
+                ? t('settings.overview.templates.pendingReview', {
+                    count: counts.templatesPending,
+                  })
+                : null,
+            ]
+              .filter(Boolean)
+              .join(' · '),
     },
     {
       section: 'deals',
@@ -231,7 +230,18 @@ export function SettingsOverview({
     {
       section: 'fields',
       loading: countsLoading,
-      subtitle: fieldsSubtitle(),
+      subtitle:
+        counts?.tags == null && counts?.customFields == null
+          ? t('settings.overview.fields.summary')
+          : t(
+              (counts?.tags ?? 0) === 1 && (counts?.customFields ?? 0) === 1
+                ? 'settings.overview.fields.tagsAndFields'
+                : 'settings.overview.fields.tagsAndFields_plural',
+              {
+                tags: counts?.tags ?? 0,
+                fields: counts?.customFields ?? 0,
+              },
+            ),
     },
     {
       section: 'appearance',
@@ -298,7 +308,7 @@ export function SettingsOverview({
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                   {loading ? (
                     <>
-                      <Loader2 className="size-3 animate-spin" /> {t('settings.overview.loading')}
+                      <Loader2 className="size-3 animate-spin" /> {t('common.actions.loading')}
                     </>
                   ) : (
                     subtitle

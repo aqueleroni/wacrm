@@ -21,36 +21,10 @@ import {
 } from "@/components/interactive/interactive-builder";
 import {
   interactivePayloadPreviewText,
-  translateInteractiveError,
-  type InteractiveErrorCode,
-  type InteractiveErrorParams,
   type InteractiveMessagePayload,
 } from "@/lib/whatsapp/interactive";
 import type { QuickReply, QuickReplyKind } from "@/types";
 import { useT } from "@/hooks/use-i18n";
-
-function toastApiInteractiveError(
-  t: (key: string, params?: Record<string, string | number>) => string,
-  data: {
-    error?: string;
-    code?: InteractiveErrorCode;
-    params?: InteractiveErrorParams;
-  },
-  fallback: string,
-) {
-  if (data.code) {
-    toast.error(
-      translateInteractiveError(t, {
-        ok: false,
-        code: data.code,
-        params: data.params,
-        error: data.error ?? fallback,
-      }),
-    );
-    return;
-  }
-  toast.error(data.error ?? fallback);
-}
 
 interface DraftState {
   id?: string;
@@ -105,7 +79,7 @@ export function QuickRepliesManager() {
   const save = useCallback(async () => {
     if (!draft) return;
     if (!draft.title.trim()) {
-      toast.error(t("settings.quickReplies.nameRequired"));
+      toast.error(t('settings.quickReplies.toast.nameRequired'));
       return;
     }
     const payload =
@@ -125,22 +99,18 @@ export function QuickRepliesManager() {
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toastApiInteractiveError(
-          t,
-          data,
-          t("settings.quickReplies.saveFailed"),
-        );
+        toast.error(data.error ?? t('settings.quickReplies.toast.saveFailed'));
         return;
       }
       toast.success(
         draft.id
-          ? t("settings.quickReplies.updated")
-          : t("settings.quickReplies.created"),
+          ? t('settings.quickReplies.toast.updated')
+          : t('settings.quickReplies.toast.created'),
       );
       setDraft(null);
       await load();
     } catch {
-      toast.error(t("settings.quickReplies.saveFailed"));
+      toast.error(t('settings.quickReplies.toast.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -148,10 +118,10 @@ export function QuickRepliesManager() {
 
   const remove = useCallback(
     async (id: string) => {
-      if (!window.confirm(t("settings.quickReplies.deleteConfirm"))) return;
+      if (!window.confirm(t('settings.quickReplies.toast.deleteConfirm'))) return;
       const res = await fetch(`/api/quick-replies/${id}`, { method: "DELETE" });
       if (!res.ok) {
-        toast.error(t("settings.quickReplies.deleteFailed"));
+        toast.error(t('settings.quickReplies.toast.deleteFailed'));
         return;
       }
       await load();
@@ -162,12 +132,12 @@ export function QuickRepliesManager() {
   return (
     <div>
       <SettingsPanelHead
-        title={t("settings.quickReplies.title")}
-        description={t("settings.quickReplies.description")}
+        title={t('settings.quickReplies.title')}
+        description={t('settings.quickReplies.description')}
         action={
           <Button onClick={openCreate}>
             <Plus className="mr-1 h-4 w-4" />
-            {t("settings.quickReplies.new")}
+            {t('settings.quickReplies.newButton')}
           </Button>
         }
       />
@@ -178,7 +148,7 @@ export function QuickRepliesManager() {
         </div>
       ) : items.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
-          {t("settings.quickReplies.empty")}
+          {t('settings.quickReplies.empty')}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -223,32 +193,32 @@ export function QuickRepliesManager() {
           <DialogHeader>
             <DialogTitle>
               {draft?.id
-                ? t("settings.quickReplies.editTitle")
-                : t("settings.quickReplies.createTitle")}
+                ? t('settings.quickReplies.editTitle')
+                : t('settings.quickReplies.createTitle')}
             </DialogTitle>
           </DialogHeader>
           {draft && (
             <div className="max-h-[70vh] space-y-3 overflow-y-auto">
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">
-                  {t("settings.quickReplies.nameLabel")}
+                  {t('settings.quickReplies.nameLabel')}
                 </label>
                 <Input
                   value={draft.title}
                   onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-                  placeholder={t("settings.quickReplies.namePlaceholder")}
+                  placeholder={t('settings.quickReplies.namePlaceholder')}
                   className="bg-muted text-foreground"
                 />
               </div>
               <div className="flex gap-2">
                 <KindTab
                   active={draft.kind === "text"}
-                  label={t("settings.quickReplies.kindText")}
+                  label={t('settings.quickReplies.kindText')}
                   onClick={() => setDraft({ ...draft, kind: "text" })}
                 />
                 <KindTab
                   active={draft.kind === "interactive"}
-                  label={t("settings.quickReplies.kindInteractive")}
+                  label={t('settings.quickReplies.kindInteractive')}
                   onClick={() => setDraft({ ...draft, kind: "interactive" })}
                 />
               </div>
@@ -256,7 +226,7 @@ export function QuickRepliesManager() {
                 <Textarea
                   value={draft.content_text}
                   onChange={(e) => setDraft({ ...draft, content_text: e.target.value })}
-                  placeholder={t("settings.quickReplies.textPlaceholder")}
+                  placeholder={t('settings.quickReplies.contentPlaceholder')}
                   className="min-h-28 bg-muted text-foreground"
                 />
               ) : (
@@ -269,11 +239,11 @@ export function QuickRepliesManager() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDraft(null)} disabled={saving}>
-              {t("settings.quickReplies.cancel")}
+              {t('common.actions.cancel')}
             </Button>
             <Button onClick={save} disabled={saving}>
               {saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-              {t("settings.quickReplies.save")}
+              {t('common.actions.save')}
             </Button>
           </DialogFooter>
         </DialogContent>
