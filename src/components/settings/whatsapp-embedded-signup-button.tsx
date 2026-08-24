@@ -243,6 +243,7 @@ export function WhatsAppEmbeddedSignupButton({
         error?: string;
         verify_token?: string;
         registration_error?: string | null;
+        registration_skipped?: boolean;
       };
       track('exchange:response', { status: res.status, error: data.error });
       if (!res.ok) {
@@ -251,6 +252,11 @@ export function WhatsAppEmbeddedSignupButton({
       }
       if (data.registration_error) {
         toast.warning(t('settings.whatsapp.embeddedSignup.savedWithRegisterError'));
+      } else if (data.registration_skipped) {
+        // Connected + subscribed, but /register never ran (no PIN). The number
+        // still can't send/receive until registered — say so instead of a
+        // misleading success.
+        toast.warning(t('settings.whatsapp.embeddedSignup.savedNeedsPin'));
       } else {
         toast.success(t('settings.whatsapp.embeddedSignup.success'));
       }

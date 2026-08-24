@@ -204,15 +204,12 @@ export async function POST(request: Request) {
       )
     }
 
-    if (
-      !registrationError &&
-      registrationSkipped &&
-      registeredAt == null &&
-      subscribedAppsAt != null
-    ) {
-      registeredAt = subscribedAppsAt
-      registrationSkipped = false
-    }
+    // NOTE: do NOT mark the number "registered" just because subscribed_apps
+    // succeeded. /register is a separate call that needs a PIN, and without it
+    // the number cannot send AND inbound events may route to another app.
+    // Faking registered_at here made the UI show green while messaging was
+    // still broken. If /register was skipped, stay honest: registered_at is
+    // null and the client is told a PIN is required.
 
     const {
       data: { user },

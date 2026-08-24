@@ -355,6 +355,8 @@ export const settings = {
       sdkNotReady: 'Meta SDK is not ready yet. Try again in a moment.',
       savedWithRegisterError:
         'Credentials saved, but phone registration failed — check the PIN and use Verify with Meta.',
+      savedNeedsPin:
+        'Number connected, but not registered yet. Enter the two-step verification PIN and connect again to send and receive messages.',
       verifyTokenHint: 'Save this webhook verify token (or keep the one already on the Meta app):',
       timeout:
         'The connection took too long. Close the Meta popup if it is still open, then try again.',

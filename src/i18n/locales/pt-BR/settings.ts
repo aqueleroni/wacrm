@@ -357,6 +357,8 @@ export const settings = {
       sdkNotReady: 'SDK da Meta ainda não carregou. Tente de novo em instantes.',
       savedWithRegisterError:
         'Credenciais salvas, mas o registro do número falhou — confira o PIN e use Verificar com a Meta.',
+      savedNeedsPin:
+        'Número conectado, mas ainda não registrado. Informe o PIN de verificação em duas etapas e conecte de novo para poder enviar e receber mensagens.',
       verifyTokenHint:
         'Guarde este verify token do webhook (ou use o já configurado no app Meta):',
       timeout:
