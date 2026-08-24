@@ -112,6 +112,20 @@ export async function GET(request: Request) {
       )
     }
 
+    // App-level webhook (Tech Provider / Embedded Signup): Meta verifies the
+    // single app webhook ONCE, with a fixed token set in the App Dashboard —
+    // no per-account challenge happens for customers onboarded via ES. Accept
+    // that fixed token directly so verification never depends on a matching
+    // per-account row existing yet. Per-account tokens (self-hosted model)
+    // still work via the DB check below.
+    const appVerifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN
+    if (appVerifyToken && verifyToken === appVerifyToken) {
+      return new Response(challenge, {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' },
+      })
+    }
+
     // Fetch all whatsapp configs to check verify tokens
     const { data: configs, error: configError } = await supabaseAdmin()
       .from('whatsapp_config')
