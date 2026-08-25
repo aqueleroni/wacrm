@@ -13,6 +13,8 @@ import {
   Zap,
   AlertTriangle,
   RotateCcw,
+  SlidersHorizontal,
+  ChevronDown,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
@@ -76,6 +78,10 @@ export function WhatsAppConfig() {
   const [accessToken, setAccessToken] = useState('');
   const [verifyToken, setVerifyToken] = useState('');
   const [pin, setPin] = useState('');
+  // Manual credentials + setup instructions are only for self-hosted/admin
+  // debugging. In the self-service model the client just uses Embedded Signup,
+  // so keep all of that collapsed behind an "Advanced" toggle by default.
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [tokenEdited, setTokenEdited] = useState(false);
 
   // Inbound-media mirror (issue #466). Unlike everything else on this
@@ -442,7 +448,7 @@ export function WhatsAppConfig() {
         title={t('settings.whatsapp.title')}
         description={t('settings.whatsapp.description')}
       />
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+      <div className={`grid gap-6${showAdvanced ? ' lg:grid-cols-[1fr_380px]' : ''}`}>
       {/* Main config form */}
       <div className="space-y-6">
         {/* Corrupted-token reset banner */}
@@ -619,6 +625,25 @@ export function WhatsAppConfig() {
           />
         )}
 
+        {/* Advanced toggle — reveals manual credentials + webhook for
+            self-hosters / admin debugging. Hidden by default so the
+            self-service client only sees the Connect button + status. */}
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((v) => !v)}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <SlidersHorizontal className="size-4" />
+          {showAdvanced
+            ? t('settings.whatsapp.advanced.hide')
+            : t('settings.whatsapp.advanced.show')}
+          <ChevronDown
+            className={`size-4 transition-transform${showAdvanced ? ' rotate-180' : ''}`}
+          />
+        </button>
+
+        {showAdvanced && (
+        <>
         {/* API Credentials */}
         <Card>
           <CardHeader>
@@ -760,6 +785,8 @@ export function WhatsAppConfig() {
             </div>
           </CardContent>
         </Card>
+        </>
+        )}
 
         {/* Attachment retention. Only meaningful once a number is
             connected, since it governs what the webhook does with
@@ -855,7 +882,9 @@ export function WhatsAppConfig() {
         </div>
       </div>
 
-      {/* Setup Instructions Sidebar */}
+      {/* Setup Instructions Sidebar — self-hoster/admin only, hidden by
+          default so clients aren't shown "create a Meta app" steps. */}
+      {showAdvanced && (
       <div>
         <Card>
           <CardHeader>
@@ -949,6 +978,7 @@ export function WhatsAppConfig() {
           </CardContent>
         </Card>
       </div>
+      )}
     </div>
     </section>
   );

@@ -324,6 +324,10 @@ export const settings = {
       reset: 'Redefinir configuração',
       resetting: 'Redefinindo...',
     },
+    advanced: {
+      show: 'Configuração avançada (manual)',
+      hide: 'Ocultar configuração avançada',
+    },
     credentials: {
       title: 'Credenciais da API',
       description: 'Informe suas credenciais da API WhatsApp Business da Meta.',
