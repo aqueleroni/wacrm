@@ -302,6 +302,8 @@ export const settings = {
       tokenCorrupted:
         "Stored token can't be decrypted — reset the configuration and re-enter your credentials.",
       credentialsRejected: 'Meta rejected the credentials: {detail}',
+      objectNotFound:
+        'This number could not be accessed on Meta. The credentials may have expired or the number was disconnected — click Connect WhatsApp to reconnect.',
     },
     registration: {
       registered: 'Registered — Meta will deliver events to wacrm',

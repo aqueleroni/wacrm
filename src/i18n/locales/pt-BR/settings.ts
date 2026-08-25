@@ -302,6 +302,8 @@ export const settings = {
       tokenCorrupted:
         'O token armazenado não pôde ser descriptografado — redefina a configuração e informe as credenciais novamente.',
       credentialsRejected: 'A Meta rejeitou as credenciais: {detail}',
+      objectNotFound:
+        'Não foi possível acessar este número na Meta. As credenciais podem ter expirado ou o número foi desconectado — clique em Conectar WhatsApp para reconectar.',
     },
     registration: {
       registered: 'Registrado — a Meta entregará eventos ao wacrm',

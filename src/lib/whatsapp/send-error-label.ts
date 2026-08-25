@@ -61,6 +61,15 @@ export function translateWhatsAppConnectionError(
     return t('settings.whatsapp.connection.tokenCorrupted')
   }
 
+  // Meta #100 for a phone-number/WABA object: the token no longer has
+  // access, or the asset was disconnected. Give a clear "reconnect" hint
+  // instead of the raw "Unsupported get request. Object ... does not exist".
+  if (
+    /does not exist, cannot be loaded|unsupported get request/i.test(trimmed)
+  ) {
+    return t('settings.whatsapp.connection.objectNotFound')
+  }
+
   if (/^Meta API rejected the credentials:\s*/i.test(trimmed)) {
     const detail = trimmed
       .replace(/^Meta API rejected the credentials:\s*/i, '')
@@ -69,6 +78,11 @@ export function translateWhatsAppConnectionError(
       /session has expired|error validating access token/i.test(detail)
     ) {
       return t('settings.whatsapp.connection.tokenExpired')
+    }
+    if (
+      /does not exist, cannot be loaded|unsupported get request/i.test(detail)
+    ) {
+      return t('settings.whatsapp.connection.objectNotFound')
     }
     return t('settings.whatsapp.connection.credentialsRejected', {
       detail: translateWhatsAppSendError(detail, t),

@@ -33,6 +33,7 @@ import {
   AccordionContent,
 } from '@/components/ui/accordion';
 import { WhatsAppEmbeddedSignupButton } from './whatsapp-embedded-signup-button';
+import { translateWhatsAppConnectionError } from '@/lib/whatsapp/send-error-label';
 import type { WhatsAppConfig as WhatsAppConfigType } from '@/types';
 
 const MASKED_TOKEN = '••••••••••••••••';
@@ -174,7 +175,11 @@ export function WhatsAppConfig() {
           } else {
             setConnectionStatus('disconnected');
             setResetReason(payload.needs_reset ? 'token_corrupted' : payload.reason === 'meta_api_error' ? 'meta_api_error' : null);
-            setStatusMessage(payload.message || '');
+            setStatusMessage(
+              payload.message
+                ? translateWhatsAppConnectionError(payload.message, t)
+                : '',
+            );
           }
         } catch (err) {
           console.error('Health check failed:', err);
@@ -352,7 +357,11 @@ export function WhatsAppConfig() {
         setConnectionStatus('disconnected');
         setResetReason(payload.needs_reset ? 'token_corrupted' : payload.reason === 'meta_api_error' ? 'meta_api_error' : null);
         setStatusMessage(payload.message || '');
-        toast.error(payload.message || t('settings.whatsapp.toast.testFailed'));
+        toast.error(
+          payload.message
+            ? translateWhatsAppConnectionError(payload.message, t)
+            : t('settings.whatsapp.toast.testFailed'),
+        );
       }
     } catch (err) {
       console.error('Test connection error:', err);
