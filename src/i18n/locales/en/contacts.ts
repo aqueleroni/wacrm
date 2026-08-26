@@ -170,5 +170,7 @@ export const contacts = {
     importFailed_plural: '{count} contacts failed to import',
     tagsAssignFailed: 'Contacts imported, but some tag assignments failed.',
     failedGeneric: 'Import failed',
+    failedRowsHeading: 'Failed rows',
+    unknownReason: 'Unknown error',
   },
 } as const;

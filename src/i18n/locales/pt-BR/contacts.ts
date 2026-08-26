@@ -170,5 +170,7 @@ export const contacts = {
     importFailed_plural: '{count} contatos não importados',
     tagsAssignFailed: 'Contatos importados, mas algumas tags não foram aplicadas.',
     failedGeneric: 'Falha na importação',
+    failedRowsHeading: 'Linhas com falha',
+    unknownReason: 'Erro desconhecido',
   },
 } as const;

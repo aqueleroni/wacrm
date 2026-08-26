@@ -143,6 +143,7 @@ export function ImportModal({
     imported: number;
     skipped: number;
     failed: number;
+    failedDetails: { phone: string; name?: string; reason: string }[];
     tagsAssigned: number;
     invalidPhone: number;
   } | null>(null);
@@ -222,6 +223,8 @@ export function ImportModal({
       let imported = 0;
       let skipped = 0;
       let failed = 0;
+      const failedDetails: { phone: string; name?: string; reason: string }[] =
+        [];
 
       // 1) De-dupe within the file by normalized phone (keep first).
       //    Rows without a leading `+` are counted as invalidPhone, not
@@ -316,6 +319,18 @@ export function ImportModal({
               skipped++;
             } else {
               failed++;
+              console.error(
+                '[contacts import] insert failed for',
+                row.phone,
+                singleErr
+              );
+              failedDetails.push({
+                phone: row.phone,
+                name: row.name ?? undefined,
+                reason:
+                  (singleErr as { message?: string } | null)?.message ||
+                  t('contacts.import.unknownReason'),
+              });
             }
           }
         } else {
@@ -348,7 +363,14 @@ export function ImportModal({
         toast.warning(t('contacts.import.tagsAssignFailed'));
       }
 
-      setResult({ imported, skipped, failed, tagsAssigned, invalidPhone });
+      setResult({
+        imported,
+        skipped,
+        failed,
+        failedDetails,
+        tagsAssigned,
+        invalidPhone,
+      });
       if (imported > 0) {
         toast.success(
           imported === 1
@@ -649,6 +671,27 @@ export function ImportModal({
                   </div>
                 )}
               </div>
+
+              {result.failedDetails.length > 0 && (
+                <div className="mt-3 space-y-1 border-t border-border/80 pt-3">
+                  <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                    {t('contacts.import.failedRowsHeading')}
+                  </p>
+                  <ul className="max-h-32 space-y-1 overflow-y-auto text-xs">
+                    {result.failedDetails.map((row, i) => (
+                      <li
+                        key={i}
+                        className="flex items-baseline gap-2 text-muted-foreground"
+                      >
+                        <span className="shrink-0 font-mono text-popover-foreground">
+                          {row.name ? `${row.name} (${row.phone})` : row.phone}
+                        </span>
+                        <span className="truncate">{row.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </div>
