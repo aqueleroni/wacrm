@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { useT } from '@/hooks/use-i18n';
 import { translateStageName } from '@/lib/pipelines/stage-label';
+import { contactHandle } from '@/lib/whatsapp/wa-identity';
 
 interface ContactDetailViewProps {
   open: boolean;
@@ -193,7 +194,7 @@ export function ContactDetailView({
 
   async function copyPhone() {
     if (!contact) return;
-    await navigator.clipboard.writeText(contact.phone);
+    await navigator.clipboard.writeText(contactHandle(contact));
     setCopiedPhone(true);
     setTimeout(() => setCopiedPhone(false), 2000);
   }
@@ -411,7 +412,7 @@ export function ContactDetailView({
                       className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
                     >
                       <Phone className="size-3" />
-                      {contact.phone}
+                      {contactHandle(contact)}
                       {copiedPhone ? (
                         <Check className="size-3 text-primary" />
                       ) : (
