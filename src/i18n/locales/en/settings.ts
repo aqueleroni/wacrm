@@ -383,6 +383,8 @@ export const settings = {
       verifyTokenPlaceholder: 'Create a custom verify token',
       verifyTokenHint:
         'A custom string you create. Must match the token you set in Meta webhook settings.',
+      verifyTokenSaved:
+        'A verify token is saved. Leave it as is to keep it, or type a new one to replace it.',
       pin: 'Two-step verification PIN',
       pinOptional: '(optional)',
       pinPlaceholder: '6-digit PIN from Meta WhatsApp Manager',

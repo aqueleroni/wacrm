@@ -22,6 +22,7 @@ import {
   phoneNumberBelongsToWaba,
 } from '@/lib/whatsapp/waba-pairing'
 import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
+import { resolveVerifyTokenForSave } from '@/lib/whatsapp/verify-token'
 
 /**
  * Resolve the caller's account_id from their profile. Inlined here
@@ -259,7 +260,6 @@ export async function POST(request: Request) {
       verify_token,
       pin,
       reuse_stored_token,
-      keep_verify_token,
     } = body
 
     // Look up any pre-existing row early so we can reuse secrets without
@@ -408,16 +408,17 @@ export async function POST(request: Request) {
       }
     }
 
-    // Encrypt sensitive tokens before storing
+    // Encrypt sensitive tokens before storing. The settings form never
+    // shows the stored verify_token, so a save that leaves it blank keeps
+    // the stored one instead of nulling it out.
     let encryptedAccessToken: string
     let encryptedVerifyToken: string | null
     try {
       encryptedAccessToken = encrypt(plainAccessToken)
-      if (keep_verify_token && existing) {
-        encryptedVerifyToken = existing.verify_token ?? null
-      } else {
-        encryptedVerifyToken = verify_token ? encrypt(verify_token) : null
-      }
+      encryptedVerifyToken = resolveVerifyTokenForSave(
+        verify_token,
+        existing?.verify_token ?? null
+      )
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown encryption error'
       console.error('Encryption failed:', message)
