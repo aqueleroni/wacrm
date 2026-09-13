@@ -18,6 +18,11 @@ import {
   uploadAccountMedia,
   MEDIA_MAX_BYTES_BY_KIND,
 } from '@/lib/storage/upload-media';
+import {
+  MEDIA_HEADER_SPECS,
+  isMediaHeaderKind,
+  type MediaHeaderKind,
+} from '@/lib/whatsapp/media-header-types';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -145,9 +150,10 @@ export function TemplateManager() {
   // doesn't take the template off Meta as well as locally.
   const [templateToDelete, setTemplateToDelete] =
     useState<MessageTemplate | null>(null);
-  // Header-image upload (issue #230). Uploads to the account-scoped
-  // chat-media bucket and stores the public URL in header_media_url; the
-  // submit route turns that into a Meta Resumable-Upload handle.
+  // Header-media upload (image #230; video/document #562). Uploads to the
+  // account-scoped chat-media bucket and stores the public URL in
+  // header_media_url; the submit route turns that into a Meta
+  // Resumable-Upload handle.
   const [uploadingHeader, setUploadingHeader] = useState(false);
   const headerFileRef = useRef<HTMLInputElement>(null);
 
@@ -457,15 +463,43 @@ export function TemplateManager() {
 
   const headerNeedsMedia =
     form.header_format !== 'none' && form.header_format !== 'text';
+  const headerMediaKind: MediaHeaderKind | null = isMediaHeaderKind(
+    form.header_format,
+  )
+    ? form.header_format
+    : null;
 
-  async function handleHeaderImageFile(file: File) {
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      toast.error(t('settings.templates.toast.headerImageType'));
+  const uploadLabelKey = {
+    image: 'settings.templates.form.uploadImage',
+    video: 'settings.templates.form.uploadVideo',
+    document: 'settings.templates.form.uploadDocument',
+  } as const;
+  const uploadHintKey = {
+    image: 'settings.templates.form.uploadHintImage',
+    video: 'settings.templates.form.uploadHintVideo',
+    document: 'settings.templates.form.uploadHintDocument',
+  } as const;
+  const invalidTypeKey = {
+    image: 'settings.templates.toast.headerImageType',
+    video: 'settings.templates.toast.headerVideoType',
+    document: 'settings.templates.toast.headerDocumentType',
+  } as const;
+
+  async function handleHeaderMediaFile(file: File, kind: MediaHeaderKind) {
+    if (!MEDIA_HEADER_SPECS[kind].mimeTypes.includes(file.type)) {
+      toast.error(t(invalidTypeKey[kind]));
       return;
     }
-    if (file.size > MEDIA_MAX_BYTES_BY_KIND.image) {
+    // The upload lands in the chat-media bucket, whose 16 MB ceiling is
+    // below Meta's 100 MB document cap — so this is the bucket-side
+    // limit, not Meta's. A larger document can still be pasted as a link.
+    const maxBytes = MEDIA_MAX_BYTES_BY_KIND[kind];
+    if (file.size > maxBytes) {
       toast.error(
-        `Image is ${(file.size / 1024 / 1024).toFixed(1)} MB — Meta's limit is 5 MB.`,
+        t('settings.templates.toast.mediaTooLarge', {
+          size: (file.size / 1024 / 1024).toFixed(1),
+          max: Math.round(maxBytes / 1024 / 1024),
+        }),
       );
       return;
     }
@@ -803,16 +837,16 @@ export function TemplateManager() {
 
               {headerNeedsMedia && (
                 <div className="space-y-2 mt-2">
-                  {form.header_format === 'image' && (
+                  {headerMediaKind && (
                     <div className="flex items-center gap-2">
                       <input
                         ref={headerFileRef}
                         type="file"
-                        accept="image/jpeg,image/png"
+                        accept={MEDIA_HEADER_SPECS[headerMediaKind].mimeTypes.join(',')}
                         className="hidden"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
-                          if (f) void handleHeaderImageFile(f);
+                          if (f) void handleHeaderMediaFile(f, headerMediaKind);
                           e.target.value = '';
                         }}
                       />
@@ -828,10 +862,10 @@ export function TemplateManager() {
                         ) : (
                           <Upload className="h-3.5 w-3.5" />
                         )}
-                        Upload image
+                        {t(uploadLabelKey[headerMediaKind])}
                       </Button>
                       <span className="text-[11px] text-muted-foreground">
-                        JPEG or PNG, ≤5 MB
+                        {t(uploadHintKey[headerMediaKind])}
                       </span>
                     </div>
                   )}
@@ -852,13 +886,13 @@ export function TemplateManager() {
                     />
                   )}
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    {form.header_format === 'image'
-                      ? 'Upload a JPEG/PNG (≤5 MB, ≥800×418 px recommended) or paste a public HTTPS link — we upload it to Meta for review automatically.'
-                      : 'Must be a publicly accessible HTTPS link. Meta fetches it once during review, so it needs to stay live for ~24 hrs.'}
+                    {t('settings.templates.form.mediaHint')}
+                    {form.header_format === 'image' &&
+                      t('settings.templates.form.imageHint')}
                     {form.header_format === 'video' &&
-                      ' Recommended: MP4 / 3GPP, ≤16 MB, ≤60 seconds.'}
+                      t('settings.templates.form.videoHint')}
                     {form.header_format === 'document' &&
-                      ' Recommended: PDF, ≤100 MB.'}
+                      t('settings.templates.form.documentHint')}
                   </p>
                 </div>
               )}
