@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server'
-import { requireRole, toErrorResponse } from '@/lib/auth/account'
+import {
+  ForbiddenError,
+  UnauthorizedError,
+  requireRole,
+  toErrorResponse,
+} from '@/lib/auth/account'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import {
   deleteMessageTemplate,
@@ -10,7 +15,7 @@ import {
   type TemplatePayload,
 } from '@/lib/whatsapp/template-validators'
 import { buildMetaTemplatePayload } from '@/lib/whatsapp/template-components'
-import { ensureImageHeaderHandle } from '@/lib/whatsapp/template-header-handle'
+import { ensureMediaHeaderHandle } from '@/lib/whatsapp/template-header-handle'
 
 /**
  * Per-template lifecycle endpoint.
@@ -27,6 +32,12 @@ import { ensureImageHeaderHandle } from '@/lib/whatsapp/template-header-handle'
  * Initial submission (DRAFT → PENDING) lives at the sibling
  * /submit endpoint — keep this route narrowly about lifecycle of
  * already-submitted templates.
+ *
+ * Both handlers require 'admin' (GHSA-m4fx-g6pr-hrw8): message
+ * templates are settings-class data, and the Meta call happens before
+ * the local mutation, so the admin-only message_templates_update /
+ * _delete RLS policies were no backstop at all — a viewer or agent got
+ * the remote edit or delete through and only the local write bounced.
  */
 
 const EDITABLE_STATUSES = new Set(['APPROVED', 'REJECTED', 'PAUSED'])
@@ -56,8 +67,8 @@ export async function PATCH(
         { status: 400 },
       )
     }
-    // This mutates Meta before the local update below. Enforce the
-    // settings role up front instead of treating RLS as authorization.
+    // Editing a template pushes a component replacement to Meta before
+    // anything is written locally, so the role has to be checked here.
     const { supabase, accountId } = await requireRole('admin')
 
     let payload: TemplatePayload
@@ -131,13 +142,14 @@ export async function PATCH(
       }
       const accessToken = decrypt(config.access_token)
 
-      // Image headers need a fresh Resumable-Upload handle on every edit
-      // (Meta replaces components wholesale). Derive from header_media_url.
+      // Media headers (image/video/document) need a fresh Resumable-Upload
+      // handle on every edit (Meta replaces components wholesale). Derive
+      // from header_media_url.
       try {
-        await ensureImageHeaderHandle(payload, accessToken)
+        await ensureMediaHeaderHandle(payload, accessToken)
       } catch (e) {
         return NextResponse.json(
-          { error: e instanceof Error ? e.message : 'Header image upload failed.' },
+          { error: e instanceof Error ? e.message : 'Header media upload failed.' },
           { status: 400 },
         )
       }
@@ -158,6 +170,7 @@ export async function PATCH(
             last_submitted_at: new Date().toISOString(),
           })
           .eq('id', id)
+          .eq('account_id', accountId)
         return NextResponse.json({ error: message }, { status: 502 })
       }
     }
@@ -181,6 +194,7 @@ export async function PATCH(
         last_submitted_at: new Date().toISOString(),
       })
       .eq('id', id)
+      .eq('account_id', accountId)
       .select()
       .single()
 
@@ -199,7 +213,17 @@ export async function PATCH(
       dry_run: isDryRun(),
     })
   } catch (error) {
-    return toErrorResponse(error)
+    if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
+      return toErrorResponse(error)
+    }
+    console.error('Error editing template:', error)
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error ? error.message : 'Failed to edit template.',
+      },
+      { status: 500 },
+    )
   }
 }
 
@@ -215,6 +239,8 @@ export async function DELETE(
         { status: 400 },
       )
     }
+    // Deleting removes the template on Meta first; same reasoning as
+    // the PATCH handler above.
     const { supabase, accountId } = await requireRole('admin')
 
     const { data: existing, error: lookupErr } = await supabase
@@ -257,6 +283,7 @@ export async function DELETE(
       .from('message_templates')
       .delete()
       .eq('id', id)
+      .eq('account_id', accountId)
     if (delErr) {
       return NextResponse.json(
         {
@@ -268,6 +295,16 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, dry_run: isDryRun() })
   } catch (error) {
-    return toErrorResponse(error)
+    if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
+      return toErrorResponse(error)
+    }
+    console.error('Error deleting template:', error)
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error ? error.message : 'Failed to delete template.',
+      },
+      { status: 500 },
+    )
   }
 }
