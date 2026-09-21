@@ -28,6 +28,10 @@ export const auth = {
     forgotPassword: 'Forgot password?',
     noAccount: "Don't have an account?",
     createAccount: 'Create account',
+    linkExpired:
+      'That link has expired. For a password reset, use “Forgot password?” to request a new one; if you were confirming your email, sign up again.',
+    linkInvalid:
+      'That link couldn’t be used to sign you in. If you were confirming your email, it may already be verified — just sign in below. For a password reset, request a new link and open it in the same browser you requested it from.',
   },
   signup: {
     title: 'Create account',
@@ -77,6 +81,25 @@ export const auth = {
       description:
         "We've sent a password reset link to {email}. Please check your inbox.",
     },
+  },
+  resetPassword: {
+    title: 'Choose a new password',
+    desc: 'Enter a new password for your account.',
+    passwordLabel: 'New password',
+    passwordPlaceholder: 'At least 6 characters',
+    confirmPasswordLabel: 'Confirm new password',
+    confirmPasswordPlaceholder: 'Repeat your new password',
+    submit: 'Update password',
+    saving: 'Updating...',
+    checking: 'Checking your link...',
+    expiredTitle: 'This link is no longer valid',
+    expiredDesc:
+      'Password reset links work once and expire after a short while. Request a new one and open it in the same browser you requested it from.',
+    requestNewLink: 'Request a new link',
+    backToSignIn: 'Back to sign in',
+    successTitle: 'Password updated',
+    successDesc: 'You’re signed in with your new password.',
+    continueToDashboard: 'Continue to dashboard',
   },
   errors: {
     passwordsMismatch: 'Passwords do not match',

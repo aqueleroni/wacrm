@@ -28,6 +28,10 @@ export const auth = {
     forgotPassword: 'Esqueceu a senha?',
     noAccount: 'Não tem uma conta?',
     createAccount: 'Criar conta',
+    linkExpired:
+      'Esse link expirou. Para redefinir a senha, use “Esqueceu a senha?” para pedir um novo; se estava confirmando seu e-mail, cadastre-se novamente.',
+    linkInvalid:
+      'Não foi possível entrar com esse link. Se estava confirmando seu e-mail, ele já pode estar verificado — basta entrar abaixo. Para redefinir a senha, peça um novo link e abra-o no mesmo navegador em que o solicitou.',
   },
   signup: {
     title: 'Criar conta',
@@ -77,6 +81,25 @@ export const auth = {
       description:
         'Enviamos um link de redefinição para {email}. Verifique sua caixa de entrada.',
     },
+  },
+  resetPassword: {
+    title: 'Escolha uma nova senha',
+    desc: 'Informe uma nova senha para a sua conta.',
+    passwordLabel: 'Nova senha',
+    passwordPlaceholder: 'Pelo menos 6 caracteres',
+    confirmPasswordLabel: 'Confirmar nova senha',
+    confirmPasswordPlaceholder: 'Repita a nova senha',
+    submit: 'Atualizar senha',
+    saving: 'Atualizando...',
+    checking: 'Verificando seu link...',
+    expiredTitle: 'Este link não é mais válido',
+    expiredDesc:
+      'Links de redefinição de senha funcionam uma vez e expiram em pouco tempo. Peça um novo e abra-o no mesmo navegador em que o solicitou.',
+    requestNewLink: 'Pedir um novo link',
+    backToSignIn: 'Voltar para entrar',
+    successTitle: 'Senha atualizada',
+    successDesc: 'Você está conectado com a nova senha.',
+    continueToDashboard: 'Ir para o painel',
   },
   errors: {
     passwordsMismatch: 'As senhas não coincidem',
