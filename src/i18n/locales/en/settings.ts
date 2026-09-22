@@ -198,6 +198,33 @@ export const settings = {
       signOutFailed: 'Sign-out failed: {message}',
     },
   },
+  browserNotifications: {
+    title: 'Browser notifications',
+    description:
+      "Get a desktop alert for every new customer message, even while you're on another page. Saved to this device.",
+    toggleLabel: 'Notify me about new customer messages',
+    toggleDesc: 'Works only while the app is open in a browser tab.',
+    statusGranted: 'Allowed by your browser.',
+    statusDefault: 'Turning this on will ask your browser for permission.',
+    statusDenied: 'Blocked in browser settings',
+    deniedHint:
+      "Allow notifications for this site in your browser's site settings (usually the lock icon next to the address bar), then reload the page.",
+    unsupported: "This browser doesn't support desktop notifications.",
+    sendTest: 'Send test notification',
+    testTitle: 'Test notification',
+    testBody:
+      'Notifications are working. New customer messages will show up like this.',
+    permissionDeniedToast: 'Your browser blocked notifications',
+    labels: {
+      fallbackTitle: 'New message',
+      image: '📷 Photo',
+      audio: '🎤 Voice message',
+      video: '🎬 Video',
+      document: '📄 Document',
+      location: '📍 Location',
+      template: '📋 Template',
+    },
+  },
   members: {
     title: 'Team members',
     description: 'Invite teammates and manage roles.',

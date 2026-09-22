@@ -11,7 +11,11 @@ import { logGeneration } from './generation-log'
 import { logAiUsage } from './usage'
 import { notifyHandoff } from './handoff-notify'
 import { AiError } from './types'
-import { engineSendText } from '@/lib/flows/meta-send'
+import {
+  engineSendText,
+  loadAccountMetaCredentials,
+} from '@/lib/flows/meta-send'
+import { sendTypingIndicator } from '@/lib/whatsapp/meta-api'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { keywordConfigMatches } from '@/lib/automations/keyword-match'
 import type { KeywordMatchTriggerConfig } from '@/types'
@@ -27,6 +31,10 @@ interface DispatchArgs {
   /** The inbound message text, used to predict whether a keyword
    *  automation will answer it (if so, the AI stands down). */
   inboundText: string
+  /** Meta's wamid of the customer message we're replying to. When set,
+   *  a typing indicator (which also marks it read) is shown while the
+   *  reply is generated. Optional so older callers keep working. */
+  inboundMessageId?: string
 }
 
 /**
@@ -51,7 +59,14 @@ interface DispatchArgs {
 export async function dispatchInboundToAiReply(
   args: DispatchArgs,
 ): Promise<void> {
-  const { accountId, conversationId, contactId, configOwnerUserId, inboundText } = args
+  const {
+    accountId,
+    conversationId,
+    contactId,
+    configOwnerUserId,
+    inboundText,
+    inboundMessageId,
+  } = args
 
   try {
     const db = supabaseAdmin()
@@ -136,6 +151,15 @@ export async function dispatchInboundToAiReply(
         `[ai auto-reply] account ${accountId} hit the per-account rate limit — skipping this inbound.`,
       )
       return
+    }
+
+    // Every gate has passed — we're committed to attempting a reply, so
+    // show the customer "typing…" (and mark their message read) while the
+    // retrieval + LLM round trips run. Meta clears the indicator after
+    // 25 s or when our reply lands, whichever is first. Strictly
+    // best-effort: a failed indicator must never cost us the reply.
+    if (inboundMessageId) {
+      await showTypingIndicator(db, accountId, inboundMessageId)
     }
 
     // Ground the reply in KB, memory, skills, and CRM context (best-effort).
@@ -279,5 +303,30 @@ export async function dispatchInboundToAiReply(
     })
   } catch (err) {
     console.error('[ai auto-reply] dispatch failed:', err)
+  }
+}
+
+/**
+ * Best-effort "typing…" for the inbound we're about to answer. Swallows
+ * every failure (no WhatsApp config, bad token, Meta 4xx) with a warning
+ * — the indicator is cosmetic, the reply is not.
+ */
+async function showTypingIndicator(
+  db: ReturnType<typeof supabaseAdmin>,
+  accountId: string,
+  inboundMessageId: string,
+): Promise<void> {
+  try {
+    const { phoneNumberId, accessToken } = await loadAccountMetaCredentials(
+      db,
+      accountId,
+    )
+    await sendTypingIndicator({
+      phoneNumberId,
+      accessToken,
+      messageId: inboundMessageId,
+    })
+  } catch (err) {
+    console.warn('[ai auto-reply] typing indicator failed (continuing):', err)
   }
 }

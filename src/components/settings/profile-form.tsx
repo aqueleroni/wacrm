@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { SettingsPanelHead } from './settings-panel-head';
+import { BrowserNotificationsCard } from './browser-notifications-card';
 import { useT } from '@/hooks/use-i18n';
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
@@ -361,6 +362,10 @@ export function ProfileForm() {
           </Button>
         </div>
       </form>
+
+      {/* Device-scoped, so it lives outside the profile form and its
+          Save button — flipping the switch applies immediately. */}
+      <BrowserNotificationsCard className="mt-6" />
     </section>
   );
 }

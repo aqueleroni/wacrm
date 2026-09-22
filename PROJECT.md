@@ -114,6 +114,7 @@ git push origin main
 | 2026-08-12 | **ES pop-up bloqueado (Edge):** `window.open` do SDK devolve `null` → alerta persistente com instruções por navegador + link "abrir em nova aba" (Chrome funciona normal) |
 | 2026-08-12 | **ES conforme doc v4:** `extras = { setup, featureType, sessionInfoVersion: '3' }`; trata evento `ERROR` + `error_message` no CANCEL (causa do spinner infinito); `waba_ids` multi-WABA; painel **Diagnóstico da conexão** com trace copiável |
 | 2026-09-22 | **Sync upstream etapa 1** (sem i18n next-intl): #519 BSUID, #536 broadcast `contact_id`, #535 motivo de falha, #505 erros Meta + pairing, #586 `+` país, #512 picker CSV broadcast. Migrations **049–051** (remoto já tinha Instagram em 046–048). 975 testes. i18n oficial (#375) fica por último. |
+| 2026-09-22 | **Sync upstream etapa 2:** #516 notificações do navegador (perfil + listener realtime); #527 typing indicator da IA no WhatsApp enquanto gera auto-reply. 1007 testes. Sem deploy. |
 
 ## Smoke test manual (pós-merge upstream)
 
