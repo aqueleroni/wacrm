@@ -65,6 +65,8 @@ export const contacts = {
     addDescription: 'Preencha os dados para criar um novo contato.',
     editDescription: 'Atualize os dados do contato abaixo.',
     phoneRequired: 'Telefone é obrigatório',
+    phoneNeedsCountryCode:
+      'Inclua o código do país — o número deve começar com + (ex.: +5511987654321)',
     phoneHint: 'Inclua o código do país, ex.: +55 para o Brasil',
     duplicateExact: 'Já existe um contato com este telefone.',
     duplicateSimilar: 'Já existe um contato com um número muito parecido.',
@@ -89,6 +91,8 @@ export const contacts = {
     },
     saveChanges: 'Salvar alterações',
     phoneRequired: 'Telefone é obrigatório',
+    phoneNeedsCountryCode:
+      'Inclua o código do país — o número deve começar com + (ex.: +5511987654321)',
     tagsHint: 'Clique em uma tag para adicionar ou remover deste contato.',
     noTagsInSettings: 'Nenhuma tag disponível. Crie tags em Configurações.',
     notePlaceholder: 'Escreva uma nota...',
@@ -147,6 +151,11 @@ export const contacts = {
     tagsAssigned_plural: '{count} tags atribuídas',
     skipped: '{count} ignorado',
     failed: '{count} com falha',
+    invalidPhone: '{count} telefone inválido',
+    invalidPhoneHint:
+      'Números devem começar com + e o código do país (ex.: +5511987654321). Sem isso, a Meta entregaria no país errado.',
+    invalidPhoneToast:
+      '{count} linha(s) ignorada(s): o telefone deve começar com + e o código do país.',
     importButton: 'Importar {count} contato',
     importButton_plural: 'Importar {count} contatos',
     noValidRows: 'Nenhuma linha válida. O CSV precisa de uma coluna "phone".',

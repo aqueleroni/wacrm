@@ -144,6 +144,7 @@ export function ImportModal({
     skipped: number;
     failed: number;
     tagsAssigned: number;
+    invalidPhone: number;
   } | null>(null);
 
   function reset() {
@@ -223,7 +224,13 @@ export function ImportModal({
       let failed = 0;
 
       // 1) De-dupe within the file by normalized phone (keep first).
-      const { unique, duplicates: inFileDupes } = dedupeByPhone(parsedRows);
+      //    Rows without a leading `+` are counted as invalidPhone, not
+      //    `skipped` — they never duplicated anything (issue #586).
+      const {
+        unique,
+        duplicates: inFileDupes,
+        invalid: invalidPhone,
+      } = dedupeByPhone(parsedRows);
       skipped += inFileDupes;
 
       // 2) Skip numbers already in this account. One read of the
@@ -341,7 +348,7 @@ export function ImportModal({
         toast.warning(t('contacts.import.tagsAssignFailed'));
       }
 
-      setResult({ imported, skipped, failed, tagsAssigned });
+      setResult({ imported, skipped, failed, tagsAssigned, invalidPhone });
       if (imported > 0) {
         toast.success(
           imported === 1
@@ -362,6 +369,11 @@ export function ImportModal({
         const more =
           skippedNames.length > 3 ? ` (+${skippedNames.length - 3} more)` : '';
         toast.info(t('contacts.import.tagsSkipped', { sample, more }));
+      }
+      if (invalidPhone > 0) {
+        toast.warning(
+          t('contacts.import.invalidPhoneToast', { count: invalidPhone }),
+        );
       }
       if (skipped > 0) {
         toast.info(
@@ -615,6 +627,19 @@ export function ImportModal({
                   <div className="flex items-center gap-1.5 text-sm text-amber-400">
                     <AlertTriangle className="size-4 shrink-0" />
                     {t('contacts.import.skipped', { count: result.skipped })}
+                  </div>
+                )}
+                {result.invalidPhone > 0 && (
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-1.5 text-sm text-amber-400">
+                      <AlertTriangle className="size-4 shrink-0" />
+                      {t('contacts.import.invalidPhone', {
+                        count: result.invalidPhone,
+                      })}
+                    </div>
+                    <p className="pl-[1.375rem] text-xs text-muted-foreground">
+                      {t('contacts.import.invalidPhoneHint')}
+                    </p>
                   </div>
                 )}
                 {result.failed > 0 && (

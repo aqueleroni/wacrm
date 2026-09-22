@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { CustomField, Tag } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -13,8 +13,11 @@ import {
   ArrowRight,
   ArrowLeft,
   X,
+  FileText,
 } from 'lucide-react';
 import { useT } from '@/hooks/use-i18n';
+import { parseBroadcastCsv } from '@/lib/broadcast-csv';
+import { toast } from 'sonner';
 
 type AudienceType = 'all' | 'tags' | 'custom_field' | 'csv';
 type CustomFieldOperator = 'is' | 'is_not' | 'contains';
@@ -91,6 +94,10 @@ export function Step2SelectAudience({
   const [loadingFields, setLoadingFields] = useState(false);
   const [estimatedCount, setEstimatedCount] = useState<number | null>(null);
   const [loadingCount, setLoadingCount] = useState(false);
+  const [pickedCsvName, setPickedCsvName] = useState<string | null>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
+  const csvCount = audience.csvContacts?.length ?? 0;
+  const csvFileName = csvCount > 0 ? pickedCsvName : null;
 
   // Tags are used both by the primary "Filter by Tags" audience type
   // AND by the exclude-list below — so always load once on mount.
@@ -212,6 +219,34 @@ export function Step2SelectAudience({
   useEffect(() => {
     fetchEstimatedCount();
   }, [fetchEstimatedCount]);
+
+  async function handleCsvChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+
+    const result = parseBroadcastCsv(await selected.text());
+
+    if (!result.ok) {
+      toast.error(
+        result.error === 'missing_phone_column'
+          ? t('broadcasts.wizard.step2.errorCsvMissingPhone')
+          : t('broadcasts.wizard.step2.errorCsvParse'),
+      );
+      e.target.value = '';
+      setPickedCsvName(null);
+      onUpdate({ ...audience, csvContacts: undefined });
+      return;
+    }
+
+    if (result.invalid > 0) {
+      toast.warning(
+        t('broadcasts.wizard.step2.csvInvalidPhones', { count: result.invalid }),
+      );
+    }
+
+    setPickedCsvName(selected.name);
+    onUpdate({ ...audience, csvContacts: result.contacts });
+  }
 
   function toggleTag(tagId: string) {
     const current = audience.tagIds ?? [];
@@ -386,6 +421,49 @@ export function Step2SelectAudience({
               />
             </div>
           )}
+        </div>
+      )}
+
+      {audience.type === 'csv' && (
+        <div className="space-y-3 rounded-xl border border-border bg-card/50 p-4">
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              {t('broadcasts.wizard.step2.uploadCsv')}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {t('broadcasts.wizard.step2.csvFormatDesc')}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => csvInputRef.current?.click()}
+            className="group flex w-full flex-col items-center gap-2 rounded-lg border border-dashed border-border bg-muted/40 px-4 py-6 text-center transition-colors hover:border-primary/40 hover:bg-muted/70"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground group-hover:text-foreground">
+              {csvFileName ? (
+                <FileText className="h-5 w-5" />
+              ) : (
+                <Upload className="h-5 w-5" />
+              )}
+            </div>
+            <p className="text-sm text-foreground">
+              {csvFileName ?? t('broadcasts.wizard.step2.uploadCsv')}
+            </p>
+            {csvCount > 0 && (
+              <p className="text-xs text-primary">
+                {t('broadcasts.wizard.step2.csvContactsFound', { count: csvCount })}
+              </p>
+            )}
+          </button>
+
+          <input
+            ref={csvInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleCsvChange}
+            className="hidden"
+          />
         </div>
       )}
 
