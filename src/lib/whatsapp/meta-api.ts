@@ -9,6 +9,8 @@
  * instead of a runtime rejection from Meta.
  */
 
+import { isBusinessScopedUserId } from './wa-identity'
+
 const META_API_VERSION = 'v21.0'
 const META_API_BASE = `https://graph.facebook.com/${META_API_VERSION}`
 
@@ -24,18 +26,84 @@ export interface MetaPhoneInfo {
 }
 
 interface MetaErrorResponse {
-  error?: { message?: string; code?: number; type?: string }
+  error?: {
+    message?: string
+    code?: number
+    error_subcode?: number
+    type?: string
+    fbtrace_id?: string
+    /** WhatsApp-specific envelope — `details` is the human-readable part. */
+    error_data?: { messaging_product?: string; details?: string }
+  }
 }
 
-async function throwMetaError(response: Response, fallback: string): Promise<never> {
+/**
+ * A Graph API failure with Meta's structured envelope preserved.
+ *
+ * `message` stays what it always was (Meta's `error.message`, or the
+ * caller's fallback when the body wasn't JSON) so every existing
+ * `err.message` consumer keeps working. The extra fields are what
+ * `meta-error-explain.ts` needs to say *why* a call failed and which
+ * setting to check — and what a user has to quote to Meta support
+ * (`fbtrace_id`). Issue #505.
+ */
+export class MetaApiError extends Error {
+  readonly code: number | null
+  readonly subcode: number | null
+  readonly type: string | null
+  readonly fbtraceId: string | null
+  readonly httpStatus: number
+  /** `error.error_data.details` — WhatsApp endpoints put the useful text here. */
+  readonly details: string | null
+
+  constructor(
+    message: string,
+    fields: {
+      code?: number | null
+      subcode?: number | null
+      type?: string | null
+      fbtraceId?: string | null
+      httpStatus: number
+      details?: string | null
+    },
+  ) {
+    super(message)
+    this.name = 'MetaApiError'
+    this.code = fields.code ?? null
+    this.subcode = fields.subcode ?? null
+    this.type = fields.type ?? null
+    this.fbtraceId = fields.fbtraceId ?? null
+    this.httpStatus = fields.httpStatus
+    this.details = fields.details ?? null
+  }
+}
+
+/**
+ * Read a failed Graph response into a MetaApiError without throwing.
+ * Consumes the body — call at most once per response.
+ */
+async function readMetaError(response: Response, fallback: string): Promise<MetaApiError> {
   let message = fallback
+  let envelope: MetaErrorResponse['error'] | undefined
   try {
     const data = (await response.json()) as MetaErrorResponse
-    if (data.error?.message) message = data.error.message
+    envelope = data.error
+    if (envelope?.message) message = envelope.message
   } catch {
     // response body wasn't JSON — keep the fallback
   }
-  throw new Error(message)
+  return new MetaApiError(message, {
+    code: typeof envelope?.code === 'number' ? envelope.code : null,
+    subcode: typeof envelope?.error_subcode === 'number' ? envelope.error_subcode : null,
+    type: envelope?.type ?? null,
+    fbtraceId: envelope?.fbtrace_id ?? null,
+    httpStatus: response.status,
+    details: envelope?.error_data?.details ?? null,
+  })
+}
+
+async function throwMetaError(response: Response, fallback: string): Promise<never> {
+  throw await readMetaError(response, fallback)
 }
 
 // ============================================================
@@ -76,6 +144,11 @@ export interface WabaPhoneNumber {
   is_on_biz_app?: boolean
 }
 
+export interface ListWabaPhoneNumbersArgs {
+  wabaId: string
+  accessToken: string
+}
+
 const PHONE_FIELDS_EXTENDED =
   'id,display_phone_number,verified_name,quality_rating,platform_type,is_on_biz_app'
 const PHONE_FIELDS_BASIC = 'id,display_phone_number,verified_name,quality_rating'
@@ -83,31 +156,44 @@ const PHONE_FIELDS_BASIC = 'id,display_phone_number,verified_name,quality_rating
 /**
  * List the phone numbers under a WABA.
  *
- * Needed by the WhatsApp Business app onboarding (coexistence) flow: it
- * finishes with only a `waba_id`, so the phone number ID has to be looked
- * up before anything can be saved. `platform_type` / `is_on_biz_app` only
- * exist on newer Graph versions, hence the retry with the basic field set.
+ * Used by:
+ * - Embedded Signup coexistence (resolve phone from WABA alone) — prefers
+ *   `platform_type` / `is_on_biz_app` when Graph returns them.
+ * - POST /api/whatsapp/config pairing check (#505) — prove the Phone Number
+ *   ID belongs to the typed WABA. Follows `paging.next` a few pages.
  */
-export async function listWabaPhoneNumbers(args: {
-  wabaId: string
-  accessToken: string
-}): Promise<WabaPhoneNumber[]> {
+export async function listWabaPhoneNumbers(
+  args: ListWabaPhoneNumbersArgs,
+): Promise<WabaPhoneNumber[]> {
   const { wabaId, accessToken } = args
-  const request = (fields: string) =>
-    fetch(`${META_API_BASE}/${wabaId}/phone_numbers?fields=${fields}`, {
+  const out: WabaPhoneNumber[] = []
+  let url: string | undefined =
+    `${META_API_BASE}/${wabaId}/phone_numbers?fields=${PHONE_FIELDS_EXTENDED}&limit=100`
+  let usedBasic = false
+
+  for (let page = 0; url && page < 5; page++) {
+    const response = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
-
-  let response = await request(PHONE_FIELDS_EXTENDED)
-  if (!response.ok) {
-    response = await request(PHONE_FIELDS_BASIC)
+    if (!response.ok && !usedBasic && page === 0) {
+      // Older Graph versions reject the extended field set — retry once
+      // with the basic fields and keep paging from there.
+      usedBasic = true
+      url = `${META_API_BASE}/${wabaId}/phone_numbers?fields=${PHONE_FIELDS_BASIC}&limit=100`
+      page -= 1
+      continue
+    }
+    if (!response.ok) {
+      await throwMetaError(response, `Meta API error: ${response.status}`)
+    }
+    const data = (await response.json()) as {
+      data?: WabaPhoneNumber[]
+      paging?: { next?: string }
+    }
+    out.push(...(data.data ?? []))
+    url = data.paging?.next
   }
-  if (!response.ok) {
-    await throwMetaError(response, `Meta API error: ${response.status}`)
-  }
-
-  const data = (await response.json()) as { data?: WabaPhoneNumber[] }
-  return data.data ?? []
+  return out
 }
 
 // ============================================================
@@ -187,17 +273,11 @@ export async function registerPhoneNumber(
   // text "already registered" appears when the number is already
   // subscribed to this app — that's success from the caller's
   // perspective, surface it as such.
-  let data: { error?: { message?: string; code?: number; error_subcode?: number } } = {}
-  try {
-    data = await response.json()
-  } catch {
-    /* keep empty */
-  }
-  const message = data.error?.message ?? `Meta API error: ${response.status}`
-  if (/already.*registered/i.test(message)) {
+  const error = await readMetaError(response, `Meta API error: ${response.status}`)
+  if (/already.*registered/i.test(error.message)) {
     return { success: true, alreadyRegistered: true }
   }
-  throw new Error(message)
+  throw error
 }
 
 export interface SubscribeWabaToAppArgs {
@@ -260,6 +340,24 @@ export async function getSubscribedApps(
 // Sending
 // ============================================================
 
+/**
+ * Address a send at either a phone number or a business-scoped user ID.
+ *
+ * Meta uses two mutually-exclusive fields: `to` (+ `recipient_type`)
+ * for a phone number, and `recipient` for a BSUID or parent BSUID
+ * (issue #519). Every send helper below routes its `to` argument
+ * through this, so callers hand over whichever identifier they hold and
+ * don't have to know which field Meta wants.
+ *
+ * The two are never ambiguous: a sanitized phone number is digits only,
+ * and a BSUID always carries a two-letter prefix and a dot.
+ */
+function recipientFields(to: string): Record<string, unknown> {
+  return isBusinessScopedUserId(to)
+    ? { recipient: to.trim() }
+    : { recipient_type: 'individual', to }
+}
+
 export interface SendTextMessageArgs {
   phoneNumberId: string
   accessToken: string
@@ -281,8 +379,7 @@ export async function sendTextMessage(
   const url = `${META_API_BASE}/${phoneNumberId}/messages`
   const body: Record<string, unknown> = {
     messaging_product: 'whatsapp',
-    recipient_type: 'individual',
-    to,
+    ...recipientFields(to),
     type: 'text',
     text: { body: text },
   }
@@ -348,8 +445,7 @@ export async function sendMediaMessage(
 
   const body: Record<string, unknown> = {
     messaging_product: 'whatsapp',
-    recipient_type: 'individual',
-    to,
+    ...recipientFields(to),
     type: kind,
     [kind]: media,
   }
@@ -464,8 +560,7 @@ export async function sendTemplateMessage(
 
   const body: Record<string, unknown> = {
     messaging_product: 'whatsapp',
-    recipient_type: 'individual',
-    to,
+    ...recipientFields(to),
     type: 'template',
     template: templatePayload,
   }
@@ -735,8 +830,7 @@ export async function sendReactionMessage(
     },
     body: JSON.stringify({
       messaging_product: 'whatsapp',
-      recipient_type: 'individual',
-      to,
+      ...recipientFields(to),
       type: 'reaction',
       reaction: { message_id: targetMessageId, emoji },
     }),
@@ -855,8 +949,7 @@ export async function sendInteractiveButtons(
 
   const body: Record<string, unknown> = {
     messaging_product: 'whatsapp',
-    recipient_type: 'individual',
-    to,
+    ...recipientFields(to),
     type: 'interactive',
     interactive,
   }
@@ -987,8 +1080,7 @@ export async function sendInteractiveList(
 
   const body: Record<string, unknown> = {
     messaging_product: 'whatsapp',
-    recipient_type: 'individual',
-    to,
+    ...recipientFields(to),
     type: 'interactive',
     interactive,
   }

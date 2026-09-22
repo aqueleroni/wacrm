@@ -65,6 +65,8 @@ export const contacts = {
     addDescription: 'Fill in the details to create a new contact.',
     editDescription: 'Update the contact details below.',
     phoneRequired: 'Phone number is required',
+    phoneNeedsCountryCode:
+      'Include the country code — the number must start with + (e.g. +14155550123)',
     phoneHint: 'Include country code, e.g. +1 for US',
     duplicateExact: 'A contact with this phone number already exists.',
     duplicateSimilar: 'A contact with a very similar number already exists.',
@@ -89,6 +91,8 @@ export const contacts = {
     },
     saveChanges: 'Save Changes',
     phoneRequired: 'Phone number is required',
+    phoneNeedsCountryCode:
+      'Include the country code — the number must start with + (e.g. +14155550123)',
     tagsHint: 'Click a tag to add or remove it from this contact.',
     noTagsInSettings: 'No tags available. Create tags in Settings.',
     notePlaceholder: 'Write a note...',
@@ -147,6 +151,11 @@ export const contacts = {
     tagsAssigned_plural: '{count} tags assigned',
     skipped: '{count} skipped',
     failed: '{count} failed',
+    invalidPhone: '{count} invalid phone',
+    invalidPhoneHint:
+      'Phone numbers must start with + and a country code (e.g. +14155550123). Numbers without one would be delivered to the wrong country.',
+    invalidPhoneToast:
+      '{count} row(s) skipped: phone numbers must start with + and a country code.',
     importButton: 'Import {count} contact',
     importButton_plural: 'Import {count} contacts',
     noValidRows: 'No valid rows found. Ensure CSV has a "phone" column header.',

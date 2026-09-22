@@ -107,6 +107,13 @@ export const broadcasts = {
       customFieldDesc: 'Filtrar por valor de campo personalizado',
       uploadCsv: 'Enviar CSV',
       uploadCsvDesc: 'Enviar uma lista de telefones',
+      csvFormatDesc:
+        'CSV com coluna phone (obrigatória). Nome opcional. Números devem começar com + e o código do país.',
+      csvContactsFound: '{count} contato pronto',
+      csvInvalidPhones:
+        '{count} linha(s) ignorada(s): o telefone deve começar com + e o código do país (ex.: +5511987654321).',
+      errorCsvParse: 'Não foi possível ler esse CSV.',
+      errorCsvMissingPhone: 'O CSV precisa de uma coluna "phone" no cabeçalho.',
       selectTags: 'Selecionar tags',
       noTags: 'Nenhuma tag encontrada. Crie tags em Configurações.',
       customFieldFilter: 'Filtro por campo personalizado',

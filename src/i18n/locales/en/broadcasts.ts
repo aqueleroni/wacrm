@@ -107,6 +107,13 @@ export const broadcasts = {
       customFieldDesc: 'Filter by a custom field value',
       uploadCsv: 'Upload CSV',
       uploadCsvDesc: 'Upload a list of phone numbers',
+      csvFormatDesc:
+        'CSV with a phone column (required). Optional name. Numbers must start with + and a country code.',
+      csvContactsFound: '{count} contact ready',
+      csvInvalidPhones:
+        '{count} row(s) skipped: phone numbers must start with + and a country code (e.g. +14155550123).',
+      errorCsvParse: 'Could not parse that CSV file.',
+      errorCsvMissingPhone: 'CSV must include a "phone" column header.',
       selectTags: 'Select Tags',
       noTags: 'No tags found. Create tags in Settings.',
       customFieldFilter: 'Custom Field Filter',
