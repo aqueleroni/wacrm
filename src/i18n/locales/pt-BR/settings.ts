@@ -305,6 +305,19 @@ export const settings = {
       objectNotFound:
         'Não foi possível acessar este número na Meta. As credenciais podem ter expirado ou o número foi desconectado — clique em Conectar WhatsApp para reconectar.',
     },
+    metaErrorStep: 'Etapa',
+    metaErrorCode: 'Código de erro da Meta',
+    metaErrorTrace: 'ID de rastreamento',
+    metaErrorMessage: 'A Meta disse',
+    metaErrorDetailsHint: 'Cite estes detalhes ao contatar o suporte da Meta.',
+    phoneNumberIdNotNumeric:
+      'O ID do número de telefone deve conter só dígitos. Copie o ID numérico em Meta → WhatsApp → Configuração da API — não o número em si.',
+    wabaIdNotNumeric:
+      'O ID da conta WhatsApp Business deve conter só dígitos. Copie em Meta → WhatsApp → Configuração da API.',
+    wabaSubscribed:
+      'A conta WhatsApp Business está inscrita neste app — os webhooks de entrada podem ser entregues.',
+    wabaNotSubscribed:
+      'A conta WhatsApp Business não está inscrita neste app, então a Meta não entregará webhooks de entrada. Informe o token de acesso de novo e salve para inscrevê-la.',
     registration: {
       registered: 'Registrado — a Meta entregará eventos ao wacrm',
       notRegistered: 'Não registrado — a Meta não entregará eventos',
