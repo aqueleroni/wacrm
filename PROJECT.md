@@ -29,7 +29,7 @@ npm run dev                          # http://localhost:3000
 - **Supabase project ref:** `tvssbeqafnodzvgzfbsp`
 - **MCP Supabase:** configurado em `.cursor/mcp.json`
 - **Agent Skills:** `.agents/skills/supabase` e `supabase-postgres-best-practices`
-- **Migrations:** `supabase/migrations/` (001–**045** + `20260723230245_account_scoped_message_templates`) — rodar novas migrations via MCP ou SQL Editor após sync upstream
+- **Migrations:** `supabase/migrations/` (001–**051** + `20260723230245_account_scoped_message_templates`) — no remoto também existem `046–048` Instagram (fora do repo do fork); próximas do creator devem continuar em **052+**. Rodar novas via MCP ou SQL Editor após sync upstream
 - **Ignorados no git:** `.codex/`, `supabase/.temp/` (ver `.gitignore`)
 - **Locale padrão:** `NEXT_PUBLIC_LOCALE=pt-BR` em `.env.local`
 - **Sem senha padrão** — conta criada em `/signup`
@@ -113,6 +113,7 @@ git push origin main
 | 2026-08-12 | **ES Coexistência:** `featureType: whatsapp_business_app_onboarding` — números já ativos no app WhatsApp Business aparecem no fluxo; conclusão vem só com `waba_id`, servidor resolve o número via `GET /{waba_id}/phone_numbers` (`listWabaPhoneNumbers`) e **pula o `/register`** |
 | 2026-08-12 | **ES pop-up bloqueado (Edge):** `window.open` do SDK devolve `null` → alerta persistente com instruções por navegador + link "abrir em nova aba" (Chrome funciona normal) |
 | 2026-08-12 | **ES conforme doc v4:** `extras = { setup, featureType, sessionInfoVersion: '3' }`; trata evento `ERROR` + `error_message` no CANCEL (causa do spinner infinito); `waba_ids` multi-WABA; painel **Diagnóstico da conexão** com trace copiável |
+| 2026-09-22 | **Sync upstream etapa 1** (sem i18n next-intl): #519 BSUID, #536 broadcast `contact_id`, #535 motivo de falha, #505 erros Meta + pairing, #586 `+` país, #512 picker CSV broadcast. Migrations **049–051** (remoto já tinha Instagram em 046–048). 975 testes. i18n oficial (#375) fica por último. |
 
 ## Smoke test manual (pós-merge upstream)
 
