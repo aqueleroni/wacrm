@@ -225,6 +225,7 @@ export const inbox = {
     unsupported: "[Tipo de mensagem não suportado]",
     aiBadge: "IA",
     aiBadgeTitle: "Resposta gerada pela IA",
+    notDelivered: "Não entregue",
     download: "Baixar",
     downloadFailed: "Não foi possível baixar o anexo",
     viewImage: "Ver imagem",

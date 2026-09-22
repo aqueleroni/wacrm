@@ -229,6 +229,7 @@ export const inbox = {
     unsupported: "[Unsupported message type]",
     aiBadge: "AI",
     aiBadgeTitle: "Sent automatically by the AI assistant",
+    notDelivered: "Not delivered",
     download: "Download",
     downloadFailed: "Couldn't download the attachment",
     viewImage: "View image",

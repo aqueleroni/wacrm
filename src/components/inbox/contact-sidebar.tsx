@@ -22,11 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
-<<<<<<< HEAD
-=======
-import { useTranslations } from "next-intl";
 import { contactHandle } from "@/lib/whatsapp/wa-identity";
->>>>>>> 2cf9806 (fix: identify WhatsApp senders by business-scoped user ID, not phone only (#519))
 
 interface ContactSidebarProps {
   contact: Contact | null;
