@@ -42,12 +42,37 @@ BEGIN
     RAISE EXCEPTION 'public.accounts is missing — migration 017 did not apply';
   END IF;
 
-  -- The BSUID index (040) is the only thing stopping a username-only
-  -- WhatsApp sender from forking a new contact per inbound message. A
-  -- typo in its name would apply cleanly and guarantee nothing.
+  -- The BSUID index (046 / upstream 040) is the only thing stopping a
+  -- username-only WhatsApp sender from forking a new contact per inbound
+  -- message. A typo in its name would apply cleanly and guarantee nothing.
   IF to_regclass('public.idx_contacts_account_wa_user_id') IS NULL THEN
     RAISE EXCEPTION
-      'idx_contacts_account_wa_user_id is missing — migration 040 did not apply';
+      'idx_contacts_account_wa_user_id is missing — migration 046 did not apply';
+  END IF;
+
+  -- 047 repairs create_broadcast_with_recipients, which 043/044 shipped
+  -- with an ambiguous bare `RETURNING id, contact_id` (SQLSTATE 42702 on
+  -- first call — plpgsql resolves names at execution, not CREATE, so a
+  -- plain replay can't catch it). Assert the qualified form is what's
+  -- actually installed.
+  IF pg_get_functiondef(
+       'public.create_broadcast_with_recipients(uuid,uuid,text,text,text,integer,uuid[],jsonb[])'::regprocedure
+     ) NOT LIKE '%RETURNING id, broadcast_recipients.contact_id%' THEN
+    RAISE EXCEPTION
+      'create_broadcast_with_recipients still has the ambiguous RETURNING — migration 047 did not apply';
+  END IF;
+
+  -- The failure-reason columns (048 / upstream 042) are only ever written
+  -- by the status webhook, which uses an untyped update — a missing
+  -- column there is a runtime PostgREST error on every failed send, not a
+  -- compile error.
+  IF (
+    SELECT COUNT(*) FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'messages'
+      AND column_name IN ('error_code', 'error_title', 'error_details')
+  ) <> 3 THEN
+    RAISE EXCEPTION
+      'messages.error_code/error_title/error_details are missing — migration 048 did not apply';
   END IF;
 
   RAISE NOTICE 'schema verification passed';
