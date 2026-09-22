@@ -198,6 +198,33 @@ export const settings = {
       signOutFailed: 'Falha ao sair: {message}',
     },
   },
+  browserNotifications: {
+    title: 'Notificações do navegador',
+    description:
+      'Receba um alerta na área de trabalho a cada nova mensagem de cliente, mesmo em outra página. Salvo neste dispositivo.',
+    toggleLabel: 'Avisar-me sobre novas mensagens de clientes',
+    toggleDesc: 'Funciona só enquanto o app estiver aberto em uma aba.',
+    statusGranted: 'Permitido pelo seu navegador.',
+    statusDefault: 'Ao ativar, o navegador pedirá permissão.',
+    statusDenied: 'Bloqueado nas configurações do navegador',
+    deniedHint:
+      'Permita notificações para este site nas configurações do navegador (geralmente o cadeado ao lado da barra de endereço) e recarregue a página.',
+    unsupported: 'Este navegador não oferece notificações na área de trabalho.',
+    sendTest: 'Enviar notificação de teste',
+    testTitle: 'Notificação de teste',
+    testBody:
+      'As notificações estão funcionando. Novas mensagens de clientes aparecerão assim.',
+    permissionDeniedToast: 'Seu navegador bloqueou as notificações',
+    labels: {
+      fallbackTitle: 'Nova mensagem',
+      image: '📷 Foto',
+      audio: '🎤 Mensagem de voz',
+      video: '🎬 Vídeo',
+      document: '📄 Documento',
+      location: '📍 Localização',
+      template: '📋 Modelo',
+    },
+  },
   members: {
     title: 'Membros da equipe',
     description: 'Convide colegas e gerencie perfis de acesso.',
