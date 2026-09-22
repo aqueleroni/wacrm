@@ -144,6 +144,11 @@ export interface WabaPhoneNumber {
   is_on_biz_app?: boolean
 }
 
+export interface ListWabaPhoneNumbersArgs {
+  wabaId: string
+  accessToken: string
+}
+
 const PHONE_FIELDS_EXTENDED =
   'id,display_phone_number,verified_name,quality_rating,platform_type,is_on_biz_app'
 const PHONE_FIELDS_BASIC = 'id,display_phone_number,verified_name,quality_rating'
@@ -151,31 +156,44 @@ const PHONE_FIELDS_BASIC = 'id,display_phone_number,verified_name,quality_rating
 /**
  * List the phone numbers under a WABA.
  *
- * Needed by the WhatsApp Business app onboarding (coexistence) flow: it
- * finishes with only a `waba_id`, so the phone number ID has to be looked
- * up before anything can be saved. `platform_type` / `is_on_biz_app` only
- * exist on newer Graph versions, hence the retry with the basic field set.
+ * Used by:
+ * - Embedded Signup coexistence (resolve phone from WABA alone) — prefers
+ *   `platform_type` / `is_on_biz_app` when Graph returns them.
+ * - POST /api/whatsapp/config pairing check (#505) — prove the Phone Number
+ *   ID belongs to the typed WABA. Follows `paging.next` a few pages.
  */
-export async function listWabaPhoneNumbers(args: {
-  wabaId: string
-  accessToken: string
-}): Promise<WabaPhoneNumber[]> {
+export async function listWabaPhoneNumbers(
+  args: ListWabaPhoneNumbersArgs,
+): Promise<WabaPhoneNumber[]> {
   const { wabaId, accessToken } = args
-  const request = (fields: string) =>
-    fetch(`${META_API_BASE}/${wabaId}/phone_numbers?fields=${fields}`, {
+  const out: WabaPhoneNumber[] = []
+  let url: string | undefined =
+    `${META_API_BASE}/${wabaId}/phone_numbers?fields=${PHONE_FIELDS_EXTENDED}&limit=100`
+  let usedBasic = false
+
+  for (let page = 0; url && page < 5; page++) {
+    const response = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
-
-  let response = await request(PHONE_FIELDS_EXTENDED)
-  if (!response.ok) {
-    response = await request(PHONE_FIELDS_BASIC)
+    if (!response.ok && !usedBasic && page === 0) {
+      // Older Graph versions reject the extended field set — retry once
+      // with the basic fields and keep paging from there.
+      usedBasic = true
+      url = `${META_API_BASE}/${wabaId}/phone_numbers?fields=${PHONE_FIELDS_BASIC}&limit=100`
+      page -= 1
+      continue
+    }
+    if (!response.ok) {
+      await throwMetaError(response, `Meta API error: ${response.status}`)
+    }
+    const data = (await response.json()) as {
+      data?: WabaPhoneNumber[]
+      paging?: { next?: string }
+    }
+    out.push(...(data.data ?? []))
+    url = data.paging?.next
   }
-  if (!response.ok) {
-    await throwMetaError(response, `Meta API error: ${response.status}`)
-  }
-
-  const data = (await response.json()) as { data?: WabaPhoneNumber[] }
-  return data.data ?? []
+  return out
 }
 
 // ============================================================
@@ -283,51 +301,6 @@ export async function subscribeWabaToApp(
   if (!response.ok) {
     await throwMetaError(response, `Meta API error: ${response.status}`)
   }
-}
-
-export interface ListWabaPhoneNumbersArgs {
-  wabaId: string
-  accessToken: string
-}
-
-export interface WabaPhoneNumber {
-  id: string
-  display_phone_number?: string
-  verified_name?: string
-}
-
-/**
- * List the phone numbers that live under a WABA.
- *
- * Used by POST /api/whatsapp/config to prove the Phone Number ID the
- * user typed actually belongs to the WABA ID they typed. A mismatch
- * used to save fine and surface days later as "the webhook never
- * fires" — the WABA that got subscribed wasn't the one owning the
- * number (issue #505). Follows `paging.next` a few pages in case a
- * WABA holds more numbers than one page returns.
- */
-export async function listWabaPhoneNumbers(
-  args: ListWabaPhoneNumbersArgs
-): Promise<WabaPhoneNumber[]> {
-  const { wabaId, accessToken } = args
-  const out: WabaPhoneNumber[] = []
-  let url: string | undefined =
-    `${META_API_BASE}/${wabaId}/phone_numbers?fields=id,display_phone_number,verified_name&limit=100`
-  for (let page = 0; url && page < 5; page++) {
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-    if (!response.ok) {
-      await throwMetaError(response, `Meta API error: ${response.status}`)
-    }
-    const data = (await response.json()) as {
-      data?: WabaPhoneNumber[]
-      paging?: { next?: string }
-    }
-    out.push(...(data.data ?? []))
-    url = data.paging?.next
-  }
-  return out
 }
 
 export interface GetSubscribedAppsArgs {
