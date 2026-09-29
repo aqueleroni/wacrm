@@ -665,7 +665,13 @@ export const settings = {
       providers: {
         openai: 'OpenAI',
         anthropic: 'Anthropic (Claude)',
+        openai_compatible: 'OpenAI-compatible API (OpenRouter, Groq, Ollama…)',
       },
+      modelFreeTextHint:
+        'Type the exact model ID your provider expects (e.g. llama-3.3-70b-versatile on Groq).',
+      baseUrl: 'Base URL',
+      baseUrlHint:
+        'Base URL for the OpenAI-compatible API, for example https://api.groq.com/openai/v1. /chat/completions is added automatically unless you include that path yourself.',
     },
     behaviour: {
       title: 'Behaviour',
@@ -719,6 +725,7 @@ export const settings = {
       testFailed: 'The provider rejected the request.',
       testUnreachable: 'Could not reach the provider.',
       modelRequired: 'Enter a model name.',
+      baseUrlRequired: 'Enter the Base URL for the OpenAI-compatible API.',
       keyRequired: 'Enter your API key.',
       saveSuccess: 'AI assistant saved.',
       saveFailed: 'Failed to save.',

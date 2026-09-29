@@ -31,6 +31,8 @@ export const AI_PROVIDER_MODELS: Record<AiProvider, readonly AiModelOption[]> = 
     { id: 'claude-sonnet-4-5-20250929', tier: 'balanced' },
     { id: 'claude-opus-4-8', tier: 'premium' },
   ],
+  // Free-text: every OpenAI-compatible host has its own model IDs.
+  openai_compatible: [],
 }
 
 export function getDefaultModel(provider: AiProvider): string {

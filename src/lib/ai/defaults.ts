@@ -28,6 +28,7 @@ export function resolvePromptLocale(
 export const AI_PROVIDER_DEFAULT_MODEL: Record<AiProvider, string> = {
   openai: getDefaultModel('openai'),
   anthropic: getDefaultModel('anthropic'),
+  openai_compatible: 'model-id',
 }
 
 /** Cap on generated reply length — keeps WhatsApp replies short and

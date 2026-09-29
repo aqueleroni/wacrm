@@ -5,6 +5,7 @@ import { decrypt } from '@/lib/whatsapp/encryption'
 import { validateAiCredentials } from '@/lib/ai/validate'
 import { supabaseAdmin } from '@/lib/ai/admin-client'
 import { AiError, type AiProvider } from '@/lib/ai/types'
+import { normalizeOpenAiCompatibleBaseUrl } from '@/lib/ai/providers/openai-compatible'
 
 /**
  * POST /api/ai/test  (admin+)
@@ -28,9 +29,9 @@ export async function POST(request: Request) {
     }
 
     const provider = body.provider as AiProvider
-    if (provider !== 'openai' && provider !== 'anthropic') {
+    if (provider !== 'openai' && provider !== 'anthropic' && provider !== 'openai_compatible') {
       return NextResponse.json(
-        { error: 'provider must be "openai" or "anthropic"' },
+        { error: 'provider must be "openai", "anthropic", or "openai_compatible"' },
         { status: 400 },
       )
     }
@@ -38,16 +39,22 @@ export async function POST(request: Request) {
     if (!model) {
       return NextResponse.json({ error: 'model is required' }, { status: 400 })
     }
+    const baseUrlProvided = 'base_url' in body
+    const requestedBaseUrl = typeof body.base_url === 'string' ? body.base_url.trim() : ''
+    let existing: { api_key: string; provider: AiProvider; base_url: string | null } | null = null
 
     const rawKey = typeof body.api_key === 'string' ? body.api_key.trim() : ''
     let apiKeyPlain = rawKey
-    if (!apiKeyPlain) {
+    if (!apiKeyPlain || provider === 'openai_compatible') {
       // api_key is service-role-only after migration 038 (B5).
-      const { data: existing } = await supabaseAdmin()
+      const { data } = await supabaseAdmin()
         .from('ai_configs')
-        .select('api_key')
+        .select('api_key, provider, base_url')
         .eq('account_id', accountId)
         .maybeSingle()
+      existing = data as unknown as { api_key: string; provider: AiProvider; base_url: string | null } | null
+    }
+    if (!apiKeyPlain) {
       if (!existing?.api_key) {
         return NextResponse.json(
           { error: 'Enter an API key to test.' },
@@ -64,11 +71,28 @@ export async function POST(request: Request) {
       }
     }
 
+    let baseUrl: string | null = null
+    if (provider === 'openai_compatible') {
+      const candidate = baseUrlProvided
+        ? requestedBaseUrl
+        : existing?.provider === 'openai_compatible'
+          ? (existing.base_url ?? '').trim()
+          : ''
+      if (!candidate) return NextResponse.json({ error: 'base_url is required for openai_compatible', code: 'invalid_base_url' }, { status: 400 })
+      try {
+        normalizeOpenAiCompatibleBaseUrl(candidate)
+      } catch (err) {
+        return NextResponse.json({ error: err instanceof AiError ? err.message : 'base_url must be a valid http(s) URL', code: 'invalid_base_url' }, { status: 400 })
+      }
+      baseUrl = candidate
+    }
+
     try {
       await validateAiCredentials({
         provider,
         model,
         apiKey: apiKeyPlain,
+        baseUrl,
         systemPrompt: null,
         isActive: true,
         autoReplyEnabled: false,
