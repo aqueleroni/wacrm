@@ -212,8 +212,12 @@ export const automations = {
       pickTemplate: 'escolha um modelo',
       noUrl: 'sem url',
       conditionWhen: 'quando {subject}',
+      waitsForReply: ' · aguarda resposta',
     },
     config: {
+      waitForReply: 'Aguardar resposta antes de continuar',
+      waitForReplyHint:
+        'Pausa aqui até o cliente tocar em um botão ou responder (até 24h). As etapas seguintes, incluindo Se/Senão no conteúdo da mensagem, usam essa resposta.',
       messageText: 'Texto da mensagem',
       placeholderMessageText: 'Olá! Obrigado por entrar em contato…',
       tagLabel: 'Tag',

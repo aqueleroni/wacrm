@@ -211,8 +211,12 @@ export const automations = {
       pickTemplate: "pick a template",
       noUrl: "no url",
       conditionWhen: "when {subject}",
+      waitsForReply: " · waits for reply",
     },
     config: {
+      waitForReply: "Wait for reply before continuing",
+      waitForReplyHint:
+        "Pauses here until the customer taps a button or replies (up to 24h). The steps after this one, including If/Else on message content, then use their reply.",
       messageText: "Message text",
       placeholderMessageText: "Hi! Thanks for reaching out…",
       tagLabel: "Tag",
