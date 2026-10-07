@@ -83,7 +83,7 @@ BEGIN
       AND (qual LIKE '%avatars%' OR qual LIKE '%flow-media%' OR qual LIKE '%chat-media%')
   ) THEN
     RAISE EXCEPTION
-      'a storage SELECT policy on avatars/flow-media/chat-media still applies to anon — migration 043 did not apply';
+      'a storage SELECT policy on avatars/flow-media/chat-media still applies to anon — migration 052 did not apply';
   END IF;
   IF (
     SELECT COUNT(*) FROM pg_policies
@@ -96,7 +96,7 @@ BEGIN
       )
   ) <> 3 THEN
     RAISE EXCEPTION
-      'the scoped storage SELECT policies are missing — migration 043 did not apply';
+      'the scoped storage SELECT policies are missing — migration 052 did not apply';
   END IF;
 
   IF EXISTS (
@@ -114,10 +114,10 @@ BEGIN
        OR NOT has_function_privilege('service_role', f.fn, 'EXECUTE')
   ) THEN
     RAISE EXCEPTION
-      'an internal SECURITY DEFINER function is still executable by anon/authenticated — migration 044 did not apply';
+      'an internal SECURITY DEFINER function is still executable by anon/authenticated — migration 053 did not apply';
   END IF;
 
-  -- 043 widens the automation_pending_executions status CHECK. It is a
+  -- 055 widens the automation_pending_executions status CHECK. It is a
   -- DROP + ADD by name, so a wrong constraint name would leave the old
   -- CHECK in place and every "wait for reply" park would be rejected at
   -- runtime, not at migration time.
@@ -126,11 +126,11 @@ BEGIN
         WHERE conname = 'automation_pending_executions_status_check')
      ) NOT LIKE '%awaiting_reply%' THEN
     RAISE EXCEPTION
-      'automation_pending_executions_status_check does not allow awaiting_reply — migration 043 did not apply';
+      'automation_pending_executions_status_check does not allow awaiting_reply — migration 055 did not apply';
   END IF;
   IF to_regclass('public.idx_automation_pending_awaiting_reply') IS NULL THEN
     RAISE EXCEPTION
-      'idx_automation_pending_awaiting_reply is missing — migration 043 did not apply';
+      'idx_automation_pending_awaiting_reply is missing — migration 055 did not apply';
   END IF;
 
   RAISE NOTICE 'schema verification passed';
