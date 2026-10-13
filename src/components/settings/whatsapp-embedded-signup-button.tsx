@@ -244,6 +244,7 @@ export function WhatsAppEmbeddedSignupButton({
         verify_token?: string;
         registration_error?: string | null;
         registration_skipped?: boolean;
+        app_data_sync?: 'requested' | 'failed' | null;
       };
       track('exchange:response', { status: res.status, error: data.error });
       if (!res.ok) {
@@ -265,6 +266,14 @@ export function WhatsAppEmbeddedSignupButton({
           description: data.verify_token,
           duration: 12000,
         });
+      }
+      if (data.app_data_sync === 'requested') {
+        toast.message(t('settings.whatsapp.embeddedSignup.appSyncStarted'), {
+          description: t('settings.whatsapp.embeddedSignup.appSyncStartedDesc'),
+          duration: 15000,
+        });
+      } else if (data.app_data_sync === 'failed') {
+        toast.warning(t('settings.whatsapp.embeddedSignup.appSyncFailed'));
       }
       onConnected();
     } catch (err) {

@@ -407,6 +407,11 @@ export const settings = {
       savedNeedsPin:
         'Number connected, but not registered yet. Enter the two-step verification PIN and connect again to send and receive messages.',
       verifyTokenHint: 'Save this webhook verify token (or keep the one already on the Meta app):',
+      appSyncStarted: 'Importing chats and contacts from the WhatsApp Business app',
+      appSyncStartedDesc:
+        'Keep the app open on the phone. It can take a few minutes; conversations show up in the inbox as they arrive.',
+      appSyncFailed:
+        'Number connected, but importing the app history failed. New messages still sync; to import the history, disconnect in the WhatsApp Business app and connect again.',
       timeout:
         'The connection took too long. Close the Meta popup if it is still open, then try again.',
       cancel: 'Cancel',

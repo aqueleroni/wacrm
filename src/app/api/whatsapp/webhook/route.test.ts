@@ -42,6 +42,10 @@ const h = vi.hoisted(() => ({
     broadcastRecipient: null as { id: string; status: string } | null,
     /** Patches applied to that broadcast_recipients row. */
     recipientUpdates: [] as Record<string, unknown>[],
+    /** Patches applied to `conversations` (coexistence preview updates). */
+    conversationUpdates: [] as Record<string, unknown>[],
+    /** Patches applied to `flow_runs` (pause when a human replies). */
+    flowRunUpdates: [] as Record<string, unknown>[],
   },
 }))
 
@@ -91,6 +95,22 @@ vi.mock('@supabase/supabase-js', () => ({
                 }),
               }),
             }),
+            update: (patch: Record<string, unknown>) => {
+              h.state.conversationUpdates.push(patch)
+              return { eq: () => Promise.resolve({ error: null }) }
+            },
+          }
+        case 'flow_runs':
+          // pause on a human reply: update().eq().eq().eq()
+          return {
+            update: (patch: Record<string, unknown>) => {
+              h.state.flowRunUpdates.push(patch)
+              const chain = {
+                eq: () => chain,
+                then: (resolve: (v: { error: null }) => void) => resolve({ error: null }),
+              }
+              return chain
+            },
           }
         case 'broadcast_recipients':
           // Two chains land here:
@@ -381,6 +401,8 @@ beforeEach(() => {
   h.state.messageUpdates = []
   h.state.broadcastRecipient = null
   h.state.recipientUpdates = []
+  h.state.conversationUpdates = []
+  h.state.flowRunUpdates = []
   mockFindExistingContact.mockResolvedValue({
     id: 'contact-1',
     name: 'Ada',
@@ -1052,5 +1074,147 @@ describe('inbound webhook: automation waiting for a reply', () => {
     await runWebhook()
 
     expect(h.resumeAwaitingReply).not.toHaveBeenCalled()
+  })
+})
+
+describe('coexistence webhooks (WhatsApp Business app)', () => {
+  const metadata = { phone_number_id: 'pn-1', display_phone_number: '15550783881' }
+
+  async function runChange(field: string, value: Record<string, unknown>) {
+    const body = { entry: [{ id: 'waba-1', changes: [{ field, value: { metadata, ...value } }] }] }
+    await POST({
+      text: async () => JSON.stringify(body),
+      headers: { get: () => 'sha256=stub' },
+    } as unknown as Request)
+    for (const cb of h.state.afterCallbacks) await cb()
+  }
+
+  function expectNoFanOut() {
+    expect(h.state.rpcCalls).toHaveLength(0)
+    expect(h.dispatchInboundToFlows).not.toHaveBeenCalled()
+    expect(h.runAutomationsForTrigger).not.toHaveBeenCalled()
+    expect(h.dispatchInboundToAiReply).not.toHaveBeenCalled()
+    expect(h.dispatchWebhookEvent).not.toHaveBeenCalled()
+  }
+
+  it('stores a message typed on the phone as an agent message and pauses flows', async () => {
+    await runChange('smb_message_echoes', {
+      message_echoes: [
+        {
+          from: '15550783881',
+          to: '15551230000',
+          id: 'wamid.ECHO1',
+          timestamp: '1700000000',
+          type: 'text',
+          text: { body: 'Sent from the phone' },
+        },
+      ],
+    })
+
+    expect(h.state.upsertCalls).toHaveLength(1)
+    expect(h.state.upsertCalls[0].row).toMatchObject({
+      conversation_id: 'conv-1',
+      sender_type: 'agent',
+      content_type: 'text',
+      content_text: 'Sent from the phone',
+      message_id: 'wamid.ECHO1',
+      status: 'sent',
+    })
+    expect(h.state.conversationUpdates[0]).toMatchObject({
+      last_message_text: 'Sent from the phone',
+    })
+    expect(h.state.flowRunUpdates[0]).toMatchObject({ status: 'paused_by_agent' })
+    expectNoFanOut()
+  })
+
+  it('a replayed echo changes nothing else', async () => {
+    h.state.messageUpsertResult = []
+
+    await runChange('smb_message_echoes', {
+      message_echoes: [
+        { from: '15550783881', to: '15551230000', id: 'wamid.ECHO1', timestamp: '1', type: 'text', text: { body: 'x' } },
+      ],
+    })
+
+    expect(h.state.conversationUpdates).toHaveLength(0)
+    expect(h.state.flowRunUpdates).toHaveLength(0)
+  })
+
+  it('bulk-inserts a history thread without bumping unread or firing anything', async () => {
+    await runChange('history', {
+      history: [
+        {
+          metadata: { phase: 1, chunk_order: 1, progress: 100 },
+          threads: [
+            {
+              id: '15551230000',
+              messages: [
+                {
+                  from: '15551230000',
+                  id: 'wamid.H1',
+                  timestamp: '1700000000',
+                  type: 'text',
+                  text: { body: 'Do you have it in blue?' },
+                  history_context: { status: 'READ' },
+                },
+                {
+                  from: '15550783881',
+                  id: 'wamid.H2',
+                  timestamp: '1700000060',
+                  type: 'media_placeholder',
+                  history_context: { status: 'DELIVERED' },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(h.state.upsertCalls).toHaveLength(1)
+    const rows = h.state.upsertCalls[0].row as unknown as Record<string, unknown>[]
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toMatchObject({ sender_type: 'customer', message_id: 'wamid.H1', status: 'read' })
+    expect(rows[1]).toMatchObject({ sender_type: 'agent', message_id: 'wamid.H2', status: 'delivered' })
+    expect(h.state.upsertCalls[0].options).toMatchObject({ ignoreDuplicates: true })
+    expect(h.state.conversationUpdates[0]).toMatchObject({
+      last_message_at: new Date(1700000060 * 1000).toISOString(),
+    })
+    expectNoFanOut()
+  })
+
+  it('creates a contact from the phone address book', async () => {
+    mockFindExistingContact.mockResolvedValue(null)
+
+    await runChange('smb_app_state_sync', {
+      state_sync: [
+        { type: 'contact', action: 'add', contact: { full_name: 'Pablo Morales', phone_number: '16505551234' } },
+      ],
+    })
+
+    expect(h.state.contactInserts).toEqual([
+      expect.objectContaining({ account_id: 'acc-1', phone: '16505551234', name: 'Pablo Morales' }),
+    ])
+  })
+
+  it('renames only a contact whose name is still the phone number', async () => {
+    mockFindExistingContact.mockResolvedValue({ id: 'contact-1', name: '+1 650 555 1234', phone: '16505551234' })
+
+    await runChange('smb_app_state_sync', {
+      state_sync: [
+        { type: 'contact', action: 'add', contact: { full_name: 'Pablo Morales', phone_number: '16505551234' } },
+      ],
+    })
+    expect(h.state.contactUpdates[0]).toMatchObject({ name: 'Pablo Morales' })
+
+    h.state.contactUpdates = []
+    h.state.afterCallbacks = []
+    mockFindExistingContact.mockResolvedValue({ id: 'contact-1', name: 'Pablo (VIP)', phone: '16505551234' })
+    await runChange('smb_app_state_sync', {
+      state_sync: [
+        { type: 'contact', action: 'add', contact: { full_name: 'Pablo Morales', phone_number: '16505551234' } },
+      ],
+    })
+    expect(h.state.contactUpdates).toHaveLength(0)
   })
 })

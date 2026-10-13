@@ -6,6 +6,7 @@ import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
 import {
   listWabaPhoneNumbers,
   registerPhoneNumber,
+  requestSmbAppDataSync,
   subscribeWabaToApp,
   verifyPhoneNumber,
 } from '@/lib/whatsapp/meta-api'
@@ -89,6 +90,7 @@ export async function POST(request: Request) {
 
     let phoneNumberId = body.phone_number_id?.trim()
     let numberAlreadyRegistered = coexistence
+    let onBusinessApp = coexistence
 
     if (!phoneNumberId) {
       const numbers = await listWabaPhoneNumbers({ wabaId, accessToken })
@@ -108,6 +110,7 @@ export async function POST(request: Request) {
         numbers[0]
       phoneNumberId = preferred.id
       numberAlreadyRegistered = true
+      onBusinessApp = onBusinessApp || preferred.is_on_biz_app === true
     }
 
     const { data: claimed, error: claimedError } = await supabaseAdmin()
@@ -243,6 +246,26 @@ export async function POST(request: Request) {
       if (error) throw error
     }
 
+    // Coexistence: ask Meta for the phone's address book and chat history
+    // now — it only works once, within 24h of onboarding. Requested after
+    // the config row is saved so the resulting webhooks resolve to this
+    // account. Best-effort: the number is connected either way.
+    let appDataSync: 'requested' | 'failed' | null = null
+    if (onBusinessApp) {
+      appDataSync = 'requested'
+      for (const syncType of ['smb_app_state_sync', 'history'] as const) {
+        try {
+          await requestSmbAppDataSync({ phoneNumberId, accessToken, syncType })
+        } catch (err) {
+          appDataSync = 'failed'
+          console.warn(
+            `[embedded-signup] ${syncType} sync failed (non-fatal):`,
+            err instanceof Error ? err.message : err,
+          )
+        }
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       phone_number_id: phoneNumberId,
@@ -252,6 +275,7 @@ export async function POST(request: Request) {
       verify_token: plainVerifyToken,
       registration_error: registrationError,
       registration_skipped: registrationSkipped,
+      app_data_sync: appDataSync,
     })
   } catch (err) {
     if (err instanceof UnauthorizedError || err instanceof ForbiddenError) {

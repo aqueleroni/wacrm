@@ -73,6 +73,7 @@ git push origin main
 | Landing | `src/app/page.tsx`, `components/landing/landing-page.tsx`, `locales/*/landing.ts` | Home pública com planos Pro/Business (sem grátis); CTA signup/login |
 | **IA evoluída** | `src/lib/ai/memory*.ts`, `skills.ts`, `agent-context.ts`, `crm-context.ts`, `handoff-notify.ts`, `generation-log.ts` | Memória (extração + aprovação), skills por gatilho, contexto CRM, aba **Inteligência** em Agentes |
 | IA APIs | `/api/ai/memory/*`, `/api/ai/skills/*`, `/api/ai/cron/consolidate` | CRUD memória/skills + cron consolidação (~30 min idle) |
+| **Coexistência WhatsApp Business** | `src/lib/whatsapp/coexistence.ts`, `webhook/route.ts` (`handleCoexistenceChange`), `embedded-signup/route.ts`, `meta-api.ts` (`requestSmbAppDataSync`) | Espelha o app no celular: `smb_message_echoes` (msg enviada pelo celular = agente, pausa flow), `history` (até 180 dias, em lote), `smb_app_state_sync` (contatos). Pede sync logo após o Embedded Signup (1x, até 24h). Doc em `docs/whatsapp-connection-troubleshooting.md` |
 | IA OpenAI-compatible | `ai-config.tsx`, `api/ai/config`, `api/ai/test` | Provider do upstream mantendo nosso Select de modelos (texto livre só p/ `openai_compatible`), leitura de `api_key` via `supabaseAdmin()` (038) |
 
 **Commits publicados:**
@@ -118,7 +119,8 @@ git push origin main
 | 2026-09-22 | **Sync upstream etapa 2:** #516 notificações do navegador (perfil + listener realtime); #527 typing indicator da IA no WhatsApp enquanto gera auto-reply. 1007 testes. Sem deploy. |
 | 2026-09-22 | **Sync upstream #500 multi-app:** `META_APP_SECRET` aceita vários secrets separados por vírgula (webhook valida contra qualquer um); doc `docs/multi-waba.md`. Sem deploy. |
 | 2026-09-22 | **Deploy produção (Vercel):** push `main` (etapas 1–2 + #500); migrations 049–051 já no remoto. URL `https://wpcrm-ten.vercel.app`. |
-| 2026-10-13 | **Sync upstream (out):** branch `sync/upstream-oct` via cherry-pick. Segurança (GHSA automations/SSRF/conversations, cache, redirect auth), Next 16.3.8 + bumps de deps; bugs (broadcast >1000 contatos, tags #560, verify_token, #553 #534 #562 #529 #559); features: provider **OpenAI-compatible**, **aguardar resposta** em automações, **/auth/callback + /reset-password** (reset de senha estava quebrado). Migrations renomeadas **052–055** (storage select, definer grants, ai base_url, wait-for-reply). Pulados: commits i18n next-intl (106fe5d, fbabe3f, cfbde12, 2605356, 7287c2a) — ficam com #375. 1170 testes, build ok. Supabase Auth: liberar `/auth/callback` nas Redirect URLs (`docs/auth-emails.md`). |
+| 2026-10-13 | **Sync upstream (out):** branch `sync/upstream-oct` via cherry-pick. Segurança (GHSA automations/SSRF/conversations, cache, redirect auth), Next 16.3.8 + bumps de deps; bugs (broadcast >1000 contatos, tags #560, verify_token, #553 #534 #562 #529 #559); features: provider **OpenAI-compatible**, **aguardar resposta** em automações, **/auth/callback + /reset-password** (reset de senha estava quebrado). Migrations renomeadas **052–055** (storage select, definer grants, ai base_url, wait-for-reply). Pulados: commits i18n next-intl (106fe5d, fbabe3f, cfbde12, 2605356, 7287c2a) — ficam com #375. 1170 testes, build ok. Migrations 052–055 **aplicadas** no remoto (via MCP `supabase-crm`). Supabase Auth: liberar `/auth/callback` nas Redirect URLs (`docs/auth-emails.md`). |
+| 2026-10-13 | **Análise WA-AKG** (Baileys/QR não oficial): descartado — exige servidor 24h fora da Vercel, risco de ban, "anti-ban" é só rate limit; código manda heartbeat com URL da instalação ao autor. Escolhida a **coexistência oficial** (Embedded Signup já existente; hoje a Meta pareia o app por **código de verificação** colado no WhatsApp Business, não mais por QR). Implementado espelhamento do app: echoes, histórico, contatos + pedido de sync pós-signup. 1186 testes. **Pendente no Meta App:** assinar campos `smb_message_echoes`, `history`, `smb_app_state_sync`. |
 
 ## Smoke test manual (pós-merge upstream)
 
@@ -167,7 +169,7 @@ Roteiro rápido em produção ou `npm run dev` (conta com WhatsApp conectado):
 
 ## Supabase / banco
 
-- Usar MCP `user-supabase` quando disponível
+- Usar MCP `supabase-crm` (`.cursor/mcp.json`, ref `tvssbeqafnodzvgzfbsp`) — **não** o `user-supabase` global, que aponta para outro projeto
 - Skill `.agents/skills/supabase/SKILL.md`
 - RLS habilitado — respeitar `account_id` / membership
 - Branding: colunas em `accounts` (031); logo em bucket `account-branding/account-{id}/`

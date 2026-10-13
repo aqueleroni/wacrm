@@ -22,6 +22,17 @@ import {
   handleTemplateWebhookChange,
   isTemplateWebhookField,
 } from '@/lib/whatsapp/template-webhook'
+import {
+  isCoexistenceWebhookField,
+  parseAddressBookSync,
+  parseHistory,
+  parseHistoryMedia,
+  parseMessageEchoes,
+  type AddressBookChange,
+  type CoexistenceWebhookField,
+  type MirroredMessage,
+  type MirroredThread,
+} from '@/lib/whatsapp/coexistence'
 
 // The `after()` callback in POST runs within this route's max duration.
 // Inbound processing can fan out to per-media Meta verification calls, so
@@ -311,47 +322,19 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
         }
       }
 
+      // WhatsApp Business app coexistence: messages typed on the phone,
+      // past chat history and address-book sync. Mirrored into the inbox
+      // only — they never fire flows, automations, AI or public webhooks.
+      if (isCoexistenceWebhookField(change.field)) {
+        await handleCoexistenceChange(change.field, change.value)
+        continue
+      }
+
       // Handle incoming messages
       if (!value.messages || !value.contacts) continue
 
-      const phoneNumberId = value.metadata.phone_number_id
-
-      // Find user's config by phone_number_id. `.single()` returns
-      // PGRST116 for both 0 rows AND ≥2 rows — distinguish them so
-      // operators see the real cause in logs. ≥2 rows shouldn't happen
-      // post-migration 013 (UNIQUE constraint), but a row created
-      // before the constraint, or a race, would still surface here.
-      const { data: configRows, error: configError } = await supabaseAdmin()
-        .from('whatsapp_config')
-        .select('*')
-        .eq('phone_number_id', phoneNumberId)
-
-      if (configError) {
-        console.error(
-          'Error fetching whatsapp_config for phone_number_id:',
-          phoneNumberId,
-          configError
-        )
-        continue
-      }
-
-      if (!configRows || configRows.length === 0) {
-        console.error('No config found for phone_number_id:', phoneNumberId)
-        continue
-      }
-
-      if (configRows.length > 1) {
-        console.error(
-          `Multiple configs (${configRows.length}) found for phone_number_id:`,
-          phoneNumberId,
-          '— inbound message dropped. Resolve duplicates so each number maps to a single account.',
-          'Account owners:',
-          configRows.map((r: { account_id: string; user_id: string }) => `${r.account_id} (admin ${r.user_id})`)
-        )
-        continue
-      }
-
-      const config = configRows[0]
+      const config = await loadConfigForPhoneNumberId(value.metadata.phone_number_id)
+      if (!config) continue
 
       const decryptedAccessToken = decrypt(config.access_token)
 
@@ -378,6 +361,46 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
       }
     }
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function loadConfigForPhoneNumberId(phoneNumberId: string): Promise<any | null> {
+  // Find user's config by phone_number_id. `.single()` returns
+  // PGRST116 for both 0 rows AND ≥2 rows — distinguish them so
+  // operators see the real cause in logs. ≥2 rows shouldn't happen
+  // post-migration 013 (UNIQUE constraint), but a row created
+  // before the constraint, or a race, would still surface here.
+  const { data: configRows, error: configError } = await supabaseAdmin()
+    .from('whatsapp_config')
+    .select('*')
+    .eq('phone_number_id', phoneNumberId)
+
+  if (configError) {
+    console.error(
+      'Error fetching whatsapp_config for phone_number_id:',
+      phoneNumberId,
+      configError
+    )
+    return null
+  }
+
+  if (!configRows || configRows.length === 0) {
+    console.error('No config found for phone_number_id:', phoneNumberId)
+    return null
+  }
+
+  if (configRows.length > 1) {
+    console.error(
+      `Multiple configs (${configRows.length}) found for phone_number_id:`,
+      phoneNumberId,
+      '— inbound message dropped. Resolve duplicates so each number maps to a single account.',
+      'Account owners:',
+      configRows.map((r: { account_id: string; user_id: string }) => `${r.account_id} (admin ${r.user_id})`)
+    )
+    return null
+  }
+
+  return configRows[0]
 }
 
 // The happy-path status ladder — pending → sent → delivered → read →
@@ -760,23 +783,7 @@ async function processMessage(
   //   conversation_id, sender_type, content_type, content_text,
   //   media_url, media_type, template_name, message_id, status,
   //   created_at
-
-  // The messages.content_type CHECK constraint (widened in migration 010
-  // to add 'interactive' for button/list taps) allows:
-  //   text, image, document, audio, video, location, template, interactive
-  // Map incoming WhatsApp types that aren't in that list to the closest
-  // allowed value so the INSERT doesn't fail with a constraint error.
-  const ALLOWED_CONTENT_TYPES = new Set([
-    'text', 'image', 'document', 'audio', 'video',
-    'location', 'template', 'interactive',
-  ])
-  const contentType = ALLOWED_CONTENT_TYPES.has(message.type)
-    ? message.type
-    : message.type === 'sticker'
-      ? 'image'         // stickers are images
-      : message.type === 'button'
-        ? 'interactive' // template quick-reply tap (issue #478)
-        : 'text'        // reaction, unknown → text fallback
+  const contentType = storedContentType(message.type)
 
   // Determine whether this is the contact's very first inbound message
   // BEFORE we insert, so the count is accurate. Covers the case where
@@ -1022,6 +1029,26 @@ async function processMessage(
     content_type: contentType,
     text: contentText,
   })
+}
+
+// The messages.content_type CHECK constraint (widened in migration 010
+// to add 'interactive' for button/list taps) allows:
+//   text, image, document, audio, video, location, template, interactive
+// Map incoming WhatsApp types that aren't in that list to the closest
+// allowed value so the INSERT doesn't fail with a constraint error.
+const ALLOWED_CONTENT_TYPES = new Set([
+  'text', 'image', 'document', 'audio', 'video',
+  'location', 'template', 'interactive',
+])
+
+function storedContentType(type: string): string {
+  return ALLOWED_CONTENT_TYPES.has(type)
+    ? type
+    : type === 'sticker'
+      ? 'image'         // stickers are images
+      : type === 'button'
+        ? 'interactive' // template quick-reply tap (issue #478)
+        : 'text'        // reaction, unknown → text fallback
 }
 
 async function parseMessageContent(
@@ -1481,4 +1508,315 @@ async function findOrCreateConversation(
   }
 
   return { conversation: newConv, created: true }
+}
+
+// ============================================================
+// WhatsApp Business app coexistence
+// ============================================================
+
+interface CoexistenceContext {
+  accountId: string
+  configOwnerUserId: string
+  accessToken: string
+  mirrorMedia: boolean
+  /** Digits-only business number, used to tell who wrote a history media row. */
+  businessPhone: string
+}
+
+/** History threads persisted in parallel — bounded to stay inside maxDuration. */
+const HISTORY_THREAD_CONCURRENCY = 4
+/** Rows per history upsert. */
+const HISTORY_INSERT_CHUNK = 500
+
+async function handleCoexistenceChange(
+  field: CoexistenceWebhookField,
+  value: unknown
+) {
+  const metadata = (value as { metadata?: { phone_number_id?: string; display_phone_number?: string } })
+    ?.metadata
+  if (!metadata?.phone_number_id) return
+
+  const config = await loadConfigForPhoneNumberId(metadata.phone_number_id)
+  if (!config) return
+
+  const ctx: CoexistenceContext = {
+    accountId: config.account_id,
+    configOwnerUserId: config.user_id,
+    accessToken: decrypt(config.access_token),
+    mirrorMedia: config.mirror_inbound_media !== false,
+    businessPhone: normalizePhone(metadata.display_phone_number ?? ''),
+  }
+
+  if (field === 'smb_message_echoes') {
+    for (const echo of parseMessageEchoes(value)) {
+      await persistMessageEcho(echo, ctx)
+    }
+    return
+  }
+
+  if (field === 'history') {
+    for (const media of parseHistoryMedia(value)) {
+      await attachHistoryMedia(media as unknown as WhatsAppMessage, ctx)
+    }
+    const history = parseHistory(value)
+    if (history.declined) {
+      console.info(
+        '[coexistence] business declined chat history sharing for account',
+        ctx.accountId
+      )
+    }
+    const threads = history.threads
+    for (let i = 0; i < threads.length; i += HISTORY_THREAD_CONCURRENCY) {
+      await Promise.all(
+        threads
+          .slice(i, i + HISTORY_THREAD_CONCURRENCY)
+          .map((thread) => persistHistoryThread(thread, ctx))
+      )
+    }
+    return
+  }
+
+  for (const change of parseAddressBookSync(value)) {
+    await applyAddressBookChange(change, ctx)
+  }
+}
+
+async function resolveMirroredConversation(
+  customerPhone: string,
+  ctx: CoexistenceContext
+) {
+  const identity = resolveInboundIdentity({ from: customerPhone })
+  const contactOutcome = await findOrCreateContact(
+    ctx.accountId,
+    ctx.configOwnerUserId,
+    identity
+  )
+  if (!contactOutcome) return null
+  const convResult = await findOrCreateConversation(
+    ctx.accountId,
+    ctx.configOwnerUserId,
+    contactOutcome.contact.id
+  )
+  if (!convResult) return null
+  return { contact: contactOutcome.contact, conversation: convResult.conversation }
+}
+
+async function buildMirroredRow(
+  mirrored: MirroredMessage,
+  conversationId: string,
+  ctx: CoexistenceContext
+) {
+  // Media inside a history thread arrives as a bare placeholder; the
+  // asset (when Meta still has it) follows in a separate delivery and is
+  // attached by attachHistoryMedia.
+  const parsed =
+    mirrored.type === 'media_placeholder'
+      ? { contentText: '[media]', mediaUrl: null, mediaType: null, interactiveReplyId: null }
+      : await parseMessageContent(
+          mirrored.message as unknown as WhatsAppMessage,
+          ctx.accessToken,
+          ctx.mirrorMedia ? { accountId: ctx.accountId } : null
+        )
+
+  return {
+    conversation_id: conversationId,
+    sender_type: mirrored.fromBusiness ? 'agent' : 'customer',
+    content_type: storedContentType(mirrored.type),
+    content_text: parsed.contentText,
+    media_url: parsed.mediaUrl,
+    media_type: parsed.mediaType,
+    message_id: mirrored.id,
+    status: mirrored.status,
+    created_at: new Date(parseInt(mirrored.timestamp) * 1000).toISOString(),
+    interactive_reply_id: mirrored.fromBusiness ? null : parsed.interactiveReplyId,
+  }
+}
+
+/**
+ * A message the business typed in the WhatsApp Business app. Stored as an
+ * agent message and, like an agent replying from the inbox, pauses any
+ * active Flow run for the contact — a human stepped in.
+ */
+async function persistMessageEcho(echo: MirroredMessage, ctx: CoexistenceContext) {
+  const resolved = await resolveMirroredConversation(echo.customerPhone, ctx)
+  if (!resolved) return
+  const { contact, conversation } = resolved
+
+  const row = await buildMirroredRow(echo, conversation.id, ctx)
+  const { data: inserted, error } = await supabaseAdmin()
+    .from('messages')
+    .upsert(row, { onConflict: 'conversation_id,message_id', ignoreDuplicates: true })
+    .select('id')
+
+  if (error) {
+    console.error('[coexistence] echo insert failed:', error.message)
+    return
+  }
+  if (!inserted || inserted.length === 0) return
+
+  await supabaseAdmin()
+    .from('conversations')
+    .update({
+      last_message_text: row.content_text || `[${echo.type}]`,
+      last_message_at: row.created_at,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', conversation.id)
+
+  const { error: pauseErr } = await supabaseAdmin()
+    .from('flow_runs')
+    .update({
+      status: 'paused_by_agent',
+      ended_at: new Date().toISOString(),
+      end_reason: 'agent_replied',
+    })
+    .eq('account_id', ctx.accountId)
+    .eq('contact_id', contact.id)
+    .eq('status', 'active')
+  if (pauseErr) {
+    console.error('[coexistence] pause-on-echo failed:', pauseErr.message)
+  }
+}
+
+/**
+ * One chat thread from the shared history. Inserted in bulk and
+ * idempotently — a message already stored (live inbound, echo, replay)
+ * is left untouched. Unread counts are not bumped: this is the past.
+ */
+async function persistHistoryThread(thread: MirroredThread, ctx: CoexistenceContext) {
+  const resolved = await resolveMirroredConversation(thread.customerPhone, ctx)
+  if (!resolved) return
+  const { conversation } = resolved
+
+  const rows = []
+  for (const message of thread.messages) {
+    rows.push(await buildMirroredRow(message, conversation.id, ctx))
+  }
+
+  for (let i = 0; i < rows.length; i += HISTORY_INSERT_CHUNK) {
+    const { error } = await supabaseAdmin()
+      .from('messages')
+      .upsert(rows.slice(i, i + HISTORY_INSERT_CHUNK), {
+        onConflict: 'conversation_id,message_id',
+        ignoreDuplicates: true,
+      })
+    if (error) {
+      console.error('[coexistence] history insert failed:', error.message)
+      return
+    }
+  }
+
+  // Chunks arrive out of order, so only move the conversation preview
+  // forward in time.
+  const newest = rows.reduce((a, b) => (a.created_at > b.created_at ? a : b))
+  const current = conversation.last_message_at
+    ? new Date(conversation.last_message_at).getTime()
+    : 0
+  if (new Date(newest.created_at).getTime() > current) {
+    await supabaseAdmin()
+      .from('conversations')
+      .update({
+        last_message_text: newest.content_text || `[${newest.content_type}]`,
+        last_message_at: newest.created_at,
+      })
+      .eq('id', conversation.id)
+  }
+}
+
+/**
+ * The asset behind an earlier `media_placeholder`. Matched back by message
+ * id; if the placeholder hasn't landed yet and the customer sent it, the
+ * row is created here (the placeholder insert then no-ops on conflict).
+ */
+async function attachHistoryMedia(message: WhatsAppMessage, ctx: CoexistenceContext) {
+  const parsed = await parseMessageContent(
+    message,
+    ctx.accessToken,
+    ctx.mirrorMedia ? { accountId: ctx.accountId } : null
+  )
+
+  const { data: existing, error: findError } = await supabaseAdmin()
+    .from('messages')
+    .select('id, conversations!inner(account_id)')
+    .eq('message_id', message.id)
+    .eq('conversations.account_id', ctx.accountId)
+    .limit(1)
+  if (findError) {
+    console.error('[coexistence] history media lookup failed:', findError.message)
+    return
+  }
+
+  if (existing && existing.length > 0) {
+    const { error } = await supabaseAdmin()
+      .from('messages')
+      .update({
+        content_type: storedContentType(message.type),
+        content_text: parsed.contentText,
+        media_url: parsed.mediaUrl,
+        media_type: parsed.mediaType,
+      })
+      .eq('id', existing[0].id)
+    if (error) console.error('[coexistence] history media update failed:', error.message)
+    return
+  }
+
+  const customerPhone = normalizePhone(message.from ?? '')
+  if (!customerPhone || customerPhone === ctx.businessPhone) return
+
+  const resolved = await resolveMirroredConversation(customerPhone, ctx)
+  if (!resolved) return
+  const { error } = await supabaseAdmin()
+    .from('messages')
+    .upsert(
+      {
+        conversation_id: resolved.conversation.id,
+        sender_type: 'customer',
+        content_type: storedContentType(message.type),
+        content_text: parsed.contentText,
+        media_url: parsed.mediaUrl,
+        media_type: parsed.mediaType,
+        message_id: message.id,
+        status: 'delivered',
+        created_at: new Date(parseInt(message.timestamp) * 1000).toISOString(),
+      },
+      { onConflict: 'conversation_id,message_id', ignoreDuplicates: true }
+    )
+  if (error) console.error('[coexistence] history media insert failed:', error.message)
+}
+
+/**
+ * Address-book sync from the business phone. Adds or renames contacts;
+ * a removal on the phone never deletes CRM data.
+ */
+async function applyAddressBookChange(change: AddressBookChange, ctx: CoexistenceContext) {
+  if (change.action === 'remove') return
+
+  const existing = await findExistingContact(supabaseAdmin(), ctx.accountId, change.phone)
+  if (existing) {
+    // Only replace a placeholder name (blank or the number itself) —
+    // never an agent's edit.
+    const currentName = (existing.name ?? '').trim()
+    const isPlaceholder =
+      !currentName || normalizePhone(currentName) === normalizePhone(existing.phone ?? '')
+    if (change.name && isPlaceholder && change.name !== currentName) {
+      const { error } = await supabaseAdmin()
+        .from('contacts')
+        .update({ name: change.name, updated_at: new Date().toISOString() })
+        .eq('id', existing.id)
+      if (error) console.error('[coexistence] contact rename failed:', error.message)
+    }
+    return
+  }
+
+  const { error } = await supabaseAdmin()
+    .from('contacts')
+    .insert({
+      account_id: ctx.accountId,
+      user_id: ctx.configOwnerUserId,
+      phone: change.phone,
+      name: change.name ?? change.phone,
+    })
+  if (error && !isUniqueViolation(error)) {
+    console.error('[coexistence] contact create failed:', error.message)
+  }
 }

@@ -303,6 +303,36 @@ export async function subscribeWabaToApp(
   }
 }
 
+export interface RequestSmbAppDataSyncArgs {
+  phoneNumberId: string
+  accessToken: string
+  /** `smb_app_state_sync` = address book, `history` = past chats. */
+  syncType: 'smb_app_state_sync' | 'history'
+}
+
+/**
+ * Coexistence (WhatsApp Business app) data sync. Meta answers with
+ * `smb_app_state_sync` / `history` webhooks. Each type can be requested
+ * ONCE, within 24h of onboarding — after that the business has to
+ * offboard and run Embedded Signup again.
+ */
+export async function requestSmbAppDataSync(
+  args: RequestSmbAppDataSyncArgs
+): Promise<void> {
+  const { phoneNumberId, accessToken, syncType } = args
+  const response = await fetch(`${META_API_BASE}/${phoneNumberId}/smb_app_data`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ messaging_product: 'whatsapp', sync_type: syncType }),
+  })
+  if (!response.ok) {
+    await throwMetaError(response, `Meta API error: ${response.status}`)
+  }
+}
+
 export interface GetSubscribedAppsArgs {
   wabaId: string
   accessToken: string

@@ -187,6 +187,28 @@ If the server cannot reach `graph.facebook.com` at all:
    environment must be *that* app's secret, or every delivery is
    rejected with a 401 before wacrm looks at it.
 
+## WhatsApp Business app numbers (coexistence)
+
+A number connected through Embedded Signup's "connect your existing
+WhatsApp Business app" option stays live on the phone. To mirror the
+phone into the inbox, the Meta App must also subscribe to these fields
+(App → WhatsApp → Configuration → Webhook fields):
+
+| Field | What wacrm does with it |
+|---|---|
+| `smb_message_echoes` | Stores messages typed on the phone as agent messages and pauses the contact's active Flow run, like an inbox reply. |
+| `history` | Imports up to 180 days of past chats (no group chats). Media older than 14 days arrives as a `[media]` placeholder. |
+| `smb_app_state_sync` | Creates contacts from the phone's address book and fills in names still showing the bare number. Removals on the phone never delete CRM contacts. |
+
+None of these fire flows, automations, AI replies or public webhooks.
+
+Right after the signup, wacrm calls `POST /{phone_number_id}/smb_app_data`
+for `smb_app_state_sync` and `history`. Meta accepts each **once, within
+24 hours** of onboarding; after that the business has to disconnect in
+the WhatsApp Business app and run the signup again. The business must
+also have accepted chat history sharing on the phone — otherwise Meta
+sends a `history` webhook with error `2593109` and nothing is imported.
+
 ## Where the mapping lives
 
 * `src/lib/whatsapp/meta-error-explain.ts` — code → explanation, field,
