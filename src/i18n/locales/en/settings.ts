@@ -370,6 +370,7 @@ export const settings = {
       hide: 'Hide advanced configuration',
     },
     credentials: {
+      lastSaveFailed: 'Last save failed',
       title: 'API Credentials',
       description: 'Enter your Meta WhatsApp Business API credentials.',
       phoneNumberId: 'Phone Number ID',

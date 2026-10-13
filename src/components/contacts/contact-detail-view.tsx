@@ -254,7 +254,7 @@ export function ContactDetailView({
       }
       onUpdated();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('toastUpdateFailed'));
+      toast.error(error instanceof Error ? error.message : t('contacts.detail.updateFailed'));
     }
     setSavingTags(false);
   }

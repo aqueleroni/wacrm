@@ -612,7 +612,7 @@ export function WhatsAppConfig() {
             <div className="flex items-start gap-3">
               <XCircle className="size-5 text-red-400 mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
-                <AlertTitle className="text-red-200 mb-1">{t('lastSaveFailed')}</AlertTitle>
+                <AlertTitle className="text-red-200 mb-1">{t('settings.whatsapp.credentials.lastSaveFailed')}</AlertTitle>
                 <AlertDescription className="text-red-100/80 text-sm">
                   {saveFailure.message}
                 </AlertDescription>

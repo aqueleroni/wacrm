@@ -371,6 +371,7 @@ export const settings = {
       hide: 'Ocultar configuração avançada',
     },
     credentials: {
+      lastSaveFailed: 'Falha ao salvar',
       title: 'Credenciais da API',
       description: 'Informe suas credenciais da API WhatsApp Business da Meta.',
       phoneNumberId: 'ID do número de telefone',
