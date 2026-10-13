@@ -29,7 +29,7 @@ npm run dev                          # http://localhost:3000
 - **Supabase project ref:** `tvssbeqafnodzvgzfbsp`
 - **MCP Supabase:** configurado em `.cursor/mcp.json`
 - **Agent Skills:** `.agents/skills/supabase` e `supabase-postgres-best-practices`
-- **Migrations:** `supabase/migrations/` (001–**051** + `20260723230245_account_scoped_message_templates`) — no remoto também existem `046–048` Instagram (fora do repo do fork); próximas do creator devem continuar em **052+**. Rodar novas via MCP ou SQL Editor após sync upstream
+- **Migrations:** `supabase/migrations/` (001–**055** + `20260723230245_account_scoped_message_templates`) — no remoto também existem `046–048` Instagram (fora do repo do fork); próximas do creator devem continuar em **056+**. Rodar novas via MCP ou SQL Editor após sync upstream
 - **Ignorados no git:** `.codex/`, `supabase/.temp/` (ver `.gitignore`)
 - **Locale padrão:** `NEXT_PUBLIC_LOCALE=pt-BR` em `.env.local`
 - **Sem senha padrão** — conta criada em `/signup`
@@ -53,7 +53,7 @@ git push origin main
 
 | Área | Arquivo(s) | O que foi feito |
 |------|------------|-----------------|
-| Auth UX | `login/page.tsx`, `signup/page.tsx` | Toggle olho show/hide senha |
+| Auth UX | `login/page.tsx`, `signup/page.tsx`, `reset-password/page.tsx` | Toggle olho show/hide senha (reset-password do upstream convertido para `useT()` + olho) |
 | i18n | `src/i18n/` | Locale padrão `pt-BR`; catálogos EN + PT-BR (~800+ chaves); `I18nProvider` + `useT()` / `t()` |
 | i18n módulos | auth, layout, settings, dashboard, contacts, inbox, pipelines, broadcasts, automations, flows, agents, etc. | UI traduzida via `useT()` |
 | i18n AI settings | `ai-config.tsx`, `ai-knowledge.tsx`, `locales/*/settings.ts` | Seção Assistente de IA completa em PT-BR |
@@ -73,6 +73,7 @@ git push origin main
 | Landing | `src/app/page.tsx`, `components/landing/landing-page.tsx`, `locales/*/landing.ts` | Home pública com planos Pro/Business (sem grátis); CTA signup/login |
 | **IA evoluída** | `src/lib/ai/memory*.ts`, `skills.ts`, `agent-context.ts`, `crm-context.ts`, `handoff-notify.ts`, `generation-log.ts` | Memória (extração + aprovação), skills por gatilho, contexto CRM, aba **Inteligência** em Agentes |
 | IA APIs | `/api/ai/memory/*`, `/api/ai/skills/*`, `/api/ai/cron/consolidate` | CRUD memória/skills + cron consolidação (~30 min idle) |
+| IA OpenAI-compatible | `ai-config.tsx`, `api/ai/config`, `api/ai/test` | Provider do upstream mantendo nosso Select de modelos (texto livre só p/ `openai_compatible`), leitura de `api_key` via `supabaseAdmin()` (038) |
 
 **Commits publicados:**
 - `54006c0` — toggle senha login/signup
@@ -116,6 +117,8 @@ git push origin main
 | 2026-09-22 | **Sync upstream etapa 1** (sem i18n next-intl): #519 BSUID, #536 broadcast `contact_id`, #535 motivo de falha, #505 erros Meta + pairing, #586 `+` país, #512 picker CSV broadcast. Migrations **049–051** (remoto já tinha Instagram em 046–048). 975 testes. i18n oficial (#375) fica por último. |
 | 2026-09-22 | **Sync upstream etapa 2:** #516 notificações do navegador (perfil + listener realtime); #527 typing indicator da IA no WhatsApp enquanto gera auto-reply. 1007 testes. Sem deploy. |
 | 2026-09-22 | **Sync upstream #500 multi-app:** `META_APP_SECRET` aceita vários secrets separados por vírgula (webhook valida contra qualquer um); doc `docs/multi-waba.md`. Sem deploy. |
+| 2026-09-22 | **Deploy produção (Vercel):** push `main` (etapas 1–2 + #500); migrations 049–051 já no remoto. URL `https://wpcrm-ten.vercel.app`. |
+| 2026-10-13 | **Sync upstream (out):** branch `sync/upstream-oct` via cherry-pick. Segurança (GHSA automations/SSRF/conversations, cache, redirect auth), Next 16.3.8 + bumps de deps; bugs (broadcast >1000 contatos, tags #560, verify_token, #553 #534 #562 #529 #559); features: provider **OpenAI-compatible**, **aguardar resposta** em automações, **/auth/callback + /reset-password** (reset de senha estava quebrado). Migrations renomeadas **052–055** (storage select, definer grants, ai base_url, wait-for-reply). Pulados: commits i18n next-intl (106fe5d, fbabe3f, cfbde12, 2605356, 7287c2a) — ficam com #375. 1170 testes, build ok. Supabase Auth: liberar `/auth/callback` nas Redirect URLs (`docs/auth-emails.md`). |
 
 ## Smoke test manual (pós-merge upstream)
 
